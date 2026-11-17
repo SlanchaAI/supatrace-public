@@ -354,3 +354,11 @@ test('default favicon is a published multi-size ICO and declared icon targets re
   assert.ok(deploy.includes('aws s3 cp public/'));
   assert.ok(deploy.includes('aws s3 cp public/favicon.ico "s3://${STATIC_BUCKET}/favicon.ico" --content-type "image/x-icon"'));
 });
+
+// The long assignment can wrap at an underscore without changing copied text.
+test('long inline OTLP assignment has an explicit boundary break',()=>{
+ for(const file of ['docs/quickstart/index.html','docs/frameworks/opentelemetry/index.html']){
+  assert.ok(read(file).includes('<code>OTEL_EXPORTER_<wbr>OTLP_HEADERS="Authorization=Bearer YOUR_INGEST_KEY"</code>'));
+  assert.ok(read(file).includes('<code>Authorization=Bearer%20YOUR_<wbr>INGEST_KEY</code>'));
+ }
+});

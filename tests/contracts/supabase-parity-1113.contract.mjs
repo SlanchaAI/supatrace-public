@@ -17,7 +17,7 @@
 //  - No probe may pass vacuously: helpers that a probe extracts from source are asserted to be
 //    non-empty, and the executed probes assert measured behaviour, not a regex.
 //
-// Startup probes execute concurrent reads, a bounded deadline and a reachability check.
+// Startup probes execute session-gated reads, a bounded deadline and a reachability check.
 // The remaining inventory is synthetic source coverage, not a deployed-state assessment.
 
 import test from 'node:test';
@@ -41,7 +41,7 @@ const apiHelper = appSource.match(/async function api\([\s\S]*?fetch\('\/api\/'\
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const twoStartupReads = async () => {
-  // Both reads start before either finishes. Their shared deadline expires before
+  // Identity gates projects. The shared deadline expires before
   // the synthetic responses, so the caller must receive a bounded timeout.
   let firstDone = false, secondStartedBeforeFirst = false;
   const seen = [];
@@ -70,13 +70,13 @@ test('the source extraction used by the source probes is real, not a vacuous mat
 // 1. Executed probes: real behaviour, run here, in this sandbox.
 // ---------------------------------------------------------------------------
 
-test('startup overlaps account reads under a bounded deadline', async () => {
+test('startup gates projects under a bounded deadline', async () => {
   assert.equal(STARTUP_TIMEOUT_MS,15000);
   const {seen,result,secondStartedBeforeFirst}=await twoStartupReads();
   assert.ok(result instanceof Error);
   assert.equal(result.message,'startup_timeout');
-  assert.deepEqual(seen,['me','projects']);
-  assert.equal(secondStartedBeforeFirst,true);
+  assert.deepEqual(seen,['me']);
+  assert.equal(secondStartedBeforeFirst,false);
 });
 
 test('reachability distinguishes an unavailable transport and parses providers', async () => {

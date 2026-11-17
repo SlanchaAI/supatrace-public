@@ -6,12 +6,12 @@ import {loadStartupIdentity,startupRead,probeReachable,PROBE_TIMEOUT_MS,STARTUP_
 const project='proj_'+'1'.repeat(32),me={tenant_id:'synthetic-account',project_id:project};
 const data={projects:[{id:project,name:'Synthetic project'}]};
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
-test('startup requests identity and its projects together, using one cancellation signal',async()=>{
+test('startup confirms identity before projects, using one cancellation signal',async()=>{
  const calls=[];const result=await loadStartupIdentity(async(path,signal)=>{calls.push({path,signal});return path==='me'?me:data;});
  assert.deepEqual(result,{me,data});assert.deepEqual(calls.map(c=>c.path),['me','projects']);assert.equal(calls[0].signal,calls[1].signal);
- // Both requests are out before either answers: a healthy load is one round trip.
+ // Projects cannot leave until the identity response confirms a session.
  const open=[],release=[];const pending=loadStartupIdentity(path=>{open.push(path);return new Promise(resolve=>release.push(()=>resolve(path==='me'?me:data)));});
- await tick();assert.deepEqual(open,['me','projects']);release[1]();await tick();release[0]();assert.deepEqual(await pending,{me,data});
+ await tick();assert.deepEqual(open,['me']);release[0]();await tick();assert.deepEqual(open,['me','projects']);release[1]();assert.deepEqual(await pending,{me,data});
  // Once the wait is over the shared signal is aborted, so nothing is left running.
  assert.equal(calls[0].signal.aborted,true);
 });
@@ -19,27 +19,26 @@ for(const stage of ['me','projects'])test(`startup deadline bounds a stalled ${s
  let finish,signal;const calls=[];
  const pending=loadStartupIdentity(async(path,s)=>{calls.push(path);if(path!==stage)return me;signal=s;return new Promise(resolve=>finish=resolve);},{timeoutMs:10});
  await assert.rejects(pending,{message:'startup_timeout'});assert.equal(signal.aborted,true);
- finish(stage==='me'?me:data);await tick();assert.deepEqual(calls,['me','projects']);
+ finish(stage==='me'?me:data);await tick();assert.deepEqual(calls,stage==='me'?['me']:['me','projects']);
 });
 test('deadline also bounds parsing of a response body that never finishes',async()=>{
  let signal;await assert.rejects(startupRead(async s=>{signal=s;const response={json:()=>new Promise(()=>{})};return await response.json();},{timeoutMs:10}),{message:'startup_timeout'});assert.equal(signal.aborted,true);
 });
-test('cancellation before dispatch sends nothing, and during the reads stops both',async()=>{
+test('cancellation before dispatch sends nothing, and during identity prevents projects',async()=>{
  for(const immediate of [true,false]){
   const controller=new AbortController(),calls=[];let finish;
   const pending=loadStartupIdentity(path=>{calls.push(path);return new Promise(resolve=>finish=resolve);},{signal:controller.signal});
   if(!immediate)await tick();controller.abort();await assert.rejects(pending,{message:'startup_cancelled'});
-  finish?.(me);await tick();assert.deepEqual(calls,immediate?[]:['me','projects']);
+  finish?.(me);await tick();assert.deepEqual(calls,immediate?[]:['me']);
  }
 });
 test('service, auth and rate-limit failures keep their status without an automatic retry',async()=>{
  for(const error of [Object.assign(Error('temporarily_unavailable'),{status:503}),Object.assign(Error('sign_in_required'),{status:401}),Object.assign(Error('rate_limit'),{status:429,retryAfter:4})]){
-  let calls=0;await assert.rejects(loadStartupIdentity(()=>{calls++;throw error;}),e=>e===error);assert.equal(calls,2,'one attempt: the two reads, no retry');
+  let calls=0;await assert.rejects(loadStartupIdentity(()=>{calls++;throw error;}),e=>e===error);assert.equal(calls,1,'one identity attempt, no projects or retry');
  }
- // The identity read's error is the one reported, even when the projects read fails first with something else.
- const auth=Object.assign(Error('sign_in_required'),{status:401});let failMe;
- const pending=loadStartupIdentity(path=>path==='me'?new Promise((_,reject)=>failMe=reject):Promise.reject(Object.assign(Error('temporarily_unavailable'),{status:503})));
- await tick();failMe(auth);await assert.rejects(pending,e=>e===auth);
+});
+test('a signed-out answer never requests projects',async()=>{
+ const calls=[];await assert.rejects(loadStartupIdentity(async path=>{calls.push(path);return {signed_out:true};}),{message:'sign_in_required'});assert.deepEqual(calls,['me']);
 });
 test('a different, missing or ambiguous project never becomes the active workspace',async()=>{
  for(const projects of [[],[{id:'other'}],[{id:project},{id:project}],null])await assert.rejects(loadStartupIdentity(async path=>path==='me'?me:{projects}),{message:'project_unavailable'});
@@ -47,7 +46,7 @@ test('a different, missing or ambiguous project never becomes the active workspa
 });
 test('an independent deliberate retry can complete after a failed read',async()=>{
  let failed=true;const calls=[];const request=async path=>{calls.push(path);if(failed)throw Error('temporarily_unavailable');return path==='me'?me:data;};
- await assert.rejects(loadStartupIdentity(request));failed=false;assert.deepEqual(await loadStartupIdentity(request),{me,data});assert.deepEqual(calls,['me','projects','me','projects']);
+ await assert.rejects(loadStartupIdentity(request));failed=false;assert.deepEqual(await loadStartupIdentity(request),{me,data});assert.deepEqual(calls,['me','me','projects']);
 });
 
 // Exercise the production API helper: it can invalidate identity before a
@@ -75,11 +74,11 @@ for(const outcome of ['cancel','deadline'])for(const code of ['sign_in_required'
   context.activeProject=fresh.data.projects[0].id;context.identityVerified=true;
   finish(stalledBody?{error:code}:failure());await tick();
   assert.equal(invalidations,0,'The cancelled request must not clear a newer account identity');
-  assert.equal(context.identityVerified,true);assert.equal(reads,4);
+  assert.equal(context.identityVerified,true);assert.equal(reads,3);
   // Current auth failures must still invalidate billing/account recovery scope.
   currentError=true;
   await assert.rejects(loadStartupIdentity(context.request),{message:code,status});
-  assert.ok(invalidations>=1,'the failing identity read invalidates; the concurrent projects read may too');assert.equal(context.identityVerified,false);
+  assert.equal(invalidations,1,'the failing identity read invalidates once');assert.equal(context.identityVerified,false);
  }
 });
 

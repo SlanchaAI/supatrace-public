@@ -117,15 +117,31 @@ test('duplicate normalized requests suppress mail with identical responses for n
   assert.deepEqual(outcomes, [3, 3]);
 });
 
+test('a successful duplicate keeps the original challenge expiry instead of extending it', async () => {
+  const w = world(), token = await issue(w);
+  const before = await w.store.peekAuthChallenge('LINK', digest(token));
+  w.advance(30); w.advanceRates(30);
+  const duplicate = await post(w, sendPath, {email: address});
+  assert.equal(duplicate.status, 200); assert.deepEqual(await duplicate.json(), sent);
+  const after = await w.store.peekAuthChallenge('LINK', digest(token));
+  assert.equal(after.expires_at, before.expires_at);
+  assert.equal(w.mailbox.length, 1);
+  assert.equal((await confirm(w, token)).status, 200);
+});
+
 test('resend cooldown spans calendar-minute boundaries with the production limiter', async () => {
   let now = 1800000059;
   const w = world({now: () => now});
   w.store.consumeRate = DynamoMetadataStore.prototype.consumeRate.bind(w.store);
   const older = await issue(w);
   now++;
-  await post(w, sendPath, {email: address}); assert.equal(w.mailbox.length, 1);
-  now += 58;
-  await post(w, sendPath, {email: address}); assert.equal(w.mailbox.length, 1);
+  for (const elapsed of [0, 58]) {
+    now += elapsed;
+    const duplicate = await post(w, sendPath, {email: address});
+    assert.equal(duplicate.status, 200); assert.deepEqual(await duplicate.json(), sent);
+    assert.equal(w.mailbox.length, 1);
+    assert.ok(await w.store.peekAuthChallenge('LINK', digest(older)), 'dedupe success retains the delivered challenge');
+  }
   now++;
   const newer = await issue(w); assert.equal(w.mailbox.length, 2);
   assert.ok(await w.store.peekAuthChallenge('LINK', digest(older)));
@@ -407,4 +423,63 @@ test('tokens never appear in JSON responses or diagnostics on success and store 
   failed.store.getEmailAccount = async () => { throw new Error('synthetic store failure'); };
   const unavailable = await confirm(failed, badToken); assert.equal(unavailable.status, 503);
   assert.equal((await unavailable.text()).includes(badToken), false); assert.equal(JSON.stringify(failed.diagnostics).includes(badToken), false);
+});
+
+// Exercise the committed sign-in module with a small DOM; browser tests cover native focus and layout.
+for (const outcome of ['success', '429', 'network']) test(`different-address recovery ignores a stale ${outcome} resend while a new send is pending`, async t => {
+  let focused;
+  class Element {
+    constructor(tag) { this.tag = tag; this.children = []; this.attrs = {}; this.listeners = {}; this.hidden = false; this.disabled = false; this.value = ''; this.classList = {add() {}}; this.text = ''; }
+    set textContent(value) { this.text = String(value); this.children = []; }
+    get textContent() { return this.text + this.children.map(child => child.textContent).join(''); }
+    get childNodes() { return this.children; }
+    setAttribute(key, value) { this.attrs[key] = value; if (key === 'hidden') this.hidden = true; }
+    getAttribute(key) { return this.attrs[key]; }
+    append(...nodes) { this.children.push(...nodes); }
+    replaceChildren(...nodes) { this.children = nodes; }
+    addEventListener(name, callback) { this.listeners[name] = callback; }
+    find(predicate) { if (predicate(this)) return this; for (const child of this.children) { const found = child.find(predicate); if (found) return found; } }
+    querySelector(selector) { return this.find(node => selector.startsWith('#') ? node.attrs.id === selector.slice(1) : (node.attrs.class || '').split(' ').includes(selector.slice(1))); }
+    focus() { focused = this; }
+    scrollIntoView() {}
+  }
+  const root = new Element('div'), slot = 'supatrace-sent-link', storage = new Map([[slot, JSON.stringify({sentEmail: address, resendAt: 0, expiresAt: Date.now() + 900000})]]), requests = [];
+  const globals = {Node: Element, document: {createElement: tag => new Element(tag), createTextNode: text => Object.assign(new Element('#text'), {textContent: text})},
+    location: new URL('https://supatrace.invalid/app/'), sessionStorage: {getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key)},
+    requestAnimationFrame: callback => callback()};
+  for (const [name, value] of Object.entries(globals)) {
+    const original = Object.getOwnPropertyDescriptor(globalThis, name);
+    Object.defineProperty(globalThis, name, {value, configurable: true, writable: true});
+    t.after(() => original ? Object.defineProperty(globalThis, name, original) : delete globalThis[name]);
+  }
+  t.mock.method(globalThis, 'setTimeout', () => 0);
+  t.mock.method(globalThis, 'fetch', (path, init) => new Promise((resolve, reject) => requests.push({path, body: JSON.parse(init.body), resolve, reject})));
+  const until = async predicate => {
+    const deadline = performance.now() + 2000;
+    while (!predicate() && performance.now() < deadline) await new Promise(setImmediate);
+    assert.ok(predicate(), 'expected request/state transition');
+  };
+  const {mountSignIn} = await import('../public/signin.js');
+  mountSignIn(root, {email: true});
+  const view = root.find(node => node.attrs['data-view'] === 'linkSent'), main = root.find(node => node.attrs['data-view'] === 'main');
+  const resend = view.find(node => node.tag === 'button' && node.textContent === 'Resend sign-in link');
+  const oldSend = resend.listeners.click();
+  await until(() => requests.length === 1);
+  view.find(node => node.textContent === 'Use a different email').listeners.click();
+  const input = root.querySelector('#link-email'), form = main.find(node => node.tag === 'form'), submit = form.find(node => node.tag === 'button');
+  assert.equal(main.hidden, false); assert.equal(view.hidden, true); assert.equal(storage.has(slot), false); assert.equal(focused, input);
+  input.value = 'replacement@example.com';
+  form.listeners.submit({preventDefault() {}});
+  await until(() => requests.length === 2);
+  assert.equal(submit.disabled, true);
+  if (outcome === 'network') requests[0].reject(Error('synthetic network failure'));
+  else requests[0].resolve(new Response(JSON.stringify(outcome === '429' ? {error: 'rate_limit'} : sent), {status: outcome === '429' ? 429 : 200, headers: {'Retry-After': '90'}}));
+  await oldSend;
+  assert.equal(main.hidden, false); assert.equal(view.hidden, true); assert.equal(storage.has(slot), false);
+  assert.equal(root.querySelector('#auth-status').textContent, ''); assert.equal(focused, input); assert.equal(submit.disabled, true); assert.equal(resend.disabled, true);
+  requests[1].resolve(new Response(JSON.stringify(sent)));
+  await until(() => !view.hidden);
+  assert.equal(main.hidden, true); assert.equal(JSON.parse(storage.get(slot)).sentEmail, 'replacement@example.com');
+  assert.equal(view.children[1].textContent, 'We sent a sign-in link to replacement@example.com.');
+  assert.equal(resend.disabled, true); assert.equal(requests.length, 2);
 });

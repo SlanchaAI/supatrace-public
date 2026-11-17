@@ -122,16 +122,36 @@ export function mountSignIn(root, providers) {
   // A link proves email sign-in intent even when provider discovery is unavailable.
   if (hasPendingLink() || new URLSearchParams(location.search).get('auth_error') === 'link_invalid') providers = {...providers, email: true};
   root.classList.add('auth');
-  const status = el('p', {id: 'auth-status', role: 'status'});
+  const status = el('p', {id: 'auth-status', role: 'status', tabindex: '-1'});
   const views = {};
   function show(name) { for (const [key, node] of Object.entries(views)) node.hidden = key !== name; status.textContent = ''; }
   function fail(error) { status.textContent = explain(error); }
   async function finish(result) {
+    clearSentLink();
     if (result?.mfa_required) { show('mfa'); return; }
     openApp();
   }
 
-  let sentEmail = '', resendAt = 0, sendingLink = false;
+  const sentLinkSlot = 'supatrace-sent-link';
+  let sentEmail = '', resendAt = 0, expiresAt = 0, sendingLink = false, linkRequest = 0;
+  function clearSentLink() {
+    // Recovery invalidates pending sends, including their error and cleanup paths.
+    linkRequest++;
+    sendingLink = false;
+    sentEmail = ''; resendAt = 0; expiresAt = 0;
+    try { sessionStorage.removeItem(sentLinkSlot); } catch { /* Storage may be unavailable. */ }
+  }
+  function saveSentLink() {
+    if (!expiresAt) return;
+    // Only successful-send metadata, never a bearer token.
+    try { sessionStorage.setItem(sentLinkSlot, JSON.stringify({sentEmail, resendAt, expiresAt})); } catch { /* Keep the current view usable. */ }
+  }
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(sentLinkSlot));
+    if (typeof saved?.sentEmail === 'string' && saved.sentEmail && Number.isFinite(saved.resendAt) && Number.isFinite(saved.expiresAt) && saved.expiresAt > Date.now()) {
+      ({sentEmail, resendAt, expiresAt} = saved);
+    } else clearSentLink();
+  } catch { clearSentLink(); }
   function retryDeadline(value) {
     const seconds = Number(value);
     return Number.isFinite(seconds) && seconds > 0 ? Date.now() + seconds * 1000 : Date.parse(value) || Date.now() + 60000;
@@ -144,19 +164,33 @@ export function mountSignIn(root, providers) {
   }
   async function sendLink(email, submit) {
     if (sendingLink) return;
-    if (email.trim().toLowerCase() === sentEmail.trim().toLowerCase() && Date.now() < resendAt) { show('linkSent'); paintResend(); return; }
+    if (email.trim().toLowerCase() === sentEmail.trim().toLowerCase() && Date.now() < resendAt) { showLinkResult(!!expiresAt); paintResend(); focusSignIn(linkSentHeading); return; }
+    const resending = submit === resend;
+    if (!resending) clearSentLink();
+    const request = ++linkRequest;
     sendingLink = true;
     submit.disabled = true;
     resendAt = 0;
     sentEmail = email;
     try {
       await post('/api/auth/email/link', {email});
+      if (request !== linkRequest) return;
       resendAt = Date.now() + 60000;
+      expiresAt = Date.now() + 900000;
+      saveSentLink();
       showLinkResult(true);
+      if (resending) status.textContent = 'Sent again';
+      focusSignIn(resending ? status : linkSentHeading);
     } catch (error) {
-      if (error.status === 429) { resendAt = retryDeadline(error.retryAfter); showLinkResult(false); }
+      if (request !== linkRequest) return;
+      if (error.status === 429) resendAt = retryDeadline(error.retryAfter);
+      if (resending || error.status === 429) showLinkResult(!!expiresAt);
+      saveSentLink();
       fail(error);
-    } finally { sendingLink = false; submit.disabled = false; paintResend(); }
+      if (resending || error.status === 429) focusSignIn(status);
+    } finally {
+      if (request === linkRequest) { sendingLink = false; submit.disabled = false; paintResend(); }
+    }
   }
   function linkForm(id) {
     const email = el('input', {id, type: 'email', autocomplete: 'email', required: true, placeholder: 'you@example.com'});
@@ -166,7 +200,7 @@ export function mountSignIn(root, providers) {
     return form;
   }
   const resend = button('button choice secondary', 'Resend sign-in link', () => sendLink(sentEmail, resend));
-  const linkSentHeading = el('h2');
+  const linkSentHeading = el('h2', {tabindex: '-1'});
   const linkSentMessage = el('p', {class: 'sub'});
   function showLinkResult(delivered) {
     linkSentHeading.textContent = delivered ? 'Check your email' : 'Try again later';
@@ -175,12 +209,13 @@ export function mountSignIn(root, providers) {
   }
   const linkSent = el('div', {'data-view': 'linkSent', hidden: true},
     linkSentHeading, linkSentMessage, el('p', {class: 'sub'}, 'It expires in 15 minutes and works once.'),
-    button('quiet', 'Use a different email', () => show('main')), resend);
+    button('quiet', 'Use a different email', () => { clearSentLink(); show('main'); focusSignIn(root.querySelector('#link-email')); }), resend);
   function focusSignIn(target) {
     requestAnimationFrame(() => { root.scrollIntoView({block: 'nearest'}); target?.focus({preventScroll: true}); });
   }
   function invalidLink() {
     incomingLink = null;
+    clearSentLink();
     show('main');
     status.textContent = linkInvalidMessage;
     focusSignIn(root.querySelector('#link-email'));
@@ -380,6 +415,8 @@ export function mountSignIn(root, providers) {
   const confirming = !!providers.email && /^[A-Za-z0-9_-]{43}$/.test(pendingToken) && pendingEmail.length > 0 && pendingEmail !== 'confirmed';
   const linking = hasPendingLink();
   show(linking ? 'linkConfirm' : providers.mfa ? 'mfa' : confirming ? 'confirm' : requestedView === 'signup' ? 'signup' : 'main');
+  if (linking || providers.mfa || confirming || pending.has('auth_error') || pendingEmail === 'confirmed') clearSentLink();
+  else if (expiresAt) { showLinkResult(true); paintResend(); focusSignIn(linkSentHeading); }
   if (linking) focusSignIn(linkContinue);
   if (confirming) { root.scrollIntoView({block: 'start'}); confirmPassword.input.focus({preventScroll: true}); }
   if (!confirming && pendingEmail === 'confirmed') status.textContent = 'Email confirmed. Sign in with your password.';

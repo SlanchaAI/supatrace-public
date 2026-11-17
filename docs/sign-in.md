@@ -6,7 +6,7 @@ For email + password, choose Sign up, enter your email and a password, then open
 
 The legal line is the two links `/terms.html` and `/privacy.html`. It does not ask anyone to agree to email updates. Supatrace collects no email addresses on that line. The sign-in and sign-up line says "By continuing you agree to the Terms of Service and Privacy Policy" with links to the published documents, effective November 16, 2026. The footer also links Acceptable Use and Subprocessors.
 
-Requesting a link twice within a minute sends one email.
+Requesting a link twice within a minute sends one email. Resend keeps **Check your email** and the same address visible. Success shows **Sent again** and restarts the 60-second cooldown; rate limits show the existing message and honor Retry-After, while other failures allow retry without claiming another delivery. Focus moves to the status message. Successful-send metadata (address, cooldown deadline, and expiry) stays in this tab’s session storage so reloads and remounts restore the card until the 15-minute expiry. No token is stored. **Use a different email** clears that state and ignores any pending resend result, so a new address can be submitted immediately; explicit link confirmation and sign-in errors take precedence over restoration.
 
 ## Workspace startup recovery
 

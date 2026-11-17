@@ -162,3 +162,195 @@ test('published browser defaults resolve in the built static tree', async () => 
     }
   } finally { await f.close(); }
 });
+
+for (const path of ['/signup/', '/', '/app/']) for (const outcome of ['success', '429', 'network']) test(`resend ${outcome} on ${path} keeps the email view and focus`, async () => {
+  const f = await fixture(); let requests = 0;
+  const now = Date.now();
+  await f.page.clock.setFixedTime(now);
+  await f.page.route('**/api/auth/email/link', route => {
+    if (++requests === 1 || outcome === 'success') return route.continue();
+    return outcome === '429' ? route.fulfill({status: 429, headers: {'Retry-After': '90'}, json: {error: 'rate_limit'}}) : route.abort('failed');
+  });
+  try {
+    await f.page.goto(f.live.origin + path, {waitUntil: 'networkidle'});
+    await f.page.locator(path === '/signup/' ? '#signup-link-email' : '#link-email').fill(email);
+    await f.page.getByRole('button', {name: 'Email me a sign-in link', exact: true}).click();
+    const view = f.page.locator('[data-view="linkSent"]'), main = f.page.locator('[data-view="main"]');
+    await view.waitFor();
+    await f.page.clock.setFixedTime(now + 60001);
+    await f.page.getByRole('button', {name: 'Resend sign-in link', exact: true}).click();
+    const expected = outcome === 'success' ? 'Sent again' : outcome === '429' ? 'Too many attempts. Wait and try again.' : 'Sign-in could not be completed.';
+    await f.page.locator('#auth-status').filter({hasText: expected}).waitFor({timeout: 2500});
+    await f.page.waitForFunction(() => document.activeElement.id === 'auth-status');
+    assert.equal(await view.isVisible(), true);
+    assert.equal(await main.isVisible(), false);
+    assert.equal(await view.locator('h2').textContent(), 'Check your email');
+    assert.equal(await view.locator('.sub').first().textContent(), `We sent a sign-in link to ${email}.`);
+    assert.equal(await f.page.locator('#auth-status').evaluate(node => node === document.activeElement), true);
+    if (outcome !== 'network') {
+      assert.equal(await f.page.getByRole('button', {name: outcome === '429' ? 'Resend in 90s' : 'Resend in 60s', exact: true}).isDisabled(), true);
+    } else assert.equal(await f.page.getByRole('button', {name: 'Resend sign-in link', exact: true}).isEnabled(), true);
+    assert.equal(requests, 2);
+    assert.equal(f.mailbox.length, outcome === 'success' ? 2 : 1);
+    const saved = await f.page.evaluate(() => JSON.parse(sessionStorage.getItem('supatrace-sent-link')));
+    assert.deepEqual(Object.keys(saved).sort(), ['expiresAt', 'resendAt', 'sentEmail']);
+    assert.equal(saved.sentEmail, email);
+    await f.page.reload({waitUntil: 'networkidle'});
+    assert.equal(await view.isVisible(), true);
+    assert.equal(await main.isVisible(), false);
+    assert.equal(requests, 2, 'reload does not send another request');
+    if (outcome !== 'network') assert.equal(await f.page.getByRole('button', {name: outcome === '429' ? 'Resend in 90s' : 'Resend in 60s', exact: true}).isDisabled(), true);
+  } finally { await f.close(); }
+});
+
+for (const path of ['/signup/', '/', '/app/']) test(`reload and remount restore the email view on ${path}`, async () => {
+  const f = await fixture();
+  const now = Date.now();
+  await f.page.clock.setFixedTime(now);
+  try {
+    await f.page.goto(f.live.origin + path, {waitUntil: 'networkidle'});
+    await f.page.locator(path === '/signup/' ? '#signup-link-email' : '#link-email').fill(email);
+    await f.page.getByRole('button', {name: 'Email me a sign-in link', exact: true}).click();
+    await f.page.locator('[data-view="linkSent"]').waitFor();
+    await f.page.clock.setFixedTime(now + 20000);
+    await f.page.reload({waitUntil: 'networkidle'});
+    const view = f.page.locator('[data-view="linkSent"]');
+    assert.equal(await view.isVisible(), true);
+    assert.equal(await f.page.locator('[data-view="main"]').isVisible(), false);
+    assert.equal(await view.locator('.sub').first().textContent(), `We sent a sign-in link to ${email}.`);
+    assert.equal(await f.page.getByRole('button', {name: 'Resend in 40s', exact: true}).isDisabled(), true);
+    await f.page.evaluate(async () => {
+      const {mountSignIn} = await import('/signin.js');
+      mountSignIn(document.querySelector('#signin'), {github: true, email: true});
+    });
+    assert.equal(await view.isVisible(), true);
+    assert.equal(await f.page.getByRole('button', {name: 'Resend in 40s', exact: true}).isDisabled(), true);
+    assert.equal(f.mailbox.length, 1, 'restoration never sends mail');
+  } finally { await f.close(); }
+});
+
+test('an initial rate limit never claims delivery or persists a sent address', async () => {
+  const f = await fixture();
+  await f.page.route('**/api/auth/email/link', route => route.fulfill({status: 429, headers: {'Retry-After': '60'}, json: {error: 'rate_limit'}}));
+  try {
+    await f.page.goto(f.live.origin + '/signup/', {waitUntil: 'networkidle'});
+    await f.page.locator('#signup-link-email').fill(email);
+    await f.page.getByRole('button', {name: 'Email me a sign-in link', exact: true}).click();
+    await f.page.getByRole('heading', {name: 'Try again later', exact: true}).waitFor();
+    assert.equal((await f.page.locator('#signin').innerText()).includes('We sent'), false);
+    assert.equal(await f.page.locator('#auth-status').textContent(), 'Too many attempts. Wait and try again.');
+    assert.equal(await f.page.evaluate(() => sessionStorage.getItem('supatrace-sent-link')), null);
+    assert.equal(f.mailbox.length, 0);
+  } finally { await f.close(); }
+});
+
+for (const state of ['expired', 'malformed', 'unavailable']) test(`${state} session storage leaves sign-in usable`, async () => {
+  const f = await fixture();
+  await f.context.addInitScript(({state, email}) => {
+    if (state === 'unavailable') Object.defineProperty(window, 'sessionStorage', {get() { throw new DOMException('Storage unavailable', 'SecurityError'); }});
+    else sessionStorage.setItem('supatrace-sent-link', state === 'malformed' ? '{bad json' : JSON.stringify({sentEmail: email, resendAt: 0, expiresAt: Date.now() - 1}));
+  }, {state, email});
+  try {
+    await f.page.goto(f.live.origin + '/app/', {waitUntil: 'networkidle'});
+    assert.equal(await f.page.locator('[data-view="main"]').isVisible(), true);
+    await f.page.locator('#link-email').fill(email);
+    await f.page.getByRole('button', {name: 'Email me a sign-in link', exact: true}).click();
+    await f.page.getByRole('heading', {name: 'Check your email', exact: true}).waitFor();
+    assert.equal(f.mailbox.length, 1);
+  } finally { await f.close(); }
+});
+
+test('choosing a different email clears restoration and focuses the email field', async () => {
+  const f = await fixture();
+  try {
+    await f.page.goto(f.live.origin + '/app/', {waitUntil: 'networkidle'});
+    await f.page.locator('#link-email').fill(email);
+    await f.page.getByRole('button', {name: 'Email me a sign-in link', exact: true}).click();
+    await f.page.getByRole('button', {name: 'Use a different email', exact: true}).click();
+    await f.page.waitForFunction(() => document.activeElement.id === 'link-email');
+    assert.equal(await f.page.evaluate(() => sessionStorage.getItem('supatrace-sent-link')), null);
+    await f.page.reload({waitUntil: 'networkidle'});
+    assert.equal(await f.page.locator('[data-view="main"]').isVisible(), true);
+    assert.equal(await f.page.locator('[data-view="linkSent"]').isVisible(), false);
+  } finally { await f.close(); }
+});
+
+test('opening and confirming a link in another tab does not reset the original resend card', async () => {
+  const f = await fixture(), now = Date.now();
+  await f.page.clock.setFixedTime(now);
+  try {
+    await f.page.goto(f.live.origin + '/app/', {waitUntil: 'networkidle'});
+    await f.page.locator('#link-email').fill(email);
+    await f.page.getByRole('button', {name: 'Email me a sign-in link', exact: true}).click();
+    await f.page.locator('[data-view="linkSent"]').waitFor();
+    const other = await f.context.newPage();
+    await other.goto(f.live.origin + '/app/?link=' + token, {waitUntil: 'networkidle'});
+    await other.getByRole('button', {name: 'Continue to SupaTrace', exact: true}).click();
+    await other.locator('#shell:not([hidden])').waitFor();
+    await f.page.bringToFront();
+    await f.page.evaluate(() => { dispatchEvent(new PageTransitionEvent('pageshow', {persisted: true})); });
+    await f.page.clock.setFixedTime(now + 60001);
+    await f.page.getByRole('button', {name: 'Resend sign-in link', exact: true}).click();
+    await f.page.locator('#auth-status').filter({hasText: 'Sent again'}).waitFor();
+    assert.equal(await f.page.locator('[data-view="linkSent"]').isVisible(), true);
+    assert.equal(await f.page.locator('[data-view="main"]').isVisible(), false);
+    assert.equal(f.mailbox.length, 2);
+  } finally { await f.close(); }
+});
+
+for (const outcome of ['success', '429', 'network']) for (const replacement of [false, true]) test(`different-address recovery ignores held resend ${outcome}${replacement ? ' during a new send' : ''}`, async () => {
+  const f = await fixture(), now = Date.now(); let requests = 0, releaseResend, releaseReplacement;
+  const heldResend = new Promise(resolve => { releaseResend = resolve; }), heldReplacement = new Promise(resolve => { releaseReplacement = resolve; });
+  await f.page.clock.setFixedTime(now);
+  await f.page.route('**/api/auth/email/link', async route => {
+    const request = ++requests;
+    if (request === 2) {
+      await heldResend;
+      if (outcome === '429') return route.fulfill({status: 429, headers: {'Retry-After': '90'}, json: {error: 'rate_limit'}});
+      if (outcome === 'network') return route.abort('failed');
+    }
+    if (request === 3) await heldReplacement;
+    return route.continue();
+  });
+  try {
+    await f.page.goto(f.live.origin + '/app/', {waitUntil: 'networkidle'});
+    const input = f.page.locator('#link-email'), submit = f.page.getByRole('button', {name: 'Email me a sign-in link', exact: true});
+    await input.fill(email); await submit.click();
+    const view = f.page.locator('[data-view="linkSent"]'), main = f.page.locator('[data-view="main"]');
+    await view.waitFor();
+    await f.page.clock.setFixedTime(now + 60001);
+    const requested = f.page.waitForRequest(request => request.url().endsWith('/api/auth/email/link'));
+    await f.page.getByRole('button', {name: 'Resend sign-in link', exact: true}).click();
+    await requested;
+    await f.page.getByRole('button', {name: 'Use a different email', exact: true}).click();
+    await f.page.waitForFunction(() => document.activeElement.id === 'link-email');
+    assert.equal(await main.isVisible(), true); assert.equal(await view.isVisible(), false);
+    assert.equal(await f.page.evaluate(() => sessionStorage.getItem('supatrace-sent-link')), null);
+    if (replacement) {
+      await input.fill('replacement@example.com');
+      const requestedReplacement = f.page.waitForRequest(request => request.url().endsWith('/api/auth/email/link') && request.postDataJSON().email === 'replacement@example.com');
+      await submit.click(); await requestedReplacement;
+    }
+    const completed = f.page.waitForEvent(outcome === 'network' ? 'requestfailed' : 'requestfinished', {predicate: request => request.url().endsWith('/api/auth/email/link') && request.postDataJSON().email === email});
+    releaseResend(); await completed;
+    await f.page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.equal(await main.isVisible(), true); assert.equal(await view.isVisible(), false);
+    assert.equal(await f.page.locator('#auth-status').textContent(), '');
+    assert.equal(await f.page.evaluate(() => sessionStorage.getItem('supatrace-sent-link')), null);
+    assert.equal(await input.evaluate(node => node === document.activeElement), !replacement);
+    if (replacement) {
+      assert.equal(await submit.isDisabled(), true);
+      releaseReplacement();
+      await view.waitFor();
+      await f.page.waitForFunction(() => document.activeElement.tagName === 'H2');
+      assert.equal(await main.isVisible(), false);
+      assert.equal(await view.locator('.sub').first().textContent(), 'We sent a sign-in link to replacement@example.com.');
+      assert.equal(await f.page.evaluate(() => JSON.parse(sessionStorage.getItem('supatrace-sent-link')).sentEmail), 'replacement@example.com');
+      assert.equal(await f.page.getByRole('button', {name: 'Resend in 60s', exact: true}).isDisabled(), true);
+    } else {
+      await f.page.reload({waitUntil: 'networkidle'});
+      assert.equal(await main.isVisible(), true); assert.equal(await view.isVisible(), false);
+    }
+    assert.equal(requests, replacement ? 3 : 2);
+  } finally { releaseResend(); releaseReplacement(); await f.close(); }
+});

@@ -25,7 +25,7 @@ import {createFixtureSession} from './fixture-session.mjs';
 const LIVE_ORIGIN = 'https://supatrace.dev';
 const root = normalize(fileURLToPath(new URL('../public/', import.meta.url)));
 const agentRoot = normalize(fileURLToPath(new URL('../agent/', import.meta.url)));
-const types = {'.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.py': 'text/x-python; charset=utf-8'};
+const types = {'.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.py': 'text/x-python; charset=utf-8'};
 // Copied from aws/template.yaml SecurityHeaders.
 export const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
 const pageHeaders = {'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'x-frame-options': 'DENY', 'content-security-policy': CSP};

@@ -254,7 +254,16 @@ export async function handle(request,baseEnv){
   url=route.url;path=url.pathname;
  }
  // A session carries its SSO binding (see Workspaces.ssoMissing); a token or key has none.
- const signedIn=token?null:await sessionRow(request,store);
+ // Browser startup may discover a missing/expired session without a console 401.
+ // Only this explicit GET probe is optional; protected routes and /api/me keep 401.
+ let signedIn=null;
+ if(!token){
+  try{signedIn=await sessionRow(request,store);}
+  catch(error){
+   if(request.method==='GET'&&path==='/api/me'&&url.searchParams.get('optional')==='1'&&error.status===401&&error.code==='sign_in_required')return json({signed_out:true});
+   throw error;
+  }
+ }
  const actor=token?token.tenant_id:signedIn.tenant_id;
  if(path==='/api/account/delete'){if(token)throw new HttpError(403,'session_required');return await deleteAccount(request,env,actor,signedIn);}
  // Tokens are created and revoked from a signed-in browser session only, never with a token.

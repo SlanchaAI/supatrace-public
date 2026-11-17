@@ -21,7 +21,7 @@ const probeAnswered=async page=>assert.equal(await page.evaluate(()=>globalThis.
 const ready=async page=>{await page.locator('#shell').waitFor({state:'visible'});await page.locator('#usage').filter({hasText:'reserved'}).waitFor({state:'attached'});};
 for(const width of [1280,390,320])test(`503 startup has a keyboard retry and restores the workspace at ${width}px`,{timeout:30000},async()=>{
  const f=await fixture({width,height:800});let failed=true,reads=0;
- await f.page.route('**/api/me',route=>{reads++;return failed?route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'temporarily_unavailable'})}):route.continue();});
+ await f.page.route('**/api/me?optional=1',route=>{reads++;return failed?route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'temporarily_unavailable'})}):route.continue();});
  try{
   await f.page.goto(f.live.origin+'/app/',{waitUntil:'networkidle'});await f.page.getByRole('button',{name:'Retry sign-in check',exact:true}).waitFor();
   assert.match(await f.page.locator('#status').textContent(),/workspace could not be reached/);assert.doesNotMatch(await f.page.locator('#status').textContent(),/upload|receipt/);assert.equal(await f.page.locator('#shell').isVisible(),false);assert.equal(reads,1);
@@ -34,7 +34,7 @@ for(const width of [1280,390,320])test(`503 startup has a keyboard retry and res
 for(const path of ['me','projects'])test(`a stalled ${path} times out and late completion cannot replace the retry`,{timeout:30000},async()=>{
  const f=await fixture();let stalled=true,reads=0,release;const pending=new Promise(resolve=>release=resolve);
  await f.page.clock.install();await watchProbe(f.page);
- await f.page.route('**/api/'+path,async route=>{reads++;if(stalled){await pending;try{await route.fulfill({status:503,contentType:'application/json',body:'{"error":"late-synthetic-error"}'});}catch{}}else await route.continue();});
+ await f.page.route('**/api/'+(path==='me'?'me?optional=1':path),async route=>{reads++;if(stalled){await pending;try{await route.fulfill({status:503,contentType:'application/json',body:'{"error":"late-synthetic-error"}'});}catch{}}else await route.continue();});
  try{
   await f.page.goto(f.live.origin+'/app/',{waitUntil:'domcontentloaded'});await f.page.locator('#startup-cancel').waitFor();
   await until(()=>reads>0);await probeAnswered(f.page);
@@ -46,7 +46,7 @@ for(const path of ['me','projects'])test(`a stalled ${path} times out and late c
 });
 test('cancel and page interruption require deliberate retry and ignore the old response',{timeout:30000},async()=>{
  const f=await fixture();let held=true,reads=0;const routes=[];
- await f.page.route('**/api/me',route=>{reads++;if(held){routes.push(route);return;}return route.continue();});
+ await f.page.route('**/api/me?optional=1',route=>{reads++;if(held){routes.push(route);return;}return route.continue();});
  try{
   await f.page.goto(f.live.origin+'/app/',{waitUntil:'domcontentloaded'});await until(()=>routes.length===1);await f.page.locator('#startup-cancel').click();await f.page.locator('#status').filter({hasText:'cancelled'}).waitFor();assert.equal(await f.page.locator('#startup-retry').evaluate(n=>n===document.activeElement),true);
   await f.page.locator('#startup-retry').click();await until(()=>routes.length===2);await f.page.locator('#startup-cancel').waitFor();
@@ -57,7 +57,7 @@ test('cancel and page interruption require deliberate retry and ignore the old r
 });
 test('429 respects Retry-After without issuing a request when the cooldown ends',{timeout:30000},async()=>{
  const f=await fixture();let limited=true,reads=0;await f.page.clock.install();
- await f.page.route('**/api/me',route=>{reads++;return limited?route.fulfill({status:429,headers:{'retry-after':'2'},contentType:'application/json',body:'{"error":"rate_limit"}'}):route.continue();});
+ await f.page.route('**/api/me?optional=1',route=>{reads++;return limited?route.fulfill({status:429,headers:{'retry-after':'2'},contentType:'application/json',body:'{"error":"rate_limit"}'}):route.continue();});
  try{
   await f.page.goto(f.live.origin+'/app/',{waitUntil:'networkidle'});assert.equal(await f.page.locator('#startup-retry').isDisabled(),true);assert.match(await f.page.locator('#status').textContent(),/Wait 2 seconds/);
   await f.page.clock.fastForward(2001);assert.equal(await f.page.locator('#startup-retry').isEnabled(),true);assert.equal(reads,1);
@@ -99,14 +99,14 @@ test('a page that stays out of date says so instead of hanging on the session ch
   assert.equal(await f.page.locator('#shell').isVisible(),false);assert.deepEqual(f.posts,[]);
  }finally{await f.close();}
 });
-// Reachability probe and concurrent startup reads (#95).
+// Reachability probe and session-gated startup reads (#95, #354).
 test('a dead API is named at the probe deadline while the reads keep waiting, and the final message says both checks failed',{timeout:30000},async()=>{
  const f=await fixture();let dead=true;const seen=[],held=[];await f.page.clock.install();
  await f.page.route('**/api/**',route=>{const path=new URL(route.request().url()).pathname;if(dead){seen.push(path);held.push(route);return;}return route.continue();});
  try{
   await f.page.goto(f.live.origin+'/app/',{waitUntil:'domcontentloaded'});await f.page.locator('#startup-cancel').waitFor();
-  // The identity read, the projects read and the probe all leave together.
-  await until(()=>seen.length===3);assert.deepEqual([...seen].sort(),['/api/auth/providers','/api/me','/api/projects']);
+  // Only the identity read and public provider probe leave before session confirmation.
+  await until(()=>seen.length===2);assert.deepEqual([...seen].sort(),['/api/auth/providers','/api/me']);
   await f.page.clock.fastForward(5000);assert.match(await f.page.locator('#status').textContent(),/Checking your session/);
   await f.page.clock.fastForward(1001);await f.page.locator('#status').filter({hasText:'A reachability check got no response from SupaTrace. Still waiting for the sign-in check'}).waitFor();
   // The probe informs; it does not end the wait. Cancel is still offered and Retry is not yet.
@@ -135,7 +135,7 @@ test('a refused connection is reported at once',{timeout:30000},async()=>{
  }finally{await f.close();}
 });
 test('an API that answers the probe but stalls the account read is reported as slow, not unreachable',{timeout:30000},async()=>{
- const f=await fixture();const held=[];await f.page.clock.install();await watchProbe(f.page);await f.page.route('**/api/me',route=>{held.push(route);});
+ const f=await fixture();const held=[];await f.page.clock.install();await watchProbe(f.page);await f.page.route('**/api/me?optional=1',route=>{held.push(route);});
  try{
   await f.page.goto(f.live.origin+'/app/',{waitUntil:'domcontentloaded'});await until(()=>held.length===1);await probeAnswered(f.page);
   await f.page.clock.fastForward(6001);assert.match(await f.page.locator('#status').textContent(),/Checking your session/);

@@ -56,7 +56,7 @@ export function mountWorkspaceStartup({request,onReady,mountSignIn}){
   });
   let identity;
   try{
-   identity=await loadStartupIdentity(request,{signal:controller.signal});
+   identity=await loadStartupIdentity((path,signal)=>request(path==='me'?'me?optional=1':path,signal),{signal:controller.signal});
   }catch(error){
    if(!current())return;
    if(error.message==='sign_in_required'){

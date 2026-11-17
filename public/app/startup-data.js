@@ -46,20 +46,20 @@ export async function probeReachable({fetcher=globalThis.fetch,signal,timeoutMs=
  const providers=bounded(()=>response.json()).then(value=>value&&typeof value==='object'&&!Array.isArray(value)?value:null,()=>null).finally(release);
  return {reachable:true,providers};
 }
-// `me` and `projects` are requested together, so a healthy load costs one round trip, not two. An error from `me`
-// is reported first and stops `projects`, which keeps the signed-out path exactly as it was.
+// Confirm the session before requesting private projects. A signed-out startup
+// costs one identity probe and never sends an unauthorized projects request.
 export function loadStartupIdentity(request,options){
  return startupRead(async signal=>{
   const child=new AbortController(),relay=()=>child.abort();signal.addEventListener('abort',relay,{once:true});
   const call=path=>Promise.resolve().then(()=>{if(child.signal.aborted)throw Error('startup_cancelled');return request(path,child.signal);});
-  // Whatever ends the wait (both answers, or the first error that counts), the other read is stopped.
   try{
-   const identity=call('me'),projects=call('projects');projects.catch(()=>{});
-   const me=await identity;
+   const me=await call('me');
    if(signal.aborted)throw Error('startup_cancelled');
-   const data=await projects;
+   if(me?.signed_out===true)throw Error('sign_in_required');
+   if(!me||typeof me.project_id!=='string'||!/^proj_[a-f0-9]{32}$/.test(me.project_id))throw Error('project_unavailable');
+   const data=await call('projects');
    if(signal.aborted)throw Error('startup_cancelled');
-   if(!me||typeof me.project_id!=='string'||!/^proj_[a-f0-9]{32}$/.test(me.project_id)||!data||!Array.isArray(data.projects)||data.projects.length<1||data.projects.length>20||!data.projects.some(p=>p.id===me.project_id)||data.projects.some(p=>!/^proj_[a-f0-9]{32}$/.test(p?.id??''))||new Set(data.projects.map(p=>p.id)).size!==data.projects.length)throw Error('project_unavailable');
+   if(!data||!Array.isArray(data.projects)||data.projects.length<1||data.projects.length>20||!data.projects.some(p=>p.id===me.project_id)||data.projects.some(p=>!/^proj_[a-f0-9]{32}$/.test(p?.id??''))||new Set(data.projects.map(p=>p.id)).size!==data.projects.length)throw Error('project_unavailable');
    return {me,data};
   }finally{child.abort();signal.removeEventListener('abort',relay);}
  },options);

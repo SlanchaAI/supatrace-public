@@ -37,6 +37,7 @@
   "tests/connector-files.test.mjs",
   "tests/connector-roundtrip.test.mjs",
   "tests/startup-data.test.mjs",
+  "tests/signed-out-session.test.mjs",
   "tests/workload-economics.test.mjs",
   "tests/account-identity.test.mjs",
   "tests/event-data.test.mjs",

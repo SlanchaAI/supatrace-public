@@ -54,7 +54,7 @@
 .landing.remodel.docs main>.preview-note{margin-bottom:34px;max-width:760px}
 .landing.remodel.docs main section .preview-note{margin:0 0 20px;max-width:760px}
 .landing.remodel.docs main section>p,.landing.remodel.docs main section li{font-size:14px;color:#3d4438}
-.landing.remodel.docs main code{font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:#232922;overflow-wrap:anywhere}
+.landing.remodel.docs main code{font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:#232922;overflow-wrap:normal;word-break:normal}
 .landing.remodel.docs main :not(pre)>code{background:#ebe7d6;border-radius:3px;padding:1px 5px}
 .landing.remodel.docs .snippet{position:relative;margin:14px 0 18px;max-width:820px}
 .landing.remodel.docs main pre{margin:14px 0 18px;max-width:820px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px 18px;overflow-x:auto}
@@ -167,3 +167,6 @@
 .guide pre:focus-visible{outline-color:#c5dda8}
 
 .landing.remodel.docs .status{text-transform:none}
+
+/* Inline names keep their words intact, including inside mobile table cards. */
+.landing.remodel main :not(pre)>code{overflow-wrap:normal;word-break:normal}
