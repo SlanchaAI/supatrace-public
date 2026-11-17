@@ -1,0 +1,48 @@
+# SupaTrace
+
+> Agent traces. Kept simple. Connect a write-only agent, inspect reviewed traces and export portable JSON. SupaTrace is a small alpha.
+
+SupaTrace stores agent traces you review before upload: explicit JSON batches and reviewed Claude Code snapshots. Opt-in Claude hooks are a beta; no silent scanning.
+
+- Capture & store: review a small JSON batch or selected Claude Code snapshot before uploading.
+- Set up agents: you approve a setup code. The write-only key can upload, never read your traces.
+- Inspect & export: browse run events and export original JSON. Review exports before sharing.
+
+Current alpha limits: Free allowance of 50,000 spans per UTC month, 1 GB stored and 2 projects per organization; 100 events / 512 KiB per batch; write-only ingest keys (st_pub_), revocable, with no expiry unless one is set; setup-code keys expire after 30 days. Base $9.99 and Pro $25.99 monthly subscriptions are billed through Stripe. Shared service caps can stop an upload before an organization reaches its own allowance. Contact support if a service cap blocks your paid plan.
+
+## Key pages
+
+- [Home](https://supatrace.dev/): product overview and sign-in
+- [Setup guide](https://supatrace.dev/docs/quickstart/): Home snippets, OTLP, then reviewed scripts; limits and recovery notes
+- [Pricing](https://supatrace.dev/pricing/): approved Free, Base, Pro and Enterprise plans; self-serve checkout remains Stripe billing
+- [Integrations](https://supatrace.dev/integrations/): frameworks, providers, importers and agent tools with their status today (available, beta, preview or planned)
+- [Changelog](https://supatrace.dev/changelog/): user-visible changes from merged pull requests, with merge dates and whether each is deployed
+- [Enterprise](https://supatrace.dev/enterprise/): custom contracts; sales and support at support@supatrace.dev; SLA terms require agreement
+- [Security](https://supatrace.dev/security/): storage, encryption and access facts from the deployment template, subprocessors, and what is not in place (no SOC 2, DPA or HIPAA)
+- [Status](https://supatrace.dev/status/): live reachability checks from the browser; no monitoring feed or hosted status page is published yet
+
+## Docs
+
+SDK preview, package coming: not on PyPI or npm. Checkout-only SDKs and importers are unavailable to outside users while the repository is private. Home key snippets, reviewed scripts and OTLP/HTTP traces (protobuf and JSON) work on supatrace.dev. No gRPC, metrics or logs. Langfuse-compatible ingest routes answer; SDK compatibility stays beta with local-only acceptance. Ingest keys from Home or API keys do not expire by default; agent-pairing keys last 30 days.
+
+- [Docs overview](https://supatrace.dev/docs/): Docs overview: what is live today, preview and planned
+- [Quickstart](https://supatrace.dev/docs/quickstart/): Quickstart: Home key and snippet, then OTLP, then reviewed scripts
+- [OpenAI guide (Python and Node)](https://supatrace.dev/docs/frameworks/openai/): OpenAI guide (Python and Node)
+- [Anthropic guide](https://supatrace.dev/docs/frameworks/anthropic/): Anthropic guide
+- [LangChain guide](https://supatrace.dev/docs/frameworks/langchain/): LangChain guide
+- [LlamaIndex guide](https://supatrace.dev/docs/frameworks/llamaindex/): LlamaIndex guide
+- [Vercel AI SDK guide](https://supatrace.dev/docs/frameworks/vercel-ai-sdk/): Vercel AI SDK guide
+- [OpenTelemetry](https://supatrace.dev/docs/frameworks/opentelemetry/): OpenTelemetry: hosted OTLP/HTTP traces available; Langfuse SDK compatibility beta; checkout-only file imports unavailable to outside users
+- [Keys](https://supatrace.dev/docs/keys/): Keys: ingest keys (write-only), secret keys (read and write) and setup-code keys (write-only, 30 days); no expiry by default for ingest and secret keys; revocable
+- [Management API](https://supatrace.dev/docs/management-api/): Management API: read-only personal access tokens and the /api/v1 endpoints for workspaces, keys, usage, traces and the ingest log
+- [Limits](https://supatrace.dev/docs/limits/): Limits: current alpha limits
+- [Export](https://supatrace.dev/docs/export/): Export: per-trace, per-environment and whole-workspace JSON export
+- [Importers](https://supatrace.dev/docs/importers/): Importers: provider file imports, LangSmith and Braintrust API imports, Claude Code
+
+- [Terms of Service](https://supatrace.dev/terms.html): effective November 16, 2026; Slancha, Inc.
+
+- [Privacy Policy](https://supatrace.dev/privacy.html): effective November 16, 2026; Slancha, Inc.
+
+- [Acceptable Use Policy](https://supatrace.dev/aup.html): effective November 16, 2026; Slancha, Inc.
+
+- [Subprocessors](https://supatrace.dev/subprocessors.html): effective November 16, 2026; Slancha, Inc.

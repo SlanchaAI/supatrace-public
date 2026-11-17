@@ -9,6 +9,7 @@ import {handle} from '../src/aws-api.mjs';
 import {digest} from '../src/aws-auth.mjs';
 import {decodeTraceRequest, encodeTraceResponse, encodeStatus, ProtobufError} from '../src/otlp-protobuf.mjs';
 import {planOtlpBatches, OTLP_LIMITS} from '../src/otlp-ingest.mjs';
+import {OTLP_CURL} from '../scripts/otlp-snippets.mjs';
 import {lambdaResult} from '../aws/handler.mjs';
 
 const fixture = name => readFileSync(new URL('./fixtures/otlp/' + name, import.meta.url));
@@ -97,6 +98,12 @@ test('bad key, missing key and unusable requests get an OTLP Status with a human
     const {key} = await session(live);
     const missing = await post(live, nodeJson, {'content-type': 'application/json'});
     assert.equal(missing.status, 401); const m = await missing.json(); assert.equal(m.code, 16); assert.equal(m.error, 'write_key_required'); assert.match(m.message, /Authorization: Bearer/);
+    const malformed=[];
+    for(const headers of [{'x-supatrace-key':'short'},{'x-supatrace-key':'wrong_'+'a'.repeat(43)},{authorization:'Bearer short'},{authorization:'Bearer st_bad_'+'a'.repeat(43)},{authorization:'Bearer st_pub_'+'b'.repeat(43)}]){
+      const response=await post(live,nodeJson,{'content-type':'application/json',...headers});assert.equal(response.status,401);
+      const error=await response.json();assert.equal(error.code,16);assert.equal(error.error,'invalid_write_key');assert.match(error.message,/Copy the full key that starts with st_pub_/);assert.match(error.message,/Create or copy a key under API keys in the app/);malformed.push(error);
+    }
+    for(const error of malformed)assert.deepEqual(error,malformed[0]);
     const wrong = await post(live, pythonProto, {'content-type': 'application/x-protobuf', authorization: 'Bearer ' + 'b'.repeat(43)});
     assert.equal(wrong.status, 401); assert.equal(wrong.headers.get('content-type'), 'application/x-protobuf');
     const status = readMessage(new Uint8Array(await wrong.arrayBuffer())); assert.equal(status[1], 16); assert.match(Buffer.from(status[2]).toString(), /not recognised/);
@@ -259,3 +266,17 @@ test('shared resource and scope are processed once, so a huge shared attribute c
 import './management-api.test.mjs';
 import './drains.test.mjs';
 import './ingest-log.test.mjs';
+
+
+test('the published curl body ingests and reads back using either header', async () => {
+  assert.ok(OTLP_CURL.split('\n').length <= 6);
+  const body=JSON.parse(OTLP_CURL.split("-d '")[1].split("'\n")[0]);
+  const live=await start();try{
+    const {cookie,key}=await session(live);
+    for(const headers of [{'x-supatrace-key':key},{authorization:'Bearer '+key}]){
+      const response=await post(live,JSON.stringify(body),{'content-type':'application/json',...headers});assert.equal(response.status,200);
+    }
+    const trace=body.resourceSpans[0].scopeSpans[0].spans[0].traceId;
+    assert.equal((await events(live,cookie,'otlp.'+trace)).length,1);
+  }finally{await live.close();}
+});

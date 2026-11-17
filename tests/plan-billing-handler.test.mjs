@@ -28,12 +28,12 @@ for (const kind of ['valid', 'malformed', 'live', 'unreadable']) test('Lambda bi
     const call = path => handler({rawPath: '/api/' + path, requestContext: {http: {method: 'GET', sourceIp: '127.0.0.1'}}, headers: {host: 'supatrace.dev'}, cookies: ['__Host-supatrace=' + token]});
     const catalog = await call('billing/catalog'); assert.equal(catalog.statusCode, 200);
     const body = JSON.parse(catalog.body);
-    assert.equal(body.checkout_available, kind === 'valid');
-    assert.equal(body.mode, kind === 'valid' ? 'stripe_test' : 'unavailable');
+    assert.equal(body.checkout_available, ['valid','live'].includes(kind));
+    assert.equal(body.mode, ['valid','live'].includes(kind) ? (kind==='live'?'stripe_live':'stripe_test') : 'unavailable');
     assert.equal((await call('me')).statusCode, 200, 'bad billing secrets cannot break a valid sign-in');
     assert.equal((await call('auth/providers')).statusCode, 200);
     assert.deepEqual(reads, ['synthetic-github', 'synthetic-billing'], 'warm calls cache success or back off failure');
-    assert.equal(warnings.length, kind === 'valid' ? 0 : 1);
+    assert.equal(warnings.length, ['valid','live'].includes(kind) ? 0 : 1);
     if (warnings.length) assert.deepEqual(warnings[0], {event: 'plan_billing_unavailable', reason: kind === 'unreadable' ? 'secret_unreadable' : 'plan_billing_test_key_required'});
   } finally { for (const [key, value] of Object.entries(previous)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } }
 });

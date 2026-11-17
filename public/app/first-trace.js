@@ -40,6 +40,7 @@ export function mountFirstTrace({document,origin,onOpen=()=>{},copy=null,now=()=
   $('first-snippets').hidden=!shown;
   $('first-dismiss').hidden=!shown;
   $('first-key').hidden=!!shown;
+  if(shown)$('first-create').hidden=true;
   if(shown){$('first-snippet').textContent=shown[tab];$('first-how').textContent=HOW[tab];for(const name of Object.keys(HOW)){const button=$('first-tab-'+name);button.setAttribute('aria-selected',String(name===tab));}}
   else{$('first-snippet').textContent='';$('first-how').textContent='';}
   $('first-wait').hidden=!waiting&&!arrived;
@@ -74,6 +75,6 @@ export function mountFirstTrace({document,origin,onOpen=()=>{},copy=null,now=()=
    $('first-trace').hidden=total>0&&!shown&&!waiting&&!arrived;paint();
   },
   get waiting(){return waiting;},
-  reset(){shown=null;keyAt=null;waiting=false;arrived=null;expected=null;tab='curl';$('first-key-note').textContent='';$('first-copy-note').textContent='';paint();}
+  reset(){$('first-create').hidden=true;shown=null;keyAt=null;waiting=false;arrived=null;expected=null;tab='curl';$('first-key-note').textContent='';$('first-copy-note').textContent='';paint();}
  };
 }

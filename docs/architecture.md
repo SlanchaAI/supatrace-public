@@ -6,6 +6,6 @@ Local development runs the same handlers with in-memory storage and synthetic id
 
 No automatic redaction applies to uploaded trace data or account archives. Review data before upload or sharing. Redaction of selected fields does not guarantee anonymity. Account export reads bounded pages and is not a point-in-time snapshot.
 
-Hosted billing uses Stripe TEST mode. Checkout return alone does not establish fulfillment. The billing adapter requires a verified event and explicit configuration. Live billing is outside the local quickstart.
+Hosted billing uses Stripe live mode. Checkout return alone does not establish fulfillment. The billing adapter requires a verified event and explicit configuration. Live billing is outside the local quickstart.
 
 Sign-in providers are disabled when required configuration is absent. See [sign-in configuration](sign-in.md). Trace ingest uses scoped keys; local developer identity routes are available only in the loopback composition.

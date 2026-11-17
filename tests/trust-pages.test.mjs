@@ -53,7 +53,7 @@ test('/security lists what is not in place and claims no certification', () => {
   for (const item of ['SOC 2:', 'ISO 27001:', 'HIPAA:', 'DPA:', 'Penetration test:', 'Security contact and disclosure policy:', 'Deletion:', 'Terms of service and privacy policy:']) assert.ok(missing.includes(`<strong>${item}</strong>`), item);
   assert.match(shown, /SupaTrace holds no security certification/);
   assert.doesNotMatch(shown, /SOC 2 (Type|compliant|certified)|ISO 27001 certified|HIPAA[- ]compliant|GDPR[- ]compliant|bank-grade|military-grade|end-to-end encrypt/i);
-  // Only providers the deployment really uses are listed; Stripe is not live.
+  // Only providers the deployment uses are listed, including Stripe for live billing.
   const table = security.slice(security.indexOf('id="subprocessors"'), security.indexOf('id="not-yet"'));
   assert.deepEqual([...table.matchAll(/<th scope="row">([^<]+)<\/th>/g)].map(match => match[1]), ['Amazon Web Services', 'GitHub', 'Google', 'Stripe', 'Cloudflare']);
   assert.doesNotMatch(table, /Datadog|Sentry|OpenAI|Anthropic/);
@@ -61,7 +61,7 @@ test('/security lists what is not in place and claims no certification', () => {
   assert.equal(CONTACT.security, 'security@supatrace.dev');
   assert.equal(existsSync(pageUrl('.well-known/security.txt')), false);
   assert.match(security, /mailto:security@supatrace\.dev/);
-  assert.match(shown, /Stripe handles TEST-mode checkout/);
+  assert.match(shown, /Stripe handles Checkout, subscriptions, invoices and payment processing/);
   assert.match(shown, /scheduled worker erases payload versions/);
   assert.match(shown, /Self-service account, organization, project and environment deletion/);
 });

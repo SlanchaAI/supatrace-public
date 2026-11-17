@@ -1,4 +1,4 @@
-// Stripe TEST-mode plan billing (src/plan-billing.mjs), against the real handler and the real Stripe SDK. The SDK's
+// Stripe plan billing (src/plan-billing.mjs), against the real handler and the real Stripe SDK. The SDK's
 // HTTP client is an in-process stand-in for api.stripe.com that refuses any route it does not model, so no request
 // leaves the machine. Webhook signatures are made and verified by the SDK's own code.
 import test from 'node:test';
@@ -32,9 +32,10 @@ function fakeStripe({livemode = false, prices = null, portal = true, liveKinds =
     else if (route === 'GET /v1/billing/meters/' + meter.id) object = meter;
     else if (route === 'GET /v1/billing_portal/configurations') object = list(portal ? [{id: 'bpc_test1', object: 'billing_portal.configuration', active: true, livemode, metadata: {app: 'supatrace'}}] : []);
     else if (route === 'POST /v1/customers') { const org = body.get('metadata[supatrace_org]'), id = 'cus_' + Buffer.from(org).toString('hex').slice(0, 20); object = {id, object: 'customer', livemode, metadata: {supatrace_org: org}}; state.customers.set(id, object); state.idempotency = new Headers(request.headers).get('idempotency-key'); }
+    else if (request.method === 'GET' && u.pathname.startsWith('/v1/customers/')) object = state.customers.get(u.pathname.split('/').at(-1)) ?? {id:u.pathname.split('/').at(-1),object:'customer',livemode};
     else if (route === 'POST /v1/checkout/sessions') {
       const id = 'cs_test_' + (++state.n);
-      object = {id, object: 'checkout.session', livemode, mode: body.get('mode'), customer: body.get('customer'), client_reference_id: body.get('client_reference_id'), price: body.get('line_items[0][price]'), success_url: body.get('success_url'), cancel_url: body.get('cancel_url'),
+      object = {id, object: 'checkout.session', livemode, mode: body.get('mode'), customer: body.get('customer'), client_reference_id: body.get('client_reference_id'), price: body.get('line_items[0][price]'), billing_address_collection:body.get('billing_address_collection'), allow_promotion_codes:body.get('allow_promotion_codes'), success_url: body.get('success_url'), cancel_url: body.get('cancel_url'),
         metadata: {supatrace_org: body.get('metadata[supatrace_org]'), plan: body.get('metadata[plan]')}, subscription_org: body.get('subscription_data[metadata][supatrace_org]'), url: 'https://checkout.stripe.com/c/pay/' + id};
       state.sessions.set(id, object);
     }
@@ -52,21 +53,21 @@ function fakeStripe({livemode = false, prices = null, portal = true, liveKinds =
     else if (route === 'POST /v1/billing_portal/sessions') object = {id: 'bps_1', object: 'billing_portal.session', livemode, customer: body.get('customer'), configuration: body.get('configuration'), return_url: body.get('return_url'), url: 'https://billing.stripe.com/p/session/test_1'};
     if (!object) throw new Error('unmodelled Stripe route ' + route);
     // A single kind of object can be made live-mode, to prove each read refuses it.
-    if (liveKinds.includes(object.object)) object = {...object, livemode: true}; else if (object.object === 'list' && object.data.some(item => liveKinds.includes(item.object))) object = {...object, data: object.data.map(item => ({...item, livemode: true}))};
+    if (liveKinds.includes(object.object)) object = {...object, livemode: !livemode}; else if (object.object === 'list' && object.data.some(item => liveKinds.includes(item.object))) object = {...object, data: object.data.map(item => ({...item, livemode: !livemode}))};
     const snapshot = JSON.stringify(object);
     if (route === 'GET /v1/subscriptions' && state.pause) { const pause = state.pause; state.pause = null; pause.enter(); await pause.wait; }
     return new Response(snapshot, {headers: {'content-type': 'application/json', 'request-id': 'req_test'}});
   })}); };
   /** What paying at Checkout does in Stripe: an active subscription on the session's customer and price. */
-  state.pay = (session, {status = 'active'} = {}) => { const id = 'sub_' + (++state.n), s = state.sessions.get(session); const sub = {id, object: 'subscription', livemode, customer: s.customer, status, cancel_at_period_end: false, metadata: {supatrace_org: s.subscription_org}, items: {data: [{id: 'si_fixed' + state.n, price: {id: s.price}, current_period_end: 1800000000}]}}; state.subscriptions.set(id, sub); return sub; };
+  state.pay = (session, {status = 'active'} = {}) => { const id = 'sub_' + (++state.n), s = state.sessions.get(session); const sub = {id, object: 'subscription', livemode, customer: s.customer, status, cancel_at_period_end: false, metadata: {supatrace_org: s.subscription_org}, items: {data: [{id: 'si_fixed' + state.n, price: {id: s.price,livemode}, current_period_end: 1800000000}]}}; state.subscriptions.set(id, sub); return sub; };
   return {client, state};
 }
-async function world({stripe = fakeStripe(), webhookSecret = WEBHOOK} = {}) {
-  let environment; const live = await start({configureEnvironment: env => { environment = env; env.planBilling = composePlanBilling({secretKey: KEY, webhookSecret, StripeClient: stripe.client}); }});
+async function world({mode='test',stripe = fakeStripe({livemode:mode==='live'}), webhookSecret = WEBHOOK} = {}) {
+  let environment; const live = await start({configureEnvironment: env => { environment = env; env.planBilling = composePlanBilling({secretKey: 'sk_'+mode+'_'+'k'.repeat(24), webhookSecret, StripeClient: stripe.client}); }});
   let cookie = ''; const tenant = await live.signIn({addCookies: async value => { cookie = value.map(c => c.name + '=' + c.value).join('; '); }}, 4242);
   const call = (method, path, data, who = cookie) => fetch(live.origin + '/api/' + path, {method, headers: {cookie: who, origin: live.origin, ...(method === 'POST' ? {'content-type': 'application/json'} : {})}, ...(method === 'POST' ? {body: JSON.stringify(data ?? {})} : {})});
   const row = () => live.store.client.items.get('TENANT#' + tenant + '\0META');
-  const hook = async (event, secret = WEBHOOK) => { const payload = JSON.stringify({id: 'evt_' + Math.random().toString(36).slice(2), object: 'event', livemode: false, ...event}), signer = new Stripe(KEY); return fetch(live.origin + '/api/billing/webhook', {method: 'POST', headers: {'content-type': 'application/json', 'stripe-signature': await signer.webhooks.generateTestHeaderStringAsync({payload, secret})}, body: payload}); };
+  const hook = async (event, secret = WEBHOOK) => { const payload = JSON.stringify({id: 'evt_' + Math.random().toString(36).slice(2), object: 'event', livemode: mode==='live', ...event}), signer = new Stripe(KEY); return fetch(live.origin + '/api/billing/webhook', {method: 'POST', headers: {'content-type': 'application/json', 'stripe-signature': await signer.webhooks.generateTestHeaderStringAsync({payload, secret})}, body: payload}); };
   return {live, tenant, call, row, hook, state: stripe.state, environment};
 }
 const ok = async (response, status = 200) => { assert.equal(response.status, status, await response.clone().text()); return response.json(); };
@@ -77,7 +78,7 @@ test('paid plan changes preserve usage items, wait for payment and reconcile the
     await refused(await w.call('POST', 'billing/change', {plan: 'pro'}), 409, 'no_subscription');
     await ok(await w.call('POST', 'billing/subscribe', {plan: 'base'}));
     const sub = w.state.pay([...w.state.sessions.keys()][0]); await ok(await w.call('POST', 'billing/sync', {}));
-    const usage = {id: 'si_meter', price: {id: 'price_usage'}}; sub.items.data.push(usage);
+    const usage = {id: 'si_meter', price: {id: 'price_usage',livemode:false}}; sub.items.data.push(usage);
     for (const body of [{plan: 'free'}, {plan: 'enterprise'}, {plan: 'pro', extra: true}]) await refused(await w.call('POST', 'billing/change', body), 400, 'invalid_billing_request');
     w.state.pending = true;
     const pending = await ok(await w.call('POST', 'billing/change', {plan: 'pro'}));
@@ -107,12 +108,12 @@ test('paid plan changes preserve usage items, wait for payment and reconcile the
   } finally { await w.live.close(); }
 });
 
-test('only a Stripe test key composes plan billing: live and malformed keys are refused', () => {
+test('secret and restricted keys compose their mode; public and malformed keys are refused', () => {
   const {client} = fakeStripe();
-  for (const bad of ['sk_live_' + 'k'.repeat(24), 'rk_live_' + 'k'.repeat(24), 'pk_test_' + 'k'.repeat(24), 'sk_test_short', '', null, undefined, 'sk_test_' + 'k'.repeat(24) + ' ']) assert.throws(() => composePlanBilling({secretKey: bad, StripeClient: client}), /plan_billing_test_key_required/, String(bad));
+  for (const bad of ['pk_live_' + 'k'.repeat(24), 'pk_test_' + 'k'.repeat(24), 'sk_test_short', '', null, undefined, 'sk_test_' + 'k'.repeat(24) + ' ']) assert.throws(() => composePlanBilling({secretKey: bad, StripeClient: client}), /plan_billing_test_key_required/, String(bad));
   for (const bad of ['secret', 'whsec_short', 7]) assert.throws(() => composePlanBilling({secretKey: KEY, webhookSecret: bad, StripeClient: client}), /plan_billing_webhook_secret_invalid/);
   assert.throws(() => composePlanBilling({secretKey: KEY}), /plan_billing_client_required/);
-  assert.equal(composePlanBilling({secretKey: 'rk_test_' + 'k'.repeat(24), StripeClient: client}).mode, 'test');
+  for(const mode of ['test','live'])for(const prefix of ['sk','rk'])assert.equal(composePlanBilling({secretKey: prefix+'_'+mode+'_'+'k'.repeat(24), StripeClient:client}).mode,mode);
 });
 
 test('without plan billing configured the catalog still lists the plans and says checkout is unavailable', async () => {
@@ -225,7 +226,7 @@ test('a signed Stripe event syncs the organization it names; forged, unsigned, l
     // The real event: the plan comes from reading the subscription back, not from the event body.
     assert.deepEqual(await ok(await hook(event('customer.subscription.created', {...sub, items: {data: [{price: {id: PRICES.pro}}]}}))), {received: true, handled: true, plan: 'base'});
     assert.equal(row().plan_id, 'base');
-    assert.deepEqual(await ok(await hook(event('checkout.session.completed', {id: 'cs_test_1', customer, client_reference_id: tenant, metadata: {supatrace_org: tenant}}))), {received: true, handled: true, plan: 'base'});
+    assert.deepEqual(await ok(await hook(event('checkout.session.completed', {id: 'cs_test_1',livemode:false, customer, client_reference_id: tenant, metadata: {supatrace_org: tenant}}))), {received: true, handled: true, plan: 'base'});
     // Cancellation arrives with nobody signed in.
     sub.status = 'canceled'; assert.deepEqual(await ok(await hook(event('customer.subscription.deleted', sub))), {received: true, handled: true, plan: 'free'});
     assert.equal(row().plan_id, undefined);
@@ -434,4 +435,98 @@ test('cold Checkout overlaps independent reads and tolerates provider latency ab
     assert.equal(state.calls.length, 5);
     assert.ok(Date.now() - started < 7000, 'five requests take three provider waits, with room for local scheduling');
   } finally { await live.close(); }
+});
+
+for(const mode of ['test','live']) test(`${mode} billing completes checkout, signed sync, portal and plan change`,async()=>{
+ const w=await world({mode});try{
+  const checkout=await ok(await w.call('POST','billing/subscribe',{plan:'base'}));assert.equal(checkout.test_mode,mode==='test');
+  const session=[...w.state.sessions.values()][0];
+  if(mode==='live'){assert.equal(session.billing_address_collection,'auto');assert.equal(session.allow_promotion_codes,'false');}
+  const sub=w.state.pay(session.id);
+  await ok(await w.hook({type:'customer.subscription.created',data:{object:sub}}));
+  assert.equal(w.row().plan_source,'stripe_'+mode);assert.equal(w.row().stripe_mode,mode);
+  assert.equal((await ok(await w.call('GET','entitlements'))).plan_id,'base');
+  const catalog=await ok(await w.call('GET','billing/catalog'));assert.equal(catalog.mode,'stripe_'+mode);assert.equal(catalog.test_mode,mode==='test');
+  assert.equal((await ok(await w.call('POST','billing/manage',{}))).test_mode,mode==='test');
+  assert.equal((await ok(await w.call('POST','billing/change',{plan:'pro'}))).plan,'pro');
+  assert.equal((await ok(await w.call('GET','usage'))).monthly.test_mode,mode==='test');
+ }finally{await w.live.close();}
+});
+
+for(const mode of ['test','live'])for(const kind of ['price','customer','checkout.session','subscription','billing_portal.session'])test(`${mode} runtime refuses opposite-mode ${kind}`,async()=>{
+ const w=await world({mode,stripe:fakeStripe({livemode:mode==='live',liveKinds:[kind]})});try{
+  if(['price','customer','checkout.session'].includes(kind))await refused(await w.call('POST','billing/subscribe',{plan:'base'}),503,'plan_billing_live_mode_refused');
+  else{
+   await ok(await w.call('POST','billing/subscribe',{plan:'base'}));w.state.pay([...w.state.sessions.keys()][0]);
+   await refused(await w.call('POST',kind==='subscription'?'billing/sync':'billing/manage',{}),503,'plan_billing_live_mode_refused');
+  }
+  assert.equal(w.row().plan_id,undefined);
+ }finally{await w.live.close();}
+});
+
+for(const mode of ['test','live'])test(`${mode} webhook refuses opposite-mode events and objects`,async()=>{
+ const w=await world({mode});try{
+  await ok(await w.call('POST','billing/subscribe',{plan:'base'}));const sub=w.state.pay([...w.state.sessions.keys()][0]);
+  await refused(await w.hook({livemode:mode!=='live',type:'customer.subscription.created',data:{object:sub}}),400,'plan_billing_live_mode_refused');
+  await refused(await w.hook({type:'customer.subscription.created',data:{object:{...sub,livemode:mode!=='live'}}}),503,'plan_billing_live_mode_refused');
+  assert.equal(w.row().plan_id,undefined);
+ }finally{await w.live.close();}
+});
+
+for(const mode of ['test','live'])test(`${mode} runtime treats the other mode's stored plan as Free without mutating it`,async()=>{
+ const w=await world({mode});try{
+  const other=mode==='live'?'test':'live';
+  Object.assign(w.row(),{plan_id:'pro',plan_source:'stripe_'+other,stripe_customer_id:'cus_oldmode',stripe_subscription_id:'sub_oldmode',spend_cap:false,...(other==='live'?{stripe_mode:'live'}:{})});
+  const before=structuredClone(w.row());
+  const catalog=await ok(await w.call('GET','billing/catalog'));assert.equal(catalog.current_plan,'free');assert.equal(catalog.portal_available,false);
+  const entitlements=await ok(await w.call('GET','entitlements'));assert.equal(entitlements.plan_id,'free');assert.equal(entitlements.limits.retention_days,PLANS.plans.find(p=>p.id==='free').retention_days);
+  assert.equal((await ok(await w.call('GET','usage'))).plan_limits.plan_id,'free');
+  assert.equal((await ok(await w.call('POST','billing/sync',{}))).plan,'free');
+  await refused(await w.call('POST','billing/manage',{}),409,'no_subscription');
+  await refused(await w.call('POST','billing/change',{plan:'base'}),409,'no_subscription');
+  assert.deepEqual(w.row(),before);assert.deepEqual(w.state.calls,[]);
+  await ok(await w.call('POST','billing/subscribe',{plan:'base'}));
+  assert.equal(w.row().stripe_mode,mode);assert.equal(w.row()['stripe_previous_'+other].stripe_customer_id,'cus_oldmode');
+  const sub=w.state.pay([...w.state.sessions.keys()][0]);await ok(await w.hook({type:'customer.subscription.created',data:{object:sub}}));
+  assert.equal(w.row().plan_source,'stripe_'+mode);assert.equal(w.row().plan_id,'base');
+ }finally{await w.live.close();}
+});
+
+test('dev entry points reject live keys before constructing any provider',async()=>{
+ const {requireDevTestKey,configureLocalBilling}=await import('../scripts/local-billing.mjs');
+ for(const prefix of ['sk','rk']){
+  const key=prefix+'_live_'+'f'.repeat(24);assert.throws(()=>requireDevTestKey(key),/dev_stripe_test_key_required/);
+  const prior=process.env.SUPATRACE_DEV_STRIPE_TEST_KEY;process.env.SUPATRACE_DEV_STRIPE_TEST_KEY=key;
+  try{await assert.rejects(configureLocalBilling({}),/dev_stripe_test_key_required/);}finally{if(prior===undefined)delete process.env.SUPATRACE_DEV_STRIPE_TEST_KEY;else process.env.SUPATRACE_DEV_STRIPE_TEST_KEY=prior;}
+ }
+ assert.equal(requireDevTestKey(KEY),KEY);
+});
+
+for(const mode of ['test','live'])test(`${mode} refuses a mixed-mode nested subscription price`,async()=>{
+ const w=await world({mode});try{
+  await ok(await w.call('POST','billing/subscribe',{plan:'base'}));const sub=w.state.pay([...w.state.sessions.keys()][0]);
+  await ok(await w.call('POST','billing/sync',{}));sub.items.data[0].price.livemode=mode!=='live';
+  await refused(await w.call('POST','billing/change',{plan:'pro'}),503,'plan_billing_live_mode_refused');
+  await refused(await w.call('POST','billing/sync',{}),503,'plan_billing_live_mode_refused');
+  assert.equal(w.row().plan_id,'base');
+ }finally{await w.live.close();}
+});
+
+test('returning to either mode reuses its customer and refuses a second paid subscription',async()=>{
+ const w=await world({mode:'live'}),liveBilling=w.environment.planBilling,testStripe=fakeStripe();try{
+  await ok(await w.call('POST','billing/subscribe',{plan:'pro'}));w.state.pay([...w.state.sessions.keys()][0]);await ok(await w.call('POST','billing/sync',{}));
+  const liveCustomer=w.row().stripe_customer_id;
+  Object.assign(w.row(),{overage_price_id:'price_savedLive',overage_customer_id:liveCustomer,overage_subscription_id:w.row().stripe_subscription_id});
+  const testBilling=composePlanBilling({secretKey:KEY,webhookSecret:WEBHOOK,StripeClient:testStripe.client});w.environment.planBilling=testBilling;
+  await ok(await w.call('POST','billing/subscribe',{plan:'base'}));testStripe.state.pay([...testStripe.state.sessions.keys()][0]);await ok(await w.call('POST','billing/sync',{}));
+  for(const [mode,billing,state,plan]of [['live',liveBilling,w.state,'pro'],['test',testBilling,testStripe.state,'base'],['live',liveBilling,w.state,'pro']]){
+   w.environment.planBilling=billing;
+   await refused(await w.call('POST','billing/subscribe',{plan}),409,'subscription_exists');
+   assert.equal(state.calls.filter(c=>c==='POST /v1/customers').length,1);
+   assert.equal(w.row().stripe_mode,mode);assert.equal(w.row()['stripe_previous_'+mode],undefined);
+   if(mode==='live'){assert.equal(w.row().overage_price_id,'price_savedLive');assert.equal(w.row().overage_customer_id,liveCustomer);assert.equal(w.row().overage_subscription_id,w.row().stripe_subscription_id);}
+   await ok(await w.call('POST','billing/sync',{}));assert.equal(w.row().plan_id,plan);
+  }
+  assert.equal(w.row().stripe_customer_id,liveCustomer);
+ }finally{await w.live.close();}
 });

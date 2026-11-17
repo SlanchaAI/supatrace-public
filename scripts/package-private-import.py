@@ -15,7 +15,7 @@ def main():
  paths={};source_bytes={}
  names=subprocess.check_output(['git','-C',str(ROOT),'ls-tree','-r','--name-only',revision,'--','src'],text=True,timeout=5).splitlines()
  names=[n for n in names if n.endswith('.mjs') or '/vendor/' in n and n.rsplit('/',1)[-1] in ['LICENSE','provenance.json','source-pins.json','langsmith-provenance.json']]
- names.extend(['package.json','package-lock.json','scripts/hosted_upload_worker.py','scripts/package-private-import.py','scripts/private-host-synthetic.mjs','tests/memory-dynamo.mjs','agent/private_upload_runtime.py','agent/upload.py','agent/stage_import.py'])
+ names.extend(['public/app/span-data.js','public/app/model-prices.js','package.json','package-lock.json','scripts/hosted_upload_worker.py','scripts/package-private-import.py','scripts/private-host-synthetic.mjs','tests/memory-dynamo.mjs','agent/private_upload_runtime.py','agent/upload.py','agent/stage_import.py'])
  source=[ROOT/n for n in names]
  for p in source:
   name=p.relative_to(ROOT).as_posix();raw=p.read_bytes()

@@ -1,7 +1,7 @@
 // Entitlements: what an organization's plan allows. One table (PLANS in src/plans.mjs) decides every count limit
 // and feature flag. The API calls requireFeature / requireCount on each gated route, and the dashboard reads the
 // same answer from GET /api/entitlements, so the two cannot disagree. The plan itself is `plan_id` on the
-// organization's account row: set by a reconciled Stripe test-mode subscription (Base, Pro) or by an operator
+// organization's account row: set by a reconciled Stripe subscription (Base, Pro) or by an operator
 // (Enterprise). Anything unknown or malformed resolves to Free: a bad row never grants more.
 import {HttpError} from './http.mjs';
 import {PLANS, FEATURES} from './plans.mjs';

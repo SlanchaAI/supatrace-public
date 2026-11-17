@@ -64,8 +64,8 @@ async function environment(){
   try{const value=await readSecret(process.env.SSO_IDP_CERT_SECRET_ARN,'sso');sso={SSO_EMAIL_DOMAINS:process.env.SSO_EMAIL_DOMAINS,SSO_IDP_SSO_URL:process.env.SSO_IDP_SSO_URL,SSO_IDP_ISSUER:process.env.SSO_IDP_ISSUER,SSO_IDP_CERT:value};}
   catch{sso={};}
  }
- // Stripe TEST-mode plan billing (src/plan-billing.mjs). On only when the secret ARN is set and holds a test key; a
- // missing, unreadable or live key leaves billing unavailable and never breaks sign-in or trace access.
+ // Plan billing mode follows the secret key (src/plan-billing.mjs). A
+ // missing, unreadable or malformed key leaves billing unavailable and never breaks sign-in or trace access.
  let planBilling;
  if(process.env.PLAN_BILLING_SECRET_ARN&&Date.now()>=planBillingRetryAt){
   try{
@@ -89,6 +89,7 @@ async function environment(){
   catch{/* Without its own app, GitHub sign-in stays off on that host; Google is unaffected. */}
  }
  const store=new DynamoMetadataStore({client:DynamoDBDocumentClient.from(new DynamoDBClient({maxAttempts:2}),{marshallOptions:{removeUndefinedValues:true}}),commands:{GetCommand,PutCommand,DeleteCommand,UpdateCommand,QueryCommand,ScanCommand,TransactWriteCommand},tableName:process.env.TABLE_NAME,...SERVICE_CAPS,stripeInboxTableName:process.env.BILLING_INBOX_TABLE_NAME||null,stripeStateTableName:stripeBilling?process.env.BILLING_STATE_TABLE_NAME||null:null,stripeTestInbox:!!stripeBilling,stripeTestEnvironment:stripeBilling?.catalog.environment_id}),objects=new S3Objects({client:new S3Client({maxAttempts:2}),commands:{PutObjectCommand,GetObjectCommand,ListObjectVersionsCommand,DeleteObjectCommand},bucket:process.env.PAYLOAD_BUCKET});
+ store.planBillingMode=planBilling?.mode ?? 'test';
  return {ENABLED:true,RETENTION_ERASURE_MODE:process.env.RETENTION_ERASURE_MODE,APP_ORIGIN:origins[0],APP_ORIGINS:origins,GITHUB_BY_ORIGIN:githubByOrigin,MFA_ENABLED:process.env.MFA_ENABLED,MCP_BRIDGE_ENABLED:process.env.MCP_BRIDGE_ENABLED==='true',GITHUB_CLIENT_ID:process.env.GITHUB_CLIENT_ID,GITHUB_CLIENT_SECRET:githubSecret,...google,...chatgpt,...email,...sso,
  planBilling,stripeBilling:stripeBilling||undefined,stripeBillingUnavailable,...commercialRuntime,
  authDiagnostic:event=>console.warn(JSON.stringify(event)),apiDiagnostic:event=>console.error(JSON.stringify(event)),

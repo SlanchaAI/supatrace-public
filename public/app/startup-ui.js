@@ -58,7 +58,7 @@ export function mountWorkspaceStartup({request,onReady,mountSignIn}){
     const providers=await (await probe.catch(()=>null))?.providers;
     if(!current())return;
     mountSignIn(get('signin'),providers||{github:true});
-    finish();get('signed-out').hidden=false;get('signin').hidden=false;status.textContent='Please sign in to continue.';
+    finish();get('signed-out').hidden=false;get('signin').hidden=false;status.textContent='';
     if(focus)get('signin').querySelector('a,button,input')?.focus();
    }else{
     job=null;

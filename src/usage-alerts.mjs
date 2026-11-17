@@ -1,3 +1,4 @@
+import {effectivePlanId} from './stripe-plan-state.mjs';
 // Usage alerts at 80% and 100% of a plan's included spans for the month.
 // A notification row is written once per account, month and level. Email goes out only when
 // the existing SES path is configured and the account or organization owner signed in with an email address.
@@ -22,7 +23,7 @@ export async function recordUsageAlert(env,store,tenantId,alert){
   // Organization metadata holds the current owner, not an email identity. Resolve it at delivery preparation.
   const recipient=account?.provider==='organization'&&typeof account.owner_account==='string'?await store.getTenant(account.owner_account):account;
   const to=recipient&&!Number.isSafeInteger(recipient.deleted_at)&&['email','sso'].includes(recipient.provider)&&typeof recipient.email==='string'&&address.test(recipient.email)&&recipient.email.length<=254?recipient.email:null;
-  const status=!hasFeature(account?.plan_id,'usage_alerts')?'not_in_plan':!emailConfigured(env)?'not_configured':!to?'no_address':'pending';
+  const status=!hasFeature(effectivePlanId(account,env.planBilling?.mode),'usage_alerts')?'not_in_plan':!emailConfigured(env)?'not_configured':!to?'no_address':'pending';
   const result=await store.recordUsageAlert(tenantId,alert,{email_status:status});
   if(!result.created)return {recorded:false,reason:'already_recorded'};
   if(status!=='pending')return {recorded:true,email:status};

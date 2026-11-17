@@ -5,8 +5,10 @@ The base package has zero required dependencies.
 
 ## Install
 
+Coming soon. Until then send traces with the stock OpenTelemetry exporter (see the [OTLP quickstart](https://supatrace.dev/docs/frameworks/opentelemetry/#otlp)) or the Python/Node snippets on Home. To use this SDK from the public repository root:
+
 ```sh
-pip install supatrace
+pip install ./packages/supatrace
 ```
 
 ## Send your first trace
@@ -15,7 +17,7 @@ In SupaTrace, create an ingest key from Home or API keys. Install the optional
 OpenTelemetry Protocol (OTLP) exporter and set the key in your shell:
 
 ```sh
-pip install 'supatrace[otlp]'
+pip install './packages/supatrace[otlp]'
 export SUPATRACE_API_KEY='YOUR_INGEST_KEY'
 ```
 

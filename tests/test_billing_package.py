@@ -7,6 +7,8 @@ class BillingPackageTest(unittest.TestCase):
   for name in ['aws/package.py','aws/handler.mjs','aws/stripe-worker.mjs','aws/stripe-entitlement-worker.mjs','aws/stripe-usage-meter-worker.mjs','package.json','package-lock.json']:
    shutil.copy2(ROOT/name,root/name)
   shutil.copytree(ROOT/'src',root/'src')
+  (root/'public/app').mkdir(parents=True)
+  for name in ['span-data.js','model-prices.js']:shutil.copy2(ROOT/'public/app'/name,root/'public/app'/name)
 
  def package(self, root):
   subprocess.run(['python3',str(root/'aws/package.py')],check=True,capture_output=True,timeout=60)
@@ -21,6 +23,8 @@ class BillingPackageTest(unittest.TestCase):
     packaged={name for name in archive.namelist() if name.startswith('src/') and name.endswith('.mjs')}
     self.assertEqual(packaged,set(expected),'all nested runtime modules must be packaged')
     for name,path in expected.items():self.assertEqual(archive.read(name),path.read_bytes(),name)
+    for name in ['public/app/span-data.js','public/app/model-prices.js']:
+     self.assertEqual(archive.read(name),(ROOT/name).read_bytes())
     for name in ['aws/handler.mjs','aws/stripe-worker.mjs','aws/stripe-entitlement-worker.mjs','aws/stripe-usage-meter-worker.mjs']:
      self.assertEqual(archive.read(name),(ROOT/name).read_bytes())
     for name in ['LICENSE','provenance.json','source-pins.json']:

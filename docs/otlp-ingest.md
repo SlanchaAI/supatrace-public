@@ -12,6 +12,20 @@ export OTEL_EXPORTER_OTLP_ENDPOINT=https://supatrace.dev
 export OTEL_EXPORTER_OTLP_HEADERS="x-supatrace-key=YOUR_INGEST_KEY"
 ```
 
+Both `x-supatrace-key: <key>` and `Authorization: Bearer <key>` are accepted. The environment-variable alternative is `OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer YOUR_INGEST_KEY"`. Some SDKs require the space URL-encoded: `Authorization=Bearer%20YOUR_INGEST_KEY`, following the [OpenTelemetry header format](https://opentelemetry.io/docs/specs/otel/protocol/exporter/#specifying-headers-via-environment-variables).
+
+### Try HTTP/JSON
+
+This fake span calls no model provider. Replace the key before sending:
+
+```sh
+curl -X POST https://supatrace.dev/v1/traces \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_INGEST_KEY' \
+  -d '{"resourceSpans":[{"scopeSpans":[{"spans":[{"traceId":"11111111111111111111111111111111","spanId":"1111111111111111","name":"synthetic.example","startTimeUnixNano":"1794685870000000000","endTimeUnixNano":"1794685871000000000"}]}]}]}'
+# Or replace Authorization with: -H 'x-supatrace-key: YOUR_INGEST_KEY'
+```
+
 ### Python
 
 ```sh
@@ -73,11 +87,11 @@ node first-trace.mjs
 
 The base URL makes both stock exporters append `/v1/traces`. Leave `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` and `OTEL_EXPORTER_OTLP_TRACES_HEADERS` overrides unset. Open Traces and find the printed `otlp.<traceid>` run. No model provider is called.
 
-The key can write spans and cannot read traces. Spans land in the environment the key belongs to. Use `x-supatrace-key` on the hosted ingest edge; no caller-computed body hash is needed. The management API under `/api/v1` uses a different edge path.
+The key can write spans and cannot read traces. Spans land in the environment the key belongs to. Use `x-supatrace-key` or `Authorization: Bearer <key>` on the hosted ingest edge; no caller-computed body hash is needed. The management API under `/api/v1` uses a different edge path.
 
 ## Local development
 
-Follow the [README setup](../README.md#run-locally). Choose **Team admin account** in its personal workspace before creating an ingest key; the Owner demo starts above the Free key allowance. Set the stock scripts' `OTEL_EXPORTER_OTLP_ENDPOINT` to `http://127.0.0.1:3000`. Local data is in memory. No hosted account or key is needed.
+Follow the [README setup](../README.md#run-locally). Choose **Team admin account** in its personal workspace, or **Owner account** for the seeded team. Seed upload keys are revoked, leaving room to create an ingest key under Free. Set the stock scripts' `OTEL_EXPORTER_OTLP_ENDPOINT` to `http://127.0.0.1:3000`. Local data is in memory. No hosted account or key is needed.
 
 The [synthetic first-trace recipe](self-hosting.md#send-and-read-one-trace) uses Node.js without installing an exporter.
 
@@ -85,7 +99,7 @@ The [synthetic first-trace recipe](self-hosting.md#send-and-read-one-trace) uses
 
 **Available** on https://supatrace.dev for traces over OTLP/HTTP, with protobuf or JSON and optional gzip. No gRPC, metrics or logs.
 
-Stock exporters use the base endpoint and `x-supatrace-key` header. The receiver is registered in the production handler (`src/aws-api.mjs`) and local development server. Langfuse SDK compatibility remains beta; see [Langfuse-compatible ingest](langfuse-compatible-ingest.md).
+Stock exporters use the base endpoint and either `x-supatrace-key` or `Authorization: Bearer <key>`. The receiver is registered in the production handler (`src/aws-api.mjs`) and local development server. Langfuse SDK compatibility remains beta; see [Langfuse-compatible ingest](langfuse-compatible-ingest.md).
 
 ## What is accepted
 
@@ -129,7 +143,7 @@ Responses follow the OTLP/HTTP specification, in the encoding of the request.
 | 200, empty | every span stored |
 | 200 with `partialSuccess` | some spans stored; `rejectedSpans` counts the rest and `errorMessage` gives each reason |
 | 400 | body is not OTLP, or no span in it could be stored |
-| 401 | key missing, unknown, expired or revoked |
+| 401 | `write_key_required`: neither key header is present. `invalid_write_key`: a supplied key is malformed, unknown, expired or revoked |
 | 403 | storage quota reached or uploads blocked. Not retryable; exporters drop the batch |
 | 413 / 415 | too large; unsupported content type or compression |
 | 429 / 503 | rate limited or temporarily unavailable, with `Retry-After`. Exporters retry |

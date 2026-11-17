@@ -50,11 +50,13 @@ test('revoke refreshes the key list instead of calling the row array', () => {
 
 test('the first-trace example is bounded synthetic intake, not automatic customer capture',()=>{
  const raw=readFileSync(new URL('../public/examples/first-trace.json',import.meta.url),'utf8');const {batch}=parseBatch(raw);assert.equal(batch.run_id,'first-trace-example');assert.equal(batch.events.length,3);assert.ok(batch.events.every(event=>event.data.synthetic===true));assert.ok(Buffer.byteLength(raw)<LIMITS.bytes);
- const guide=readFileSync(new URL('../public/agent-setup.html',import.meta.url),'utf8');for(const path of ['/agent/connect.py','/agent/upload.py','/agent/claude_snapshot.py','/examples/first-trace.json','/app/#agents','/app/#traces'])assert.ok(guide.includes('href="'+path+'"'),path);for(const fact of ['50,000 spans','1 GB','512 KiB','32 KiB','30 days','50 GiB','does not reset monthly','not automatically redacted','server acceptance order','/privacy.html'])assert.ok(guide.includes(fact),fact);
+ const guide=readFileSync(new URL('../public/agent-setup.html',import.meta.url),'utf8');for(const path of ['/agent/connect.py','/agent/upload.py','/agent/claude_snapshot.py','/examples/first-trace.json','/app/#agents','/app/#traces'])assert.ok(guide.includes('href="'+path+'"'),path);for(const fact of ['50,000 spans','1 GB','512 KiB','32 KiB','30 days','Shared service caps can stop an upload','does not reset monthly','not automatically redacted','server acceptance order','/privacy.html'])assert.ok(guide.includes(fact),fact);
 });
 
 test('public entry points explain supported capture and link the published policies',()=>{
- const landing=readFileSync(new URL('../public/index.html',import.meta.url),'utf8');for(const fact of ['Explicit JSON batches and reviewed Claude Code snapshots','Opt-in Claude hooks are a beta; no silent scanning','50k spans a month','opens your existing account when both verify the same email address','stay separate unless you link them in Settings','/privacy.html','/agent-setup.html','/app/'])assert.ok(landing.includes(fact),fact);assert.doesNotMatch(landing,/<script(?![^>]*src=)(?!\s+type="application\/ld\+json">)|\son\w+=/i);
+ const landing=readFileSync(new URL('../public/index.html',import.meta.url),'utf8');for(const fact of ['Explicit JSON batches and reviewed Claude Code snapshots','Opt-in Claude hooks are a beta; no silent scanning','50k spans a month','/privacy.html','/docs/quickstart/','/app/'])assert.ok(landing.includes(fact),fact);assert.doesNotMatch(landing,/<script(?![^>]*src=)(?!\s+type="application\/ld\+json">)|\son\w+=/i);
+ assert.doesNotMatch(landing,/provider-note|use the sign-in method you previously used|stay separate unless you link/);
+ const settings=readFileSync(new URL('../public/app/sign-in-methods.js',import.meta.url),'utf8');assert.ok(settings.includes('use the sign-in method you previously used for that account'));
  for(const path of ['terms.html','privacy.html'])assert.match(readFileSync(new URL('../public/'+path,import.meta.url),'utf8'),/Slancha, Inc\./);
 });
 
@@ -83,7 +85,7 @@ test('original export controls disclose unredacted content beside the action',()
 test('evergreen capability docs state the runtime boundaries',()=>{
  const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
  const architecture=read('docs/architecture.md'),signin=read('docs/sign-in.md'),commercial=read('docs/commercial-controls.md');
- for(const fact of ['No automatic redaction','not a point-in-time snapshot','does not guarantee anonymity','Stripe TEST mode','in-memory'])assert.ok(architecture.includes(fact),fact);
+ for(const fact of ['No automatic redaction','not a point-in-time snapshot','does not guarantee anonymity','Stripe live mode','in-memory'])assert.ok(architecture.includes(fact),fact);
  assert.match(signin,/Supplying the client ID, secret and all three URLs would expose the scaffold mechanically/);
  assert.match(signin,/Keep these parameters empty until an approved official integration/);
  assert.doesNotMatch(signin,/When the real ones are known, set/);

@@ -25,3 +25,15 @@ test('general request budget permits dashboard setup and still rejects a sustain
  for(let i=0;i<300;i++)assert.equal((await health()).status,200,'ordinary dashboard request '+(i+1));
  const blocked=await health();assert.equal(blocked.status,429);assert.equal(blocked.headers.get('Retry-After'),'60');assert.deepEqual(await blocked.json(),{error:'rate_limit'});
 });
+
+// Event timestamps may describe delivery while explicit spans describe the work itself.
+test('ingest summary uses root span boundaries rather than event arrival timestamps',async()=>{
+ const f=fixture();let summary;
+ f.env.store.acceptReservedBatch=async(_tenant,_id,_hash,trace)=>{summary=trace;};
+ const body=JSON.stringify({version:1,batch_id:'timing',run_id:'timing',events:[
+  {id:'root',time:'2026-10-21T00:00:00.000Z',kind:'note',name:'Root',data:{span_id:'root',startTime:'2026-10-21T00:00:00.000Z',endTime:'2026-10-21T00:00:00.080Z'}},
+  {id:'child',time:'2026-10-21T00:00:00.025Z',kind:'note',name:'Child',data:{span_id:'child',parent_span_id:'root',duration_ms:10}}
+ ]});
+ assert.equal((await handle(upload(body),f.env)).status,201);
+ assert.equal(summary.ended_at-summary.started_at,80);
+});

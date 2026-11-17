@@ -1,4 +1,4 @@
-// Plans in Billing: the four plans with their prices, an upgrade button that opens Stripe Checkout (test mode), and a
+// Plans in Billing: the four plans with their prices, an upgrade button that opens Stripe Checkout, and a
 // button that opens the Stripe customer portal to change or cancel. The server decides everything shown here
 // (GET /api/billing/catalog); after a return from Stripe this asks the server to read the subscription back
 // (POST /api/billing/sync) before showing the plan. Only the organization's owner, on Default, gets the catalog.
@@ -76,7 +76,7 @@ export function installPlanBilling(document, {fetcher = (...args) => fetch(...ar
   function render(catalog) {
     section.hidden = false;
     mode.textContent = catalog.checkout_available
-      ? 'Payments are in Stripe test mode. No real card is charged: at Checkout use the test card 4242 4242 4242 4242, any future date and any CVC.'
+      ? catalog.test_mode === true ? 'Payments are in Stripe test mode. No real card is charged: at Checkout use the test card 4242 4242 4242 4242, any future date and any CVC.' : 'You are charged by Stripe.'
       : 'Checkout is not switched on for this deployment yet. The plans and limits below are what the service enforces.';
     const sub = catalog.subscription;
     section.dataset.plan = catalog.current_plan;
@@ -100,13 +100,13 @@ export function installPlanBilling(document, {fetcher = (...args) => fetch(...ar
         if (action.kind === 'checkout') button.addEventListener('click', () => act(button, 'billing/subscribe', {plan: plan.id}));
         if (action.kind === 'portal') button.addEventListener('click', () => act(button, 'billing/manage', {}));
         if (action.kind === 'change') button.addEventListener('click', () => {
-          if (confirm('Change to ' + plan.name + ' at ' + priceText(plan) + '? Stripe invoices the prorated difference now. Features change after payment succeeds. Test mode: no real charge.')) void act(button, 'billing/change', {plan: plan.id});
+          if (confirm('Change to ' + plan.name + ' at ' + priceText(plan) + '? Stripe invoices the prorated difference now. Features change after payment succeeds.' + (catalog.test_mode === true ? ' Test mode: no real charge.' : ''))) void act(button, 'billing/change', {plan: plan.id});
         });
         item.append(button);
       }
       return item;
     }));
-    if (sub) status.textContent = 'Subscription ' + (sub.status ?? 'unknown') + (sub.cancel_at_period_end ? ', cancels' : ', renews') + (sub.current_period_end ? ' on ' + sub.current_period_end.slice(0, 10) : '') + '. Test mode: no real payment.';
+    if (sub) status.textContent = 'Subscription ' + (sub.status ?? 'unknown') + (sub.cancel_at_period_end ? ', cancels' : ', renews') + (sub.current_period_end ? ' on ' + sub.current_period_end.slice(0, 10) : '') + '.' + (catalog.test_mode === true ? ' Test mode: no real payment.' : '');
     else if (catalog.plan_source === 'operator') status.textContent = 'This plan is set by SupaTrace for your organization.';
   }
   let version = 0;
@@ -138,7 +138,7 @@ export function installPlanBilling(document, {fetcher = (...args) => fetch(...ar
       await wait(2000);
     }
     await entitlements?.refresh(); const catalog = await refresh();
-    if (result && catalog) status.textContent = (result.changed ? 'Plan changed to ' + catalog.current_plan_name + '. ' : 'Plan is ' + catalog.current_plan_name + '. ') + 'Limits and features follow it now. Test mode: no real payment.';
+    if (result && catalog) status.textContent = (result.changed ? 'Plan changed to ' + catalog.current_plan_name + '. ' : 'Plan is ' + catalog.current_plan_name + '. ') + 'Limits and features follow it now.' + (catalog.test_mode === true ? ' Test mode: no real payment.' : '');
     document.dispatchEvent(new CustomEvent('supatrace:plan-changed', {detail: result}));
     return catalog;
   }

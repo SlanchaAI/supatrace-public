@@ -3,6 +3,14 @@ import assert from 'node:assert/strict';
 import {readdirSync, readFileSync} from 'node:fs';
 
 const root = new URL('../public/', import.meta.url);
+const privateRepositoryLink = /github\.com\/slanchaai\/supatrace(?:\.git)?(?=[/?#"'<>`\s]|$)/i;
+
+test('private repository link check distinguishes the public checkout', () => {
+  for (const path of ['', '.git', '/issues/284', '?tab=readme', '#readme']) {
+    assert.ok(privateRepositoryLink.test('https://github.com/SlanchaAI/supatrace' + path));
+  }
+  assert.ok(!privateRepositoryLink.test('https://github.com/SlanchaAI/supatrace-public'));
+});
 
 test('public files outside fixtures never link to the private repository', () => {
   const files = directory => readdirSync(directory, {withFileTypes: true}).flatMap(entry => {
@@ -10,7 +18,7 @@ test('public files outside fixtures never link to the private repository', () =>
     return entry.isDirectory() ? (entry.name === 'fixtures' ? [] : files(path)) : [path];
   });
   for (const path of files(root)) {
-    assert.ok(!readFileSync(path, 'utf8').toLowerCase().includes('github.com/slanchaai/supatrace'), path.pathname);
+    assert.ok(!privateRepositoryLink.test(readFileSync(path, 'utf8')), path.pathname);
   }
 });
 

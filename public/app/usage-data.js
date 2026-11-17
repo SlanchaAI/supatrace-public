@@ -23,7 +23,7 @@ function monthlyAllowance(value){
    cap.overage_usd_per_million_spans!==null&&(!count(cap.overage_usd_per_million_spans)||cap.overage_usd_per_million_spans<1)||cap.configurable!==(cap.overage_usd_per_million_spans!==null))fail('invalid_usage');
   spendCap={enabled:cap.enabled,configurable:cap.configurable,default_enabled:cap.default_enabled,overage_spans:cap.overage_spans,overage_usd_per_million_spans:cap.overage_usd_per_million_spans};
  }
- return {spend_cap:spendCap,history,period:m.period,resets_at:m.resets_at,spans_used:m.spans_used,spans_limit:m.spans_limit,spans_remaining:m.spans_remaining,plan_id:p.plan_id,plan_name:p.name,retention_days:p.retention_days,retention_enforced:r!==undefined,retention_physical:r?.physical_deletion===true,projects:p.projects,proposal:p.status!=='approved'};
+ return {test_mode:m.test_mode===true,spend_cap:spendCap,history,period:m.period,resets_at:m.resets_at,spans_used:m.spans_used,spans_limit:m.spans_limit,spans_remaining:m.spans_remaining,plan_id:p.plan_id,plan_name:p.name,retention_days:p.retention_days,retention_enforced:r!==undefined,retention_physical:r?.physical_deletion===true,projects:p.projects,proposal:p.status!=='approved'};
 }
 // Additive: idle-pause state (#113). Older APIs omit it. When present it must be complete.
 const instant=value=>typeof value==='string'&&/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$/.test(value)&&!Number.isNaN(Date.parse(value));

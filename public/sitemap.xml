@@ -25,4 +25,14 @@
   <url><loc>https://supatrace.dev/privacy.html</loc></url>
   <url><loc>https://supatrace.dev/aup.html</loc></url>
   <url><loc>https://supatrace.dev/subprocessors.html</loc></url>
+  <!-- redirects -->
+  <url><loc>https://supatrace.dev/login/</loc></url>
+  <url><loc>https://supatrace.dev/signin/</loc></url>
+  <url><loc>https://supatrace.dev/sign-in/</loc></url>
+  <url><loc>https://supatrace.dev/signup/</loc></url>
+  <url><loc>https://supatrace.dev/sign-up/</loc></url>
+  <url><loc>https://supatrace.dev/register/</loc></url>
+  <url><loc>https://supatrace.dev/docs/opentelemetry/</loc></url>
+  <url><loc>https://supatrace.dev/docs/setup/</loc></url>
+  <!-- /redirects -->
 </urlset>

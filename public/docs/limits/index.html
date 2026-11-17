@@ -40,12 +40,12 @@
 <p class="eyebrow">Reference</p>
 <h1>Limits</h1>
 </div>
-<p class="lede">These are the limits the service enforces. Plan limits come from the <a href="/pricing/">plan table</a>; payments for Base and Pro are in Stripe test mode until launch.</p>
+<p class="lede">These are the limits the service enforces. Plan limits come from the <a href="/pricing/">plan table</a>; Base and Pro subscriptions are billed monthly through Stripe.</p>
 <section aria-labelledby="current"><h2 id="current">Current limits</h2>
 <div class="table-scroll" tabindex="0" role="region" aria-label="Current limits"><table class="compare"><thead><tr><th scope="col">Area</th><th scope="col">Limit</th></tr></thead><tbody>
 <tr><th scope="row">Free allowance</th><td>50k spans per UTC calendar month and 1 GB stored, per organization. Base, Pro and Enterprise raise both; see <a href="/pricing/">Pricing</a>. A span is one accepted trace event. The span count resets on the first of the month; stored bytes count accepted and pending uploads and do not reset. At either limit uploads are rejected with an error that names the limit; nothing already stored is dropped.</td></tr>
 <tr><th scope="row">Retention</th><td>7 days on Free, 30 on Base, 90 on Pro and 1 year on Enterprise, counted from when a batch is accepted. After that it is no longer listed, opened or exported. Data stored before retention existed does not expire.</td></tr>
-<tr><th scope="row">Service capacity</th><td>1,000 accounts and 50 GiB across the service during the test-mode launch. This shared cap can stop an upload before an organization reaches its own allowance. Both caps must be raised before live Stripe is activated; 50 GiB is below one Enterprise allowance.</td></tr>
+<tr><th scope="row">Service capacity</th><td>Shared service caps can stop an upload before an organization reaches its allowance.</td></tr>
 <tr><th scope="row">Projects per organization</th><td>Free 2, Base 3, Pro 10, Enterprise 20. Projects share billing and usage; keys, environments and traces are isolated. A third Free project is refused with HTTP 402 plan_limit_reached.</td></tr>
 <tr><th scope="row">Batch</th><td>1 to 100 events and 512 KiB per batch; 32 KiB per event's JSON data; nesting depth 32.</td></tr>
 <tr><th scope="row">Rate</th><td>60 API requests per minute per network; 30 uploads per minute per account.</td></tr>
@@ -55,16 +55,16 @@
 <tr><th scope="row">Export without Save File support</th><td>20 MiB and 100,000 events.</td></tr>
 </tbody></table></div>
 <p>The <a href="/agent-setup.html#limits">setup guide</a> has the recovery steps for each limit.</p></section>
-<section aria-labelledby="not-yet"><h2 id="not-yet">Not in the alpha</h2>
+<section aria-labelledby="not-yet"><h2 id="not-yet">Billing and service boundaries</h2>
 <ul class="facts">
-<li>Live payments remain off; Base and Pro checkout and upgrades use Stripe test mode.</li>
+<li>Base and Pro checkout and upgrades use Stripe. Payment confirms the plan; the Pro spend cap controls approved usage charges.</li>
 <li>Individual-trace deletion is unavailable. Account, organization, project and environment deletion revoke access and queue physical erasure.</li>
 <li>Expired data is hidden immediately; the scheduled worker erases payload versions and releases stored bytes. Recovery backups expire within 35 days.</li>
 </ul>
 <p>Use synthetic or deliberately reviewed data for evaluation.</p></section>
 </main>
 </div>
-<footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/">Security</a><a href="/changelog/">Changelog</a><a href="/status/">Status</a><a href="/agent-setup.html">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a><span id="build" class="build" hidden></span></nav><script type="module" src="/build.js"></script><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>
+<footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/">Security</a><a href="/changelog/">Changelog</a><a href="/status/">Status</a><a href="/docs/quickstart/">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a></nav><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>
 <script type="module" src="/docs/docs.js"></script>
 </body>
 </html>

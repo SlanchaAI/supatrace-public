@@ -1,6 +1,6 @@
 # SupaTrace
 
-> Agent traces. Kept simple. Connect a write-only agent, inspect reviewed traces and export portable JSON. SupaTrace is a small, unbilled alpha.
+> Agent traces. Kept simple. Connect a write-only agent, inspect reviewed traces and export portable JSON. SupaTrace is a small alpha.
 
 SupaTrace stores agent traces you review before upload: explicit JSON batches and reviewed Claude Code snapshots. Opt-in Claude hooks are a beta; no silent scanning.
 
@@ -8,13 +8,13 @@ SupaTrace stores agent traces you review before upload: explicit JSON batches an
 - Set up agents: you approve a setup code. The write-only key can upload, never read your traces.
 - Inspect & export: browse run events and export original JSON. Review exports before sharing.
 
-Current alpha limits: Free allowance of 50,000 spans per UTC month, 1 GB stored and 2 projects per organization (service-wide cap: 1,000 accounts, 50 GiB); 100 events / 512 KiB per batch; write-only ingest keys (st_pub_), revocable, with no expiry unless one is set; setup-code keys expire after 30 days. Base $9.99 and Pro $25.99 monthly plans use Stripe TEST checkout; live payments remain off. Service-wide caps must be raised before LIVE Stripe activation.
+Current alpha limits: Free allowance of 50,000 spans per UTC month, 1 GB stored and 2 projects per organization; 100 events / 512 KiB per batch; write-only ingest keys (st_pub_), revocable, with no expiry unless one is set; setup-code keys expire after 30 days. Base $9.99 and Pro $25.99 monthly subscriptions are billed through Stripe. Shared service caps can stop an upload before an organization reaches its own allowance. Contact support if a service cap blocks your paid plan.
 
 ## Key pages
 
 - [Home](https://supatrace.dev/): product overview and sign-in
-- [Setup guide](https://supatrace.dev/agent-setup.html): Home snippets, OTLP, then reviewed scripts; limits and recovery notes
-- [Pricing](https://supatrace.dev/pricing/): approved Free, Base, Pro and Enterprise plans; self-serve checkout remains TEST mode
+- [Setup guide](https://supatrace.dev/docs/quickstart/): Home snippets, OTLP, then reviewed scripts; limits and recovery notes
+- [Pricing](https://supatrace.dev/pricing/): approved Free, Base, Pro and Enterprise plans; self-serve checkout remains Stripe billing
 - [Integrations](https://supatrace.dev/integrations/): frameworks, providers, importers and agent tools with their status today (available, beta, preview or planned)
 - [Changelog](https://supatrace.dev/changelog/): user-visible changes from merged pull requests, with merge dates and whether each is deployed
 - [Enterprise](https://supatrace.dev/enterprise/): custom contracts; sales and support at support@supatrace.dev; SLA terms require agreement

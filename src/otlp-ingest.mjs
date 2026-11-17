@@ -16,7 +16,7 @@ import {decodeTraceRequest, encodeTraceResponse, encodeStatus, ProtobufError} fr
 export const OTLP_LIMITS = Object.freeze({wireBytes: 524288, bytes: 4194304, spans: 2000, traces: 50, batchBytes: 480000, storedBytes: 8388608, clip: 256});
 const MESSAGES = Object.freeze({
   write_key_required: 'Missing ingest key. Send the project write key as "Authorization: Bearer <key>" or "x-supatrace-key: <key>".',
-  invalid_write_key: 'The ingest key is not recognised, or it has expired or been revoked. Create a new key in the SupaTrace dashboard.',
+  invalid_write_key: 'Ingest key not recognised or malformed. Copy the full key that starts with st_pub_. Create or copy a key under API keys in the app.',
   environment_unavailable: 'The ingest key does not belong to the requested environment.',
   project_unavailable: 'The ingest key does not belong to the requested project.',
   rate_limit: 'Too many export requests for this workspace. Retry after the Retry-After interval.',

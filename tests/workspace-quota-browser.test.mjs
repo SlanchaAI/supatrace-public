@@ -163,7 +163,7 @@ test('usage banner appears at 80% and 100%, and the owner can switch the Pro spe
     // Usage must not say uploads are rejected while the cap is off.
     await nav(page, 'usage'); await refresh();
     assert.match(await page.locator('#usage-monthly').innerText(), /The included spans are used up; the spend cap is off, so uploads continue and are metered as overage\.$/);
-    assert.match(await page.locator('#usage-plan-limits').innerText(), /The spend cap is off: uploads past the allowance continue and are metered as overage \(test mode, no real charge\)\./);
+    assert.match(await page.locator('#usage-plan-limits').innerText(), /The spend cap is off: uploads past the allowance continue and are metered as overage\. Test mode: no real charge\./);
     assert.doesNotMatch(await page.locator('#view-usage').innerText(), /uploads are rejected|rejected, never billed/);
     await nav(page, 'billing');
     if (shots) await page.screenshot({path: shots + '/cost-control-cap-off.png', fullPage: true});

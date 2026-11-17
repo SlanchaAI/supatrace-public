@@ -41,11 +41,11 @@
 <h1>OpenAI</h1>
 </div>
 <p class="lede">Record OpenAI calls as SupaTrace events from Python or Node.</p>
-<p class="preview-note"><strong>SDK preview, package coming.</strong> The <code>supatrace</code> Python package and <code>@supatrace/client</code> JavaScript package are not published to PyPI or npm. The repository is private, so these checkout-only examples are unavailable to outside users. Use the <a href="/docs/quickstart/#home">Home snippets</a>, <a href="/docs/frameworks/opentelemetry/#otlp">stock OpenTelemetry exporters</a> or <a href="/agent-setup.html">reviewed script downloads</a> today.</p>
+<p class="preview-note"><strong>Coming soon.</strong> The Python and JavaScript <code>supatrace</code> packages are not published to PyPI or npm. Until then send traces with the <a href="/docs/frameworks/opentelemetry/#otlp">stock OpenTelemetry exporter</a> or the Python/Node snippets on <a href="/app/#home">Home</a>. These SDK examples run from the <a href="https://github.com/SlanchaAI/supatrace-public">public repository</a> checkout.</p>
 
 <section aria-labelledby="source"><h2 id="source">Record a call in source mode <span class="status preview">preview</span></h2><p>Source mode is the default. It makes no network request: you choose the events, the SDK checks them against the same batch rules the server applies and writes one file to a local spool for you to review. The example records the model name and token counts, not the prompt or the reply.</p>
 <h3 id="python">Python</h3>
-<pre data-lang="sh"><code>pip install ./packages/supatrace   # private checkout only; unavailable to outside users</code></pre>
+<pre data-lang="sh"><code>pip install ./packages/supatrace   # from the public repository root</code></pre>
 <pre data-lang="python" data-run="py"><code>import datetime
 import supatrace
 from openai import OpenAI
@@ -61,8 +61,8 @@ result = trace.batch([
 ])
 print(result["report"]["valid"], result["report"]["path"])</code></pre>
 <h3 id="node">Node</h3>
-<pre data-lang="sh"><code>npm install ./packages/supatrace-js   # private checkout only; unavailable to outside users. Node 22 or later, ESM only</code></pre>
-<pre data-lang="js" data-run="js"><code>import { init } from "@supatrace/client";
+<pre data-lang="sh"><code>npm install ./packages/supatrace-js   # from the public repository root. Node 22 or later, ESM only</code></pre>
+<pre data-lang="js" data-run="js"><code>import { init } from "supatrace";
 import OpenAI from "openai";
 
 const trace = init("support-bot", { spool: "./spool" });
@@ -90,7 +90,7 @@ print(trace.capture["sending"], trace.capture["instrumented"], trace.capture["sk
 <p>Nothing is sent unless the endpoint, the key and the OpenTelemetry packages are all present. When one is missing, <code>trace.capture["skipped"]</code> says which. Prompt and response content is not captured unless you pass <code>capture_content=True</code> or set <code>SUPATRACE_CAPTURE_CONTENT=1</code>.</p></section>
 </main>
 </div>
-<footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/">Security</a><a href="/changelog/">Changelog</a><a href="/status/">Status</a><a href="/agent-setup.html">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a><span id="build" class="build" hidden></span></nav><script type="module" src="/build.js"></script><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>
+<footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/">Security</a><a href="/changelog/">Changelog</a><a href="/status/">Status</a><a href="/docs/quickstart/">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a></nav><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>
 <script type="module" src="/docs/docs.js"></script>
 </body>
 </html>

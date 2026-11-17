@@ -1,3 +1,5 @@
+import {stripeStateMatches, stripeStateFence, inactiveLiveBilling} from './stripe-plan-state.mjs';
+import {planBillingAvailable} from './plan-billing.mjs';
 import {createHash} from 'node:crypto';
 import {HttpError,boundedText,json,requireOrigin} from './http.mjs';
 import {Workspaces,workspaceSession} from './workspaces.mjs';
@@ -36,12 +38,14 @@ export async function deleteAccount(request,env,actor,session){
  const store=env.store,stamp=await workspaceSession(request,store,actor);
  if(session.expires_at<=store.now()+86400-600)fail(403,'recent_sign_in_required');
  const row=await store.getTenant(actor);
- if(row?.commercial_managed===true||(typeof store.hasStripeTestBinding==='function'&&await store.hasStripeTestBinding(actor)))fail(409,'legacy_billing_requires_operator_closure');
+ if(row?.commercial_managed===true||((env.planBilling?.mode??'test')==='test'&&typeof store.hasStripeTestBinding==='function'&&await store.hasStripeTestBinding(actor)))fail(409,'legacy_billing_requires_operator_closure');
+ if(inactiveLiveBilling(row,env.planBilling?.mode))fail(409,'live_billing_requires_operator_closure');
+ const billingFence=stripeStateFence(row);
  const capacity=await store._get(key(actor,'ORGANIZATION#CAPACITY'));
  if((capacity?.count??0)>0)fail(409,'owned_organizations_require_transfer_or_deletion');
  const spaces=new Workspaces(store,stamp);
  await spaces.tx([
-  {Update:{Key:key(actor,'META'),UpdateExpression:'SET deleted_at = :now, session_epoch = :next',ConditionExpression:'attribute_exists(pk) AND attribute_not_exists(deleted_at) AND attribute_not_exists(commercial_managed)',ExpressionAttributeValues:{':now':store.now(),':next':stamp.epoch+1}}},
+  {Update:{Key:key(actor,'META'),UpdateExpression:'SET deleted_at = :now, session_epoch = :next',ConditionExpression:'attribute_exists(pk) AND attribute_not_exists(deleted_at) AND attribute_not_exists(commercial_managed) AND '+billingFence.condition,ExpressionAttributeValues:{':now':store.now(),':next':stamp.epoch+1,...billingFence.values}}},
   {ConditionCheck:{Key:key(actor,'ORGANIZATION#CAPACITY'),ConditionExpression:'attribute_not_exists(#n) OR #n = :zero',ExpressionAttributeNames:{'#n':'count'},ExpressionAttributeValues:{':zero':0}}},
   await erasureItem(store,actor)
  ]);
@@ -82,17 +86,18 @@ async function eraseAccount(env,job,deadline){
  const meta=await store.getTenant(job.owner);
  if(!Number.isSafeInteger(meta?.deleted_at))throw Error('erasure_account_not_closed');
  const owner=job.owner;
+ if(inactiveLiveBilling(meta,env.planBilling?.mode))throw Error('erasure_live_billing_requires_operator_closure');
  if(job.phase==='billing'){
-  if(meta.stripe_customer_id){
-   if(env.planBilling?.mode!=='test')throw Error('erasure_test_billing_unavailable');
+  if(meta.stripe_customer_id&&(!planBillingAvailable(env)||stripeStateMatches(meta,env.planBilling.mode))){
+   if(!planBillingAvailable(env))throw Error('erasure_test_billing_unavailable');
    const stripe=env.planBilling.stripe,customer=await stripe.customers.retrieve(meta.stripe_customer_id);
    if(!customer.deleted){
-    if(customer.livemode!==false)throw Error('erasure_live_billing_refused');
-    if(meta.overage_price_id&&await settleOverage(env,owner,meta.overage_price_id,deadline)){
+    if(customer.livemode!==(env.planBilling.mode==='live'))throw Error('erasure_live_billing_refused');
+    if(await settleOverage(env,owner,meta.overage_price_id,deadline)){
      const subscriptions=await stripe.subscriptions.list({customer:customer.id,status:'all',limit:100});
      if(subscriptions.has_more)throw Error('erasure_billing_list_incomplete');
      for(const sub of subscriptions.data){
-      if(sub.livemode!==false||sub.customer!==customer.id||sub.metadata?.supatrace_org!==owner)throw Error('erasure_billing_scope_mismatch');
+      if(sub.livemode!==(env.planBilling.mode==='live')||sub.customer!==customer.id||sub.metadata?.supatrace_org!==owner)throw Error('erasure_billing_scope_mismatch');
       if(['active','trialing','past_due'].includes(sub.status))await stripe.subscriptions.cancel(sub.id,{invoice_now:true,prorate:true});
      }
     }

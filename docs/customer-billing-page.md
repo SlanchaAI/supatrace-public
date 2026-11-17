@@ -14,9 +14,10 @@ with a Billing link. Home also links to Billing.
   while showing a team workspace.
 - Shows a concrete unavailable state when no approved catalog is returned. No
   prices, card details, invoice records or subscription claims are fabricated.
-- Moves the existing server-authorized sandbox plan selector/Checkout to Billing.
-  The optional Portal is labelled sandbox billing history and remains read-only:
-  no payment-method update, subscription cancellation or paid access is offered.
+- Shows Base and Pro subscriptions billed through Stripe on the hosted service.
+  The plan applies after payment is confirmed. Owners can manage subscriptions,
+  payment details and invoices through Stripe. Sandbox billing history remains
+  read-only when the sandbox controls are used.
 - Preserves tab-local, same-request Checkout recovery. Cancelling or navigating
   suppresses stale redirects but does not claim to cancel the server's intent.
 - Handles old `?billing=success|cancelled#usage` returns on Billing. A return URL
@@ -42,10 +43,9 @@ safety assertions.
 
 Run browser tests in a supported Chromium environment. Source and unit checks do not establish rendered behavior or provider payment correctness.
 
-## Payment activation remains separate
+## Hosted and local billing
 
-This is a UI change, not payment activation. The default-off backend and existing
-sandbox principal checks are unchanged. Real billing still needs approved prices
-and commercial policies, authorized merchant/credential binding, compatible signed
-event delivery and worker reconciliation, tax/terms decisions and end-to-end
-provider acceptance. See [commercial controls](commercial-controls.md) for the backend gates.
+Hosted plans are billed by Stripe in live mode. The local server uses synthetic
+billing and charges no cards. Stripe test-mode and sandbox controls retain their
+mode-specific labels. See [plan billing](plan-billing.md) for payment confirmation,
+subscription management and mode separation.

@@ -88,7 +88,7 @@ test('publishable first key survives reload and dismissal and sign-out remove st
   const snippet=await page.locator('#first-snippet').textContent();await page.reload({waitUntil:'networkidle'});await page.locator('#first-snippets:not([hidden])').waitFor();assert.equal(await page.locator('#first-snippet').textContent(),snippet);
   await page.locator('#first-dismiss').click();assert.equal(await page.evaluate(()=>Object.keys(sessionStorage).some(k=>k.startsWith('supatrace-first-trace:'))),false);
   await page.reload({waitUntil:'networkidle'});assert.equal(await page.locator('#first-snippets').isVisible(),false);
-  await page.locator('#first-key').click();await page.locator('#first-snippets:not([hidden])').waitFor();await page.locator('#logout').click();await page.locator('#signin:not([hidden])').waitFor();assert.equal(await page.evaluate(()=>Object.keys(sessionStorage).some(k=>k.startsWith('supatrace-first-trace:'))),false);
+  await page.locator('#first-key').click();await page.locator('#first-key-note').filter({hasText:'cannot be shown again'}).waitFor();await page.locator('#first-create').click();await page.locator('#first-snippets:not([hidden])').waitFor();await page.locator('#logout').click();await page.locator('#signin:not([hidden])').waitFor();assert.equal(await page.evaluate(()=>Object.keys(sessionStorage).some(k=>k.startsWith('supatrace-first-trace:'))),false);
  }finally{await context.close();await live.close();}
 });
 test('email confirmation scrolls and focuses the password then enters the app',{timeout:60000},async()=>{
@@ -99,5 +99,18 @@ test('email confirmation scrolls and focuses the password then enters the app',{
   assert.equal(await page.locator('#confirm-password').evaluate(node=>document.activeElement===node),true);assert.ok((await page.locator('#confirm-password').boundingBox()).y<800);
   await page.route('**/api/auth/email/verify',async route=>{await live.signIn(context);await route.fulfill({status:204});});
   await page.fill('#confirm-password','Synthetic-only-1!');await page.getByRole('button',{name:'Confirm email',exact:true}).click();await page.locator('#shell:not([hidden])').waitFor();assert.equal(new URL(page.url()).pathname,'/app/');
+ }finally{await context.close();await live.close();}
+});
+
+for(const width of [1440,390])test(`Home keeps an existing ingest key until explicit creation at ${width}px`,{timeout:60000},async()=>{
+ const live=await start(),context=await browser.newContext({viewport:{width,height:900}}),page=await context.newPage();
+ try{
+  const tenant=await live.signIn(context);await live.writeKey(tenant);
+  let creates=0;page.on('request',request=>{if(request.url().includes('/api/keys/create'))creates++;});
+  await page.goto(live.origin+'/app/',{waitUntil:'networkidle'});await page.locator('#first-key').click();
+  await page.locator('#first-key-note').filter({hasText:'cannot be shown again'}).waitFor();
+  assert.equal(creates,0);assert.equal(await page.locator('#first-snippets').isVisible(),false);
+  await page.locator('#first-create').click();await page.locator('#first-snippets:not([hidden])').waitFor();assert.equal(creates,1);
+  await page.reload({waitUntil:'networkidle'});await page.locator('#first-snippets:not([hidden])').waitFor();assert.equal(creates,1,'saved snippets reuse the same key');
  }finally{await context.close();await live.close();}
 });

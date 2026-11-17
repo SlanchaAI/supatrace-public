@@ -11,20 +11,18 @@ SupaTrace is a trace service for applications that use large language models. Se
 
 Provider file import tools are a preview. Preparing a file does not upload it; the secure upload runner requires deployment-specific hooks. Start with hosted OpenTelemetry or the local synthetic recipe.
 
-The SDKs are alpha. Once version 0.1.0 is published, install with `npm install supatrace` or `pip install supatrace`. These commands describe the planned release; they do not claim that packages are available today. See the [JavaScript](packages/supatrace-js/README.md) and [Python](packages/supatrace/README.md) guides for exporter setup and configuration.
+The SupaTrace packages are coming soon. Until then send traces with the stock OpenTelemetry exporter (see the [OTLP quickstart](docs/otlp-ingest.md)) or the Python/Node snippets on Home. The public repository includes checkout-only SDKs. See the [JavaScript](packages/supatrace-js/README.md) and [Python](packages/supatrace/README.md) guides for exporter setup and configuration.
 
 The Free plan permits model training and product improvement on submitted traces. Paid-plan protections apply prospectively; review the [Terms](https://supatrace.dev/terms.html) before uploading real data.
 
-Hosted billing uses Stripe TEST mode. It does not charge real cards. Review [data handling](docs/roles-and-security.md) before sending traces. Trace attributes and imported content can contain secrets. Redacted-copy previews require review and do not guarantee anonymity.
+Hosted plans are billed by Stripe. The local server uses synthetic billing and charges no cards. Review [data handling](docs/roles-and-security.md) before sending traces. Trace attributes and imported content can contain secrets. Redacted-copy previews require review and do not guarantee anonymity.
 
 ## Run locally
-
-Repository access is required during release preparation. The clone URL below becomes usable without authentication only after publication.
 
 Requires Git, Node.js 22+, and OpenSSL. Python is needed for the Python tests and tools, not for server startup. No cloud account, payment key, OAuth application, or model provider is required.
 
 ```sh
-git clone https://github.com/SlanchaAI/supatrace.git
+git clone https://github.com/SlanchaAI/supatrace-public.git supatrace
 cd supatrace
 cp .env.example .env
 npm ci --ignore-scripts
@@ -32,7 +30,7 @@ node --env-file=.env scripts/dev.mjs
 ```
 
 
-Open <http://127.0.0.1:3000/__local__/> and choose **Team admin account**. This starts a local session for a synthetic account. Keep its personal workspace selected. Create an ingest key on Home, then follow the [OpenTelemetry quickstart](docs/otlp-ingest.md) with the endpoint set to `http://127.0.0.1:3000`. Find the resulting `otlp.<traceid>` run in Traces. To inspect seeded team runs, choose **Owner account** instead. That demo workspace starts above the Free key allowance and cannot create another key.
+Open `http://127.0.0.1:3000/__local__/` and choose **Team admin account**. This starts a local session for a synthetic account. Keep its personal workspace selected. Create an ingest key on Home, then follow the [OpenTelemetry quickstart](docs/otlp-ingest.md) with the endpoint set to `http://127.0.0.1:3000`. Find the resulting `otlp.<traceid>` run in Traces. To inspect seeded team runs, choose **Owner account** instead. Seed upload keys are revoked after seeding, so the Owner can create an ingest key within the Free allowance.
 
 For a command-only first trace, follow the [synthetic self-host check](docs/self-hosting.md#send-and-read-one-trace). It keeps its local key and session in memory and prints status counts.
 

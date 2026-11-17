@@ -3,8 +3,9 @@
 // CSP-safe, and the pricing page shows exactly the approved plan table in src/plans.mjs.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {existsSync, readFileSync, statSync} from 'node:fs';
-import {PAGES, NAV, FOOTER, ORIGIN, stamp, pageUrl, format, planCards, planCompare, planOverage, plansToday} from '../scripts/site-pages.mjs';
+import {existsSync, readFileSync, readdirSync, statSync} from 'node:fs';
+import {REDIRECTS, redirectHtml, PAGES, NAV, FOOTER, ORIGIN, stamp, pageUrl, format, planCards, planCompare, planOverage, plansToday} from '../scripts/site-pages.mjs';
+import {spawnSync} from 'node:child_process';
 import {PLAN_LIMITS} from '../src/plan-limits.mjs';
 import {PLANS, FEATURES, PLAN_CATALOG, accountPlanConfiguration} from '../src/plans.mjs';
 
@@ -97,7 +98,7 @@ test('the pricing page shows the numbers in src/plans.mjs and nothing else', () 
     // Every card states the count limits the service enforces for that plan, the custom plan included: no card says more than the table.
     for (const fact of [plan.seats + ' members', plan.environments + ' environments', plan.api_keys + ' API keys']) assert.ok(card.includes(fact), id + ' ' + fact);
     assert.doesNotMatch(card, /unlimited/i, id + ' promises nothing unlimited');
-    if (plan.price_kind === 'custom') { assert.doesNotMatch(card, /\$\d/, 'no invented enterprise price'); assert.match(body, /href="\/enterprise\/#contact">Contact sales</); continue; }
+    if (plan.price_kind === 'custom') { assert.doesNotMatch(card, /\$\d/, 'no invented enterprise price'); assert.match(body, /href="\/enterprise\/#contact">Talk to us</); continue; }
     for (const fact of [format.spans(plan.included_spans_per_month) + ' spans per month', format.storage(plan.storage_gb) + ' stored', format.retention(plan.retention_days) + ' retention']) assert.ok(card.includes(fact), id + ' ' + fact);
   }
   assert.deepEqual(['$0', '50k', '1 GB', '7 days', '$9.99', '1M', '10 GB', '30 days', '$25.99', '5M', '$5 per 1M spans', '50 GB', '90 days', 'Custom'].filter(value => !shown.includes(value)), []);
@@ -123,15 +124,16 @@ test('public pages describe the typed key model: ingest keys with no forced expi
   // No page still says every key expires after 30 days.
   for (const [name, page] of Object.entries({keys, quick, security, limits, home: read('index.html'), llms: read('llms.txt'), pricing: read('pricing/index.html')})) for (const stale of ['write-only, 30 days, revocable', '30-day revocable write keys', 'Keys expire after 30 days', 'Keys expire 30 days after approval', 'write keys, expiring after 30 days']) assert.ok(!page.includes(stale), name + ': ' + stale);
 });
-test('the pricing page says payments are in test mode, sends buyers to Billing and makes no SLA or compliance claim', () => {
+test('the pricing page uses mode-neutral billing copy, sends buyers to Billing and makes no SLA or compliance claim', () => {
   const html = read('pricing/index.html'), shown = text(html);
-  for (const fact of ['Payments are in test mode.', 'no real card is charged', 'Live payments are not on yet', 'Nothing already stored is dropped', '100 events / 512 KiB per batch', 'write-only ingest keys, revocable, with no expiry unless you set one', 'Keys made with a setup code expire after 30 days', 'projects are isolated within each organization']) assert.ok(shown.includes(fact), fact);
+  for (const fact of ['Prices shown in USD per month.', 'Free plan with no card.', 'Nothing already stored is dropped', '100 events / 512 KiB per batch', 'write-only ingest keys, revocable, with no expiry unless you set one', 'Keys made with a setup code expire after 30 days', 'projects are isolated within each organization']) assert.ok(shown.includes(fact), fact);
   // Base and Pro lead to the signed-in Billing view; the page itself holds no purchase form or Stripe link.
-  assert.deepEqual([...html.matchAll(/<a class="button" href="([^"]+)">([^<]+)<\/a>/g)].map(match => [match[1], match[2]]).slice(0, 4), [['/#signin', 'Sign in free'], ['/app/#billing', 'Choose Base'], ['/app/#billing', 'Choose Pro'], ['/enterprise/#contact', 'Contact sales']]);
+  assert.deepEqual([...html.matchAll(/<a class="button" href="([^"]+)">([^<]+)<\/a>/g)].map(match => [match[1], match[2]]).slice(0, 4), [['/app/', 'Start free'], ['/app/#billing', 'Choose Base'], ['/app/#billing', 'Choose Pro'], ['/enterprise/#contact', 'Talk to us']]);
   assert.doesNotMatch(html, /\/api\/billing|checkout\.stripe|buy\.stripe|<form/i, 'no purchase path on the public page');
   assert.doesNotMatch(shown, /99\.9|SOC 2|HIPAA|money-back|guarantee/i, 'no SLA or compliance claim');
   assert.doesNotMatch(shown, /proposal|proposed|Not yet purchasable|Team\b/i, 'no leftover proposal wording or Team plan');
-  assert.ok(read('index.html').includes('id="signin"'), 'the free call to action lands on the sign-in block');
+  assert.doesNotMatch(html, /test[ -]mode|no real card|no real charges/i);
+  assert.ok(read('app/index.html').includes('id="signin"'), 'the free call to action lands on the app sign-in');
   assert.ok(html.includes('<title>Pricing · SupaTrace</title>'));
   assert.ok(read('enterprise/index.html').includes('id="contact"'), 'the Enterprise call to action lands on the contact block');
   const landing = read('index.html');
@@ -222,4 +224,85 @@ test('legal pages are complete, dated and linked from each shared footer and sig
   assert.equal(PLANS.approval_note, "Plan limits and features");
   const changed = structuredClone(PLANS); changed.plans[3].overage_usd_per_million_spans = 12345;
   for (const render of [planCards, planCompare, planOverage]) assert.ok(!render(changed).includes('$12345'), 'Enterprise internal overage never becomes public');
+});
+
+
+test('auth and legacy docs redirects are generated, noindex and fixed local destinations', () => {
+  assert.deepEqual(REDIRECTS.map(page => [page.file, page.target]), [
+    ...['login', 'signin', 'sign-in'].map(path => [path + '/index.html', '/app/']),
+    ...['signup', 'sign-up', 'register'].map(path => [path + '/index.html', '/app/?view=signup']),
+    ['docs/opentelemetry/index.html', '/docs/frameworks/opentelemetry/'],
+    ['docs/setup/index.html', '/agent-setup.html']
+  ]);
+  for (const page of REDIRECTS) {
+    const html = read(page.file);
+    assert.equal(html, redirectHtml(page));
+    assert.ok(html.includes('<meta name="robots" content="noindex">'));
+    assert.ok(html.includes(`<meta http-equiv="refresh" content="0;url=${page.target}">`));
+    assert.ok(html.includes(`<a href="${page.target}">Continue to SupaTrace</a>`));
+    assert.ok(resolves(page.target));
+    assert.ok(read('sitemap.xml').includes(`${ORIGIN}/${page.file.replace('index.html', '')}</loc>`));
+  }
+});
+
+test('launch copy and shared chrome keep the public surface consistent', () => {
+  const home = read('index.html');
+  assert.ok(home.includes('Send traces from any OpenTelemetry app. Inspect the steps your app records.'));
+  assert.doesNotMatch(home, /test[ -]mode|provider-note/);
+  // Hosted billing is live; both pages keep the approved catalog prices.
+  for (const file of ['index.html', 'pricing/index.html']) {
+    const html = read(file);
+    for (const stale of ['unbilled alpha', 'Can I buy Base or Pro today?']) assert.ok(!html.includes(stale), file + ': ' + stale);
+    assert.ok(html.includes('Free plan with no card.'), file);
+    for (const plan of PLANS.plans.filter(plan => plan.checkout)) assert.ok(html.includes(`${plan.name} is $${plan.monthly_base_usd.toFixed(2)}/month.`), file + ': catalog price for ' + plan.name);
+  }
+  assert.ok(home.includes('Small alpha'));
+  for (const page of PAGES) {
+    const html = read(page.file);
+    assert.ok(html.includes('SupaTrace'), page.file);
+    assert.doesNotMatch(html, />Supatrace[< .]/);
+    if (['terms.html', 'privacy.html', 'aup.html'].includes(page.file)) continue;
+    const footer = html.slice(html.indexOf('<!-- site:footer -->'));
+    assert.doesNotMatch(footer, /id="build"|src="\/build.js"|href="\/agent-setup.html"/);
+    assert.ok(footer.includes('href="/docs/quickstart/"'));
+  }
+  assert.doesNotMatch(read('agent-setup.html'), /Supatrace/);
+  assert.ok(read('404.html').includes('href="/docs/quickstart/"'));
+  assert.ok(read('app/index.html').includes('class="brand-name">SupaTrace</span>'));
+  assert.ok(read('app/index.html').includes('supatrace<span class="dot">.</span>'), 'lowercase sign-in lockup is preserved');
+});
+
+
+test('hosted public copy describes live Stripe billing', () => {
+  const publicRoot = new URL('../public/', import.meta.url);
+  const files = readdirSync(publicRoot, {recursive: true}).filter(file => file.endsWith('.html') && !file.startsWith('app/'));
+  for (const file of [...files, 'llms.txt']) {
+    assert.doesNotMatch(read(file).replace(/\s+/g, ' '), /test[ -]mode|no real (?:card|charge|payment)|test card|until launch|unbilled|live payments (?:remain off|disabled)/i, file);
+  }
+  const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+  assert.doesNotMatch(readme, /test[ -]mode|no real card|test card|until launch/i);
+  assert.ok(readme.includes('Hosted plans are billed by Stripe. The local server uses synthetic billing and charges no cards.'));
+  const pricing = text(read('pricing/index.html'));
+  assert.ok(pricing.includes('Payments are handled by Stripe.'));
+  assert.ok(pricing.includes('The paid plan unlocks its limits and features after Stripe confirms payment.'));
+  assert.ok(pricing.includes('With the Pro spend cap off, accepted spans above the allowance are billed at $5 per million additional spans.'));
+  const terms = text(read('terms.html'));
+  assert.ok(terms.includes('Stripe charges the price shown at Checkout when you authorize a subscription. Subscriptions renew monthly until cancelled.'));
+  assert.ok(terms.includes('Pro starts with its spend cap on; turning it off authorizes overage at $5 per million additional spans.'));
+  for (const file of ['pricing/index.html', 'docs/limits/index.html', 'agent-setup.html', 'llms.txt']) {
+    assert.doesNotMatch(text(read(file)), /1,000 accounts|50 GiB|publish the verified/i, file);
+    assert.match(text(read(file)), /Shared service caps can stop an upload/);
+  }
+  const home = read('index.html');
+  const liveDescription = 'Base and Pro subscriptions are billed monthly through Stripe.';
+  const descriptions = [...home.matchAll(/<meta (?:name="(?:description|twitter:description)"|property="og:description") content="([^"]+)"/g)];
+  assert.equal(descriptions.length, 3);
+  for (const [, description] of descriptions) assert.ok(description.includes(liveDescription));
+  const structured = JSON.parse(home.match(/<script type="application\/ld\+json">(.*?)<\/script>/)[1]);
+  for (const type of ['WebSite', 'SoftwareApplication']) assert.ok(structured['@graph'].find(item => item['@type'] === type).description.includes(liveDescription));
+});
+
+test('all public generator outputs match checked-in files', () => {
+  const result = spawnSync(process.execPath, ['scripts/site-pages.mjs', '--check'], {cwd: new URL('..', import.meta.url), encoding: 'utf8'});
+  assert.equal(result.status, 0, result.stdout + result.stderr);
 });

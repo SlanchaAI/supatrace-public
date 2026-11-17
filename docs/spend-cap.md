@@ -1,8 +1,7 @@
 # Spend cap and usage alerts
 
 Both read the approved plan table (`PLANS` in `src/plans.mjs`, through
-`src/plan-limits.mjs`). Billing is test mode
-only: no real money is charged. Hosted Pro cap-off reports billable accepted spans to the TEST meter at $5 per million.
+`src/plan-limits.mjs`). Hosted billing uses Stripe live mode. With the Pro spend cap off, accepted spans above the allowance are billed at $5 per million additional spans.
 
 ## Spend cap
 
@@ -10,7 +9,7 @@ Free and Base stop at their included spans. Paid Pro can opt into metered overag
 
 - **On:** uploads stop when the month's included spans are used up. Rejection:
   `429 spend_cap_reached`, with the limit, usage, `resets_at` and `cost_control_url`.
-- **Off:** uploads continue. Only accepted spans past the allowance are reported to the verified TEST meter. Missing billing configuration refuses cap-off.
+- **Off:** uploads continue. Only accepted spans past the allowance are reported to the verified Stripe meter. Missing billing configuration refuses cap-off.
 
 Pro defaults to cap on (`spend_cap: 'on_by_default'`).
 Free has no cap to change; it stops at the allowance with
@@ -19,7 +18,7 @@ Free has no cap to change; it stops at the allowance with
 The owner changes it with `POST /api/billing/spend-cap` and body `{"enabled": true}` or
 `{"enabled": false}`, or with the button in Billing → Cost control. The route is
 owner-only and Default-environment-only, like every `/api/billing/` route. A plan
-without the entitlement answers `402 plan_upgrade_required`. Unconfigured TEST metering answers `503 overage_test_billing_unavailable`.
+without the entitlement answers `402 plan_upgrade_required`. Unconfigured metering answers `503 overage_test_billing_unavailable`.
 
 Enforcement is in the reservation transaction. With the cap on, the monthly counter
 update carries the span ceiling; with it off, it does not. The transaction pins the
@@ -51,5 +50,4 @@ At 80% and at 100% of the month's included spans:
 ## Deployment configuration
 
 - Deploy the API before using these controls. Email alerts require `EMAIL_FROM`.
-- Turning the cap off has a cost only once live billing exists. That is a separate,
-  approved change.
+- Turning the Pro spend cap off authorizes overage at $5 per million additional accepted spans.

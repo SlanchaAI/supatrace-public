@@ -1,3 +1,4 @@
+import {effectivePlanId} from './stripe-plan-state.mjs';
 // Support is delivered to the configured service inbox. No trace payloads or credentials are attached.
 import {randomUUID} from 'node:crypto';
 import {HttpError, json} from './http.mjs';
@@ -6,7 +7,7 @@ import {entitlementsFor, requireFeature} from './entitlements.mjs';
 
 export async function supportInfo(env, tenant) {
   const row = await env.store.getTenant(tenant);
-  return {available: emailConfigured(env), ...entitlementsFor(row?.plan_id), inbox: 'support@supatrace.dev'};
+  return {available: emailConfigured(env), ...entitlementsFor(effectivePlanId(row, env.planBilling?.mode)), inbox: 'support@supatrace.dev'};
 }
 export async function submitSupport(env, {tenant, actor, project, environment}, data) {
   const info = await supportInfo(env, tenant);

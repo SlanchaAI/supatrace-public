@@ -19,9 +19,9 @@ The plan table defines all limits and the existing feature split below; the $0 F
 | Active API keys | 2 | 10 | 25 | 100 |
 | Projects per organization | 2 | 3 | 10 | 20 |
 | Created organizations per owner (highest owned plan) | 1 | 3 | 5 | 10 |
-| Service-wide cap (all organizations together) | 1,000 accounts, 50 GiB | | | |
+| Service-wide cap (all organizations together) | Shared service caps apply | | | |
 
-Billing is monthly, per organization. No annual price. The 1,000-account and 50-GiB service-wide caps remain TEST-mode launch safety caps (`aws/handler.mjs` SERVICE_CAPS). Both must be raised before LIVE Stripe is activated: 50 GiB is below one 500-GB Enterprise allowance. This approval does not activate live billing or authorize deployment.
+Billing is monthly, per organization. No annual price. Hosted Base and Pro subscriptions are billed through Stripe. Shared service caps can stop an upload before an organization reaches its allowance. Contact support if a service cap blocks your paid plan.
 
 The highest plan among actively owned organizations, including the personal workspace, sets the owner’s creation allowance. The personal workspace does not consume a created-organization slot. Membership in someone else’s organization grants no allowance. A new organization starts Free and bills separately; a downgrade prevents further creation above the lower cap without hiding existing organizations. Ownership transfer applies the recipient’s allowance, including the incoming organization’s plan.
 
@@ -67,16 +67,16 @@ Supabase's gradient is Free $0, Pro $25, Team $599, Enterprise custom. SupaTrace
 - Seats, environments, API keys: the create request is refused with HTTP 402 `plan_limit_reached`, the limit, the count in use and the next plan with room. Existing items stay.
 - A feature the plan lacks: HTTP 402 `plan_upgrade_required` with the feature and the plan that unlocks it. The dashboard locks the panel and shows the same sentence with a link to Billing.
 - Downgrade: nothing is deleted. Members, environments, keys and drains over the new plan stay and keep working; creating more is refused. Features of the higher plan lock again. Retention shortens only for data stored after the downgrade.
-- Overage on paid Pro with the cap off is metered at $5 per million accepted spans beyond the allowance, in Stripe TEST mode only. See [plan-billing.md](plan-billing.md) for the durable reporter and reconciliation procedure. Enterprise remains custom; no self-serve Enterprise overage price is authorized.
+- Overage on paid Pro with the cap off is metered at $5 per million accepted spans beyond the allowance, through Stripe. See [plan-billing.md](plan-billing.md) for the durable reporter and reconciliation procedure. Enterprise remains custom; no self-serve Enterprise overage price is authorized.
 
-## Stripe (test mode only)
+## Stripe billing
 
 | Plan | Product | Price lookup key | Amount |
 | --- | --- | --- | --- |
 | Base | SupaTrace Base | `supatrace_base_monthly` | $9.99/month |
 | Pro | SupaTrace Pro | `supatrace_pro_monthly` | $25.99/month |
 
-Both objects have `livemode: false`. No live product, price or key exists. Live billing requires separate configuration and approval.
+Hosted subscriptions use live Stripe products and prices. Runtime checks require Stripe objects to match the configured mode. Local development and sandbox rehearsals use separate test objects.
 
 ## Changing a plan
 

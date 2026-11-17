@@ -5,8 +5,10 @@ Requires Node.js 22 or later. No runtime dependencies in the base package.
 
 ## Install
 
+Coming soon. Until then send traces with the stock OpenTelemetry exporter (see the [OTLP quickstart](https://supatrace.dev/docs/frameworks/opentelemetry/#otlp)) or the Python/Node snippets on Home. To use this SDK from the public repository root:
+
 ```sh
-npm install supatrace
+npm install ./packages/supatrace-js
 ```
 
 ## Send your first trace
@@ -76,7 +78,7 @@ Provider protocol tests use fake clients; this package makes no claim of live pr
 
 ## Command line
 
-`npx supatrace --help` lists `login`, `init`, `tail`, `dev` and `logout`.
+`node packages/supatrace-js/cli.mjs --help` lists `login`, `init`, `tail`, `dev` and `logout`.
 `login` saves a read-only personal access token from Settings. `init` pairs a folder
 and writes its key to `.env.local` with owner-only permissions; keys are not printed.
 `tail` reads traces. `dev` requires a SupaTrace source checkout; a local viewer is

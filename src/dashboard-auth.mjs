@@ -295,7 +295,7 @@ export async function emailSignUp(request,env){
  await charge(env,'signuphour','all',20,3600);
  const token=random();
  await env.store.replaceAuthChallenge('SIGNUP',digest(email),{email,password_hash:hashPassword(body.password),token_hash:digest(token)},600);
- await send(env,{to:email,subject:'Finish signing up for Supatrace',text:`Open this link and enter the password you chose. The link does not create the account or sign you in. It expires in 10 minutes.\n${env.APP_ORIGIN}/?email=${encodeURIComponent(email)}&token=${token}\n`});
+ await send(env,{to:email,subject:'Finish signing up for Supatrace',text:`Open this link and enter the password you chose. You will be signed in. The link expires in 10 minutes.\n${env.APP_ORIGIN}/?email=${encodeURIComponent(email)}&token=${token}\n`});
  return json({ok:true,message:'Check your email'});
 }
 export async function emailVerify(request,env){

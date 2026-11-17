@@ -10,7 +10,7 @@ The state is derived from the account row every time it is needed. No scheduler 
 
 - `last_accepted_at`, stamped on the account row in the transaction that accepts an upload (a reservation alone is not activity);
 - `resumed_at`, stamped by a resume;
-- `plan_changed_at`, stamped when a test-mode subscription changes the plan;
+- `plan_changed_at`, stamped when a subscription changes the plan;
 - the account's `created_at`;
 - `IDLE_PAUSE.introduced_at` (2026-11-14), so accounts that predate the rule are not paused for inactivity before it existed. The earliest possible pause is 2026-12-14.
 

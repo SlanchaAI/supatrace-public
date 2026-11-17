@@ -1,6 +1,6 @@
-# Plan billing (Stripe test mode)
+# Plan billing
 
-Base ($9.99/month) and Pro ($25.99/month) are bought through Stripe Checkout and changed in Billing and cancelled in the Stripe customer portal. Enterprise is assigned by an operator. Everything here runs in Stripe **test mode**: no real card is charged. Live mode is refused by the code and is a separate decision.
+Base ($9.99/month) and Pro ($25.99/month) are bought through Stripe Checkout and changed in Billing and cancelled in the Stripe customer portal. Enterprise is assigned by an operator. Hosted subscriptions use Stripe live billing. The secret key selects Stripe test or live mode. Test mode charges no real card. A test key preserves the existing test behavior; a live key enables real payments.
 
 The plan table, limits and feature flags are in [plan-catalog.md](plan-catalog.md). The code is `src/plan-billing.mjs`; the dashboard part is `public/app/plan-billing.js`.
 
@@ -26,8 +26,10 @@ Back on Free nothing is deleted: members, environments, keys and drains over the
 
 ## Safeguards
 
-- Only a Stripe test key (`sk_test_` or `rk_test_`) composes the runtime. A live key leaves billing unavailable.
-- Every Stripe object read must have `livemode: false`; a signed event with `livemode: true` is refused.
+- Secret and restricted keys compose the runtime: `sk_test_` or `rk_test_` selects test; `sk_live_` or `rk_live_` selects live. Public, empty and malformed keys leave billing unavailable. There is no mode environment variable or stack parameter.
+- Every Stripe object read and signed event must have `livemode` equal to the runtime mode. Mixed objects are refused. Webhook signature verification remains required. Keys are never logged.
+- Customers carry `stripe_mode`. Unmarked legacy customers belong to test mode. Paid plans use `stripe_test` or `stripe_live`; other-mode plans count as Free. Reads never mutate them. An explicit purchase preserves previous billing fields under `stripe_previous_test` or `stripe_previous_live` before binding the new customer. Returning to a mode reuses its saved customer and checks for an existing subscription before opening Checkout. Operator plans stay unchanged. Overage ledgers carry their own mode; live ledger keys have a `live#` segment. Other-mode ledgers cannot be reported. Monthly counters and usage notices are separate by mode; legacy rows and unmarked pending uploads remain test usage. Returning to a mode restores its saved subscription and overage bindings. Erasure holds if outstanding usage lacks a settlement price. Test-only state does not block deletion in live mode. Current or archived live billing blocks deletion after rollback until the lead closes it with live credentials; erasure never discards that binding.
+- Live Checkout collects billing addresses with `billing_address_collection: auto` and disables promotion codes.
 - The Stripe prices are found by lookup key (`supatrace_base_monthly`, `supatrace_pro_monthly`) and must match the plan table's amount, currency and interval, or Checkout is refused (`plan_billing_price_mismatch`).
 - One subscription per organization: a second Checkout is refused (`subscription_exists`).
 - Billing routes are owner-only and Default-environment-only, need the application's own Origin on POST, and are rate limited.
@@ -46,11 +48,11 @@ The organization id is the workspace id shown in Settings. The script needs AWS 
 
 ## Switching it on for a deployment (operator)
 
-The runtime is off until the function has `PLAN_BILLING_SECRET_ARN`. Stripe test-mode objects that must exist (they do in the Slancha test account): products "SupaTrace Base" and "SupaTrace Pro" with a tax code, their monthly prices with the lookup keys above, and a customer portal configuration with `metadata.app = supatrace` that allows switching between the two prices and cancelling.
+The runtime is off until the function has `PLAN_BILLING_SECRET_ARN`. Objects in the selected Stripe mode that must exist: products "SupaTrace Base" and "SupaTrace Pro" with a tax code, their monthly prices with the lookup keys above, and a customer portal configuration with `metadata.app = supatrace` that allows switching between the two prices and cancelling.
 
-1. Store the Stripe **test** secret key in Secrets Manager.
+1. Store the Stripe secret or restricted key for the selected mode in Secrets Manager.
 2. Add that secret's ARN to the function role and its permissions boundary, and set `PLAN_BILLING_SECRET_ARN` on the function (stack parameters; see `aws/DEPLOYMENT.md`).
-3. For events: create a Stripe test webhook endpoint for the billing ingress URL with the events `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`; store its signing secret and set `PLAN_BILLING_WEBHOOK_SECRET_ARN`.
+3. For events: create a Stripe webhook endpoint in that mode for the billing ingress URL with the events `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`; store its signing secret and set `PLAN_BILLING_WEBHOOK_SECRET_ARN`.
 
 Without step 3 plans still change when the owner returns from Stripe or opens Billing; a cancellation made while nobody has the dashboard open is picked up the next time Billing is opened.
 
@@ -60,15 +62,38 @@ Without step 3 plans still change when the owner returns from Stripe or opens Bi
 SUPATRACE_DEV_STRIPE_TEST_KEY=sk_test_... node scripts/dev.mjs --port 3411
 ```
 
-Sign in as the owner at `/__local__/`, open Billing and upgrade with the test card `4242 4242 4242 4242`. The dev server's application origin is `https://supatrace.dev`, so Stripe returns there; open the same path on the local port.
+Live keys are refused by both dev entry points before provider construction. Sign in as the owner at `/__local__/`, open Billing and upgrade with the test card `4242 4242 4242 4242`. The dev server's application origin is `https://supatrace.dev`, so Stripe returns there; open the same path on the local port.
 
-## Pro overage (TEST only)
+## Pro overage
 
-Before cap-off, the server verifies the paid Pro subscription, attaches the monthly TEST metered price `supatrace_pro_overage_monthly`, and pins the customer/subscription binding. The price is USD 0.0005 cents per accepted span ($5 per million), summed by the active `supatrace_pro_overage` meter. Cap-off is refused when this configuration is unavailable. Enterprise overage needs a negotiated contract and cannot use this self-serve price.
+Before cap-off, the server verifies the paid Pro subscription, attaches the monthly metered price in the runtime mode `supatrace_pro_overage_monthly`, and pins the customer/subscription binding. The price is USD 0.0005 cents per accepted span ($5 per million), summed by the active `supatrace_pro_overage` meter. Cap-off is refused when this configuration is unavailable. Enterprise overage needs a negotiated contract and cannot use this self-serve price.
 
 `acceptReservedBatch` atomically records only accepted spans beyond the monthly allowance in a durable ledger and queues `PLAN_OVERAGE#JOBS`. Reservations and retries never add charges. The dedicated EventBridge `supatrace-plan-overage` rule calls the API Lambda every five minutes; `src/plan-overage.mjs` reports the unreported delta with a persisted deduplication identifier. Plan/cap/subscription changes fence the acceptance transaction. Turning the cap back on remains available during a Stripe outage.
 
-Failed reports remain queued and trigger the Lambda error alarm. An ambiguous report older than 12 hours is held for operator reconciliation, before Stripe's deduplication window expires; it is never blindly replayed. Inspect the ledger's persisted identifier against TEST meter events and reconcile `reported_spans` before releasing a held job. Account erasure waits for queued reporting and Stripe aggregation before generating a final TEST usage invoice and deleting the customer.
+Failed reports remain queued and trigger the Lambda error alarm. An ambiguous report older than 12 hours is held for operator reconciliation, before Stripe's deduplication window expires; it is never blindly replayed. Inspect the ledger's persisted identifier against meter events in the ledger's mode and reconcile `reported_spans` before releasing a held job. Account erasure waits for queued reporting and Stripe aggregation before generating a final usage invoice in that mode and deleting the customer.
+
+## Going live and rolling back
+
+The lead stages Stripe objects and secrets, then controls the flip. Merging this code changes nothing in production while the secret holds a test key. Legal and marketing wording is proposed in [live-billing-copy-changes.md](live-billing-copy-changes.md) for a separate approved flip-time change.
+
+Required objects in **live mode**:
+
+- Base and Pro products and active USD monthly licensed prices with lookup keys `supatrace_base_monthly` (999 cents) and `supatrace_pro_monthly` (2599 cents).
+- An active monthly metered price with lookup key `supatrace_pro_overage_monthly`, at USD 0.0005 cents per span, attached to the active meter whose event name is `supatrace_pro_overage`. The meter sums `value` and maps customers by `stripe_customer_id`.
+- An active customer portal configuration with `livemode: true` and `metadata.app=supatrace`, allowing cancellation, payment details and invoice access. The app changes plan prices in place and preserves metered items.
+- A webhook endpoint for `POST /api/billing/webhook` subscribing to all six events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`.
+
+Put the live secret or restricted key in `supatrace-plan-billing-test-key` and the matching live endpoint signing secret in `supatrace-plan-billing-test-webhook`. These names are historical. Their ARNs are the existing stack parameters that supply `PLAN_BILLING_SECRET_ARN` and `PLAN_BILLING_WEBHOOK_SECRET_ARN`; no new secret name, parameter or mode flag is needed. The app picks up a new secret version within five minutes through its secret cache. Stage both matching secrets before directing live traffic. During a mismatch, webhook verification fails closed.
+
+A restricted key needs these permissions: customers **write**, Checkout Sessions **write**, billing portal **write**, subscriptions **write**, prices **read**, products **read**, invoices **read**, billing meters **read**, meter events **write**, billing meter event summaries **read**. Keep unrelated permissions disabled.
+
+**One-step rollback:** restore the prior secret versions, moving `AWSPREVIOUS` back to `AWSCURRENT` with `aws secretsmanager update-secret-version-stage`, for the key and webhook secrets as one rollback operation. For each secret, use its previous and current version IDs:
+
+```sh
+aws secretsmanager update-secret-version-stage --secret-id SECRET_NAME --version-stage AWSCURRENT --move-to-version-id PREVIOUS_VERSION_ID --remove-from-version-id CURRENT_VERSION_ID
+```
+
+Alternatively, put the test key and test webhook signing secret back in those same secrets. No deploy or mode parameter change is needed. Allow the five-minute cache window. Other-mode billing state remains stored and is ignored; operator plans are unchanged. Existing live subscriptions remain in Stripe and require lead reconciliation if live traffic is rolled back.
 
 ## Not built
 - No annual prices, coupons, trials or tax registration.

@@ -7,7 +7,7 @@ class PrivatePackageTest(unittest.TestCase):
   with tempfile.TemporaryDirectory() as temp:
    root=pathlib.Path(temp).resolve();revision='a'*40
    files={'src/worker.mjs':b'// approved source\n','package.json':b'{"type":"module"}','package-lock.json':b'{"packages":{}}'}
-   for name in ['scripts/hosted_upload_worker.py','scripts/package-private-import.py','scripts/private-host-synthetic.mjs','tests/memory-dynamo.mjs','agent/private_upload_runtime.py','agent/upload.py','agent/stage_import.py']:files[name]=b'# synthetic approved source\n'
+   for name in ['public/app/span-data.js','public/app/model-prices.js','scripts/hosted_upload_worker.py','scripts/package-private-import.py','scripts/private-host-synthetic.mjs','tests/memory-dynamo.mjs','agent/private_upload_runtime.py','agent/upload.py','agent/stage_import.py']:files[name]=b'# synthetic approved source\n'
    for name,body in files.items():path=root/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(body)
    def git(args,**kwargs):
     if 'rev-parse' in args:return revision+'\n'

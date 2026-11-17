@@ -30,7 +30,7 @@ const fits = async (page, label) => {
   assert.ok(size.width <= size.inner, `${label} horizontal overflow: ${size.width}/${size.inner}`);
 };
 
-for (const viewport of [{width: 1280, height: 800}, {width: 390, height: 844}, {width: 320, height: 740}]) {
+for (const viewport of [{width: 1440, height: 900}, {width: 390, height: 844}, {width: 320, height: 740}]) {
   test(`public pages render with shared chrome and no overflow at ${viewport.width}px`, {timeout: 60000}, async () => {
     for (const item of PAGES) {
       const {context, page, errors} = await open(item.path, viewport);
@@ -47,27 +47,27 @@ for (const viewport of [{width: 1280, height: 800}, {width: 390, height: 844}, {
 }
 
 test('pricing shows the four plans, a working FAQ, and calls to action that reach sign-in, Billing and sales', {timeout: 60000}, async () => {
-  const {context, page, errors} = await open('/pricing/', {width: 1280, height: 800});
+  const {context, page, errors} = await open('/pricing/', {width: 1440, height: 900});
   try {
     assert.ok(await page.locator('#preview-note').isVisible());
-    assert.match(await page.locator('#preview-note').innerText(), /Payments are in test mode/);
+    assert.match(await page.locator('#preview-note').innerText(), /Free plan with no card/);
     assert.deepEqual(await page.locator('.plans .plan h3').allInnerTexts(), PLANS.plans.map(plan => plan.name));
     assert.deepEqual(await page.locator('.plans .plan [data-field=price]').allInnerTexts(), ['$0', '$9.99', '$25.99', 'Custom']);
-    assert.deepEqual(await page.locator('.plans .plan a.button').evaluateAll(links => links.map(link => link.getAttribute('href'))), ['/#signin', '/app/#billing', '/app/#billing', '/enterprise/#contact']);
+    assert.deepEqual(await page.locator('.plans .plan a.button').evaluateAll(links => links.map(link => link.getAttribute('href'))), ['/app/', '/app/#billing', '/app/#billing', '/enterprise/#contact']);
     const answer = page.locator('.faq details').nth(0).locator('p');
     assert.equal(await answer.isVisible(), false);
     await page.locator('.faq summary').nth(0).click();
-    assert.match(await answer.innerText(), /Stripe test mode/i);
+    assert.match(await answer.innerText(), /Stripe collects payment and the plan applies after payment is confirmed/);
     assert.equal(await page.locator('.site-header nav a[aria-current=page]').innerText(), 'Pricing');
-    await page.locator('.plans .plan[data-plan=free] a.button').click();
-    await page.waitForURL(live.origin + '/#signin');
-    await page.locator('#signin a, #signin button').first().waitFor();
     assert.deepEqual(errors, []);
+    await page.locator('.plans .plan[data-plan=free] a.button').click();
+    await page.waitForURL(live.origin + '/app/');
+    await page.locator('#signin a, #signin button').first().waitFor();
   } finally { await context.close(); }
 });
 
 test('docs pages share a sidebar and every code block has a working Copy button', {timeout: 60000}, async () => {
-  const {context, page, errors} = await open('/docs/quickstart/', {width: 1280, height: 800});
+  const {context, page, errors} = await open('/docs/quickstart/', {width: 1440, height: 900});
   try {
     await context.grantPermissions(['clipboard-read', 'clipboard-write'], {origin: live.origin});
     assert.equal(await page.locator('.site-header nav a[aria-current=page]').innerText(), 'Docs');
@@ -87,21 +87,11 @@ test('docs pages share a sidebar and every code block has a working Copy button'
   } finally { await context.close(); }
 });
 
-test('the footer shows the deployed commit only when build.json is stamped', {timeout: 60000}, async () => {
-  const unstamped = await open('/pricing/', {width: 1280, height: 800});
+test('the footer hides the build while build.json remains available', async () => {
+  const {context, page} = await open('/pricing/', {width: 1440, height: 900});
   try {
-    assert.equal(await unstamped.page.locator('#build').isHidden(), true);
-    assert.deepEqual(unstamped.errors, []);
-  } finally { await unstamped.context.close(); }
-  const context = await browser.newContext({viewport: {width: 1280, height: 800}});
-  const commit = '0123456789abcdef0123456789abcdef01234567';
-  await context.route('**/build.json', route => route.fulfill({contentType: 'application/json', body: JSON.stringify({schema: 1, commit, short: commit.slice(0, 7), ref: 'main', source: 'github-actions', built_at: '2026-11-14T00:00:00.000Z'})}));
-  const page = await context.newPage();
-  try {
-    await page.goto(live.origin + '/pricing/', {waitUntil: 'networkidle'});
-    await page.locator('#build:not([hidden])').waitFor();
-    assert.equal(await page.locator('#build').innerText(), 'Build 0123456');
-    assert.equal(await page.locator('#build').getAttribute('title'), commit);
+    assert.equal(await page.locator('#build').count(), 0);
+    assert.equal((await page.request.get(live.origin + '/build.json')).status(), 200);
   } finally { await context.close(); }
 });
 
@@ -142,7 +132,7 @@ test('enterprise contact form composes a draft to the live support inbox', {time
 });
 
 test('status runs live checks, says no feed is published, and shows a published feed only while it is fresh', {timeout: 60000}, async () => {
-  const plain = await open('/status/', {width: 1280, height: 800});
+  const plain = await open('/status/', {width: 1440, height: 900});
   try {
     await plain.page.locator('#check-api .status.available').waitFor();
     assert.equal(await plain.page.locator('#check-site .state').innerText(), 'REACHABLE');
@@ -174,7 +164,7 @@ test('status runs live checks, says no feed is published, and shows a published 
     assert.ok(size.width <= size.inner);
   } finally { await fresh.context.close(); }
   // A feed that was fresh at load stops being shown as current once it ages out, without a reload.
-  const aging = await browser.newContext({viewport: {width: 1280, height: 800}});
+  const aging = await browser.newContext({viewport: {width: 1440, height: 900}});
   try {
     const stamped = new Date().toISOString();
     const before = JSON.stringify({schema: 1, source: 'test', updated_at: stamped, components: [{name: 'Uploads', status: 'operational', note: 'ok'}], incidents: []});
@@ -208,7 +198,7 @@ test('status runs live checks, says no feed is published, and shows a published 
     assert.equal(await page.locator('#feed .components').count(), 0);
   } finally { await aging.close(); }
   // Overlapping refreshes: the response to an older request arrives last and must be ignored.
-  const racing = await browser.newContext({viewport: {width: 1280, height: 800}});
+  const racing = await browser.newContext({viewport: {width: 1440, height: 900}});
   try {
     const stamped = new Date().toISOString(), body = status => JSON.stringify({schema: 1, source: 'test', updated_at: stamped, components: [{name: 'Uploads', status}], incidents: []});
     let calls = 0, releaseOld;
@@ -248,7 +238,7 @@ test('sign-in and sign-up show consent links that open the published legal pages
       mountSignIn(document.querySelector('#signin'), {github: true, google: true, email: true});
     });
     for (const view of ['main', 'signup']) {
-      if (view === 'signup') await page.getByRole('button', {name: 'Sign up', exact: true}).click();
+      if (view === 'signup') await page.getByRole('button', {name: 'Create a free account', exact: true}).click();
       const consent = page.locator('[data-view="' + view + '"] .legal');
       assert.equal(await consent.innerText(), 'By continuing you agree to the Terms of Service and Privacy Policy');
       for (const [label, href] of [['Terms of Service', '/terms.html'], ['Privacy Policy', '/privacy.html']]) {
@@ -260,4 +250,28 @@ test('sign-in and sign-up show consent links that open the published legal pages
     assert.equal(await page.locator('h1').innerText(), 'Terms of Service');
     assert.deepEqual(errors, []);
   } finally { await context.close(); }
+});
+
+
+test('live billing copy renders on pricing and terms at desktop and mobile sizes', {timeout: 60000}, async () => {
+  for (const viewport of [{width: 1440, height: 900}, {width: 390, height: 844}]) {
+    for (const path of ['/pricing/', '/terms.html']) {
+      const {context, page, errors} = await open(path, viewport);
+      try {
+        const content = await page.locator('main').innerText();
+        assert.doesNotMatch(content, /test[ -]mode|no real (?:card|charge)|until launch/i);
+        if (path === '/pricing/') {
+          assert.ok(content.includes('Payments are handled by Stripe.'));
+          await page.getByText('Where do I choose a plan?', {exact: true}).click();
+          assert.ok(await page.getByText('Choose Base or Pro in Billing. Stripe collects payment and the plan applies after payment is confirmed.', {exact: true}).isVisible());
+        } else {
+          assert.ok(content.includes('Stripe charges the price shown at Checkout when you authorize a subscription.'));
+          assert.ok(content.includes('Subscriptions renew monthly until cancelled.'));
+        }
+        await fits(page, path);
+        assert.deepEqual(errors, []);
+        if (out) await page.screenshot({path: `${out}/${path === '/pricing/' ? 'pricing' : 'terms'}-${viewport.width}.png`, fullPage: true});
+      } finally { await context.close(); }
+    }
+  }
 });

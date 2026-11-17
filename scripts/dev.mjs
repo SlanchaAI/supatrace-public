@@ -1,4 +1,4 @@
-import {configureLocalBilling} from './local-billing.mjs';
+import {configureLocalBilling,requireDevTestKey} from './local-billing.mjs';
 import {configureLocalImports} from './local-imports.mjs';
 // Loopback-only developer composition. Reuses the real handlers and test AWS adapters.
 import {start} from '../tests/harness.mjs';
@@ -20,6 +20,8 @@ export async function seedLocalWorkspace(live){
   for(const n of [1,2]){const raw=JSON.stringify({version:1,batch_id:'local-batch-'+n,run_id:'local-run-'+n,events:[{id:'request',time:'2026-11-06T00:00:00Z',kind:'request',name:environment+' synthetic request',data:{environment,synthetic:true}},{id:'response',time:'2026-11-06T00:00:01Z',kind:'response',name:'Synthetic result',data:{ok:true}}]});
    const r=await fetch(live.origin+'/api/batches?environment='+environment,{method:'POST',headers:{'content-type':'application/json','x-supatrace-key':token,'x-amz-content-sha256':digest(raw)},body:raw});if(r.status!==201)throw Error('Local upload failed: '+r.status+' '+await r.text());
   }
+  // Seed uploads are complete. Revoke their pairing keys so Free can create a new ingest key.
+  await post('github-4242','keys/revoke?environment='+environment,{id:digest(token)});
  }
  delete ownerRow().plan_id;
  return {owner:'github-4242',admin:'github-5252',viewer:'github-6262',environments:['default','development','production']};
@@ -28,7 +30,7 @@ if(process.argv[1]?.endsWith('/scripts/dev.mjs')){
  const index=process.argv.indexOf('--port'),port=index===-1?3000:Number(process.argv[index+1]);if(!Number.isInteger(port)||port<1024||port>65535)throw Error('Use --port 1024..65535');
  const live=await start({localDev:true,port,configureEnvironment:async env=>{env.localBilling=await configureLocalBilling(env,{planLimits:true});env.localImports=await configureLocalImports(env);
   // Optional: drive the hosted plan-billing path (src/plan-billing.mjs) against a real Stripe TEST account. Test keys only.
-  if(process.env.SUPATRACE_DEV_STRIPE_TEST_KEY){const {default:Stripe}=await import('stripe');const {composePlanBilling}=await import('../src/plan-billing.mjs');env.planBilling=composePlanBilling({secretKey:process.env.SUPATRACE_DEV_STRIPE_TEST_KEY,StripeClient:Stripe});}
+  if(process.env.SUPATRACE_DEV_STRIPE_TEST_KEY){requireDevTestKey();const {default:Stripe}=await import('stripe');const {composePlanBilling}=await import('../src/plan-billing.mjs');env.planBilling=composePlanBilling({secretKey:process.env.SUPATRACE_DEV_STRIPE_TEST_KEY,StripeClient:Stripe});}
  }});try{await seedLocalWorkspace(live);}catch(e){await live.close();throw e;}
  console.log('SupaTrace local development: '+live.origin+'/__local__/');console.log('Synthetic owner/admin/viewer; Default, Development and Production traces. In-memory AWS adapters; synthetic Checkout/portal/signature/stream/entitlement simulation; a completed test Checkout moves the owner workspace to Base or Pro limits. No external provider calls or charges.');
  for(const signal of ['SIGINT','SIGTERM'])process.once(signal,()=>void live.close().then(()=>process.exit(0)));

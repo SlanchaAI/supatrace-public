@@ -158,7 +158,7 @@ function paintSpendCap(monthly){
  if(!cap){$('spend-cap-state').textContent=monthly?'This server does not report a spend cap.':'Spend cap has not been checked.';$('spend-cap-detail').textContent='';return;}
  if(!cap.configurable){$('spend-cap-state').textContent=`${monthly.plan_name} plan: uploads always stop at the monthly allowance. Nothing is billed for usage.`;$('spend-cap-detail').textContent='A spend cap you can switch off comes with plans that have metered overage.';return;}
  $('spend-cap-state').textContent=cap.enabled?'Spend cap is on. Uploads stop when the included spans are used up, so there is no overage.':'Spend cap is off. Uploads continue past the included spans and the extra spans are metered as overage.';
- $('spend-cap-detail').textContent=`Overage rate: $${cap.overage_usd_per_million_spans} per million spans. `+(cap.overage_spans?`${cap.overage_spans.toLocaleString('en-US')} spans over the allowance this month. `:'')+'Billing is in test mode: no real charge is made.'+(owner?'':' Only the workspace owner can change this, on the Default environment.');
+ $('spend-cap-detail').textContent=`Overage rate: $${cap.overage_usd_per_million_spans} per million spans. `+(cap.overage_spans?`${cap.overage_spans.toLocaleString('en-US')} spans over the allowance this month. `:'')+(monthly.test_mode?'Billing is in test mode: no real charge is made.':'You are charged by Stripe.')+(owner?'':' Only the workspace owner can change this, on the Default environment.');
  toggle.textContent=cap.enabled?'Turn spend cap off':'Turn spend cap on';
 }
 $('spend-cap-toggle').onclick=async()=>{
@@ -176,7 +176,12 @@ function paintMonthlyAllowance(monthly,count){
  if(!monthly){$('usage-monthly').textContent='This server does not report a monthly allowance yet. The reserved-byte limit above applies.';$('usage-plan-limits').textContent='';return;}
  const resets=new Date(monthly.resets_at).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric',timeZone:'UTC'});
  $('usage-monthly').textContent=`${count(monthly.spans_used)} of ${count(monthly.spans_limit)} spans this month. Resets ${resets} (UTC).`+(monthly.spans_remaining===0?(monthly.spend_cap?.enabled===false?' The included spans are used up; the spend cap is off, so uploads continue and are metered as overage.':' The allowance is used up; new uploads are rejected until the reset.'):'');
- $('usage-plan-limits').textContent=`${monthly.plan_name} plan${monthly.proposal?' (proposed allowance, not a final offer)':''}: ${count(monthly.spans_limit)} spans per calendar month. A span is one trace event; it counts when its upload is reserved, including uploads still pending. ${monthly.spend_cap?.enabled===false?'The spend cap is off: uploads past the allowance continue and are metered as overage (test mode, no real charge).':'Uploads over the allowance are rejected, never billed.'} Billing shows the plans with a higher allowance.`;
+ $('usage-plan-limits').textContent=`${monthly.plan_name} plan${monthly.proposal?' (proposed allowance, not a final offer)':''}: ${count(monthly.spans_limit)} spans per calendar month. A span is one trace event; it counts when its upload is reserved, including uploads still pending. ${monthly.spend_cap?.enabled===false?'The spend cap is off: uploads past the allowance continue and are metered as overage.'+(monthly.test_mode?' Test mode: no real charge.':' You are charged by Stripe.'):'Uploads over the allowance are rejected, never billed.'} Billing shows the plans with a higher allowance.`;
+}
+function paintUsageCounters(storage,monthly){
+ const count=value=>value.toLocaleString('en-US');
+ const line=`${count(storage.used_bytes)} of ${count(storage.limit_bytes)} bytes reserved. ${count(storage.remaining_bytes)} bytes remaining.`;
+ $('usage').textContent=line;$('usage-page').textContent=line;paintMonthlyAllowance(monthly,count);
 }
 async function usage(){
  if(!activeProject||keySigningOut||keySuspended)return false;
@@ -185,12 +190,11 @@ async function usage(){
   const {storage,account_plan,billing,commercial,monthly,lifecycle}=await loadAccountUsage((path,signal,pinned)=>api(path,undefined,signal,pinned,environment,workspace),{projectId:project,workspaceId:workspace,environmentId:environment,signal:job.signal});
   if(version!==usageVersion||project!==activeProject||job.signal.aborted||keySigningOut||keySuspended)return false;
   liveSignal=liveSignalOf(project,workspace,environment,storage);
-  const count=value=>value.toLocaleString('en-US');
-  const line=`${count(storage.used_bytes)} of ${count(storage.limit_bytes)} bytes reserved. ${count(storage.remaining_bytes)} bytes remaining.`;
+  paintUsageCounters(storage,monthly);
   // Stripe test mode with plan assignment: the enforced plan is the one in the monthly allowance, moved by the test subscription.
   const plan=billing.test_plan_limits===true&&monthly?`${monthly.plan_name} plan (Stripe test mode). Limits follow the test subscription; no real payment is taken.`:account_plan.paid_active===true?`${account_plan.name}. Verified live billing controls are active.`:account_plan.billing_status==='blocked'?`${account_plan.name}. New uploads are blocked pending billing reconciliation.`:monthly?`${monthly.plan_name} plan. `+(activeRole==='owner'?'Plans and upgrade are at the top of Billing.':'The organization owner manages the plan.'):`${account_plan.name}.`;
-  enforcedPlanName=monthly?.plan_name??null;paintMonthlyAllowance(monthly,count);paintLifecycle(lifecycle??null);
-  $('usage').textContent=line;$('usage-page').textContent=line;$('account-plan').textContent=plan;$('plan-page').textContent=plan;
+  enforcedPlanName=monthly?.plan_name??null;paintLifecycle(lifecycle??null);
+  $('account-plan').textContent=plan;$('plan-page').textContent=plan;
   const scope=activeWorkspaceName+' · '+project+'. One quota is shared by all workspace environments; viewing '+environment+'.';
   const accounting=storage.accounting==='cumulative_reserved_bytes'?'Reserved bytes include accepted and pending uploads. This cumulative quota does not reset monthly.':'The server did not provide accounting details. Do not assume a monthly reset or that pending uploads use no capacity.';
   $('usage-explanation-home').textContent=storage.accounting==='cumulative_reserved_bytes'?'All environments share accepted and pending reservations; no monthly reset.':'All environments share this quota. Refresh Usage for accounting details.';
@@ -238,7 +242,7 @@ async function loadBillingStatus(provided,{signal,project=activeProject,workspac
   billingTestPlans=state.test_plan_limits===true;$('billing-portal').textContent=billingTestPlans?'Manage test subscription':'Open sandbox billing history';
   $('billing-note').textContent=billingReady?(billingTestPlans?'Stripe test mode: change or cancel the test subscription in the billing portal. No real payment is taken.':'Sandbox only: open a read-only billing portal. This does not activate paid access or change your storage limit.'):state.commercial_controls===true&&state.sandbox===false?(state.paid_access===true?'Verified live billing controls are active. The live billing portal is not configured.':state.reason==='commercial_free_account'?'Approved free account controls are active. No paid access is enabled.':'New uploads are blocked pending billing reconciliation. Stored traces remain accessible.'):state.reason==='billing_runtime_unavailable'?'Billing is temporarily unavailable. No paid access or charges are enabled.':'Billing is not activated. No paid access or charges are enabled.';
   paintBillingAvailability();
-  if(state.entitlement_preview_available===true){const preview=await api('billing/sandbox-entitlement',undefined,signal,project,environment,workspace);if(version===billingVersion&&!signal?.aborted)$('billing-note').textContent=preview.quota_enforced===true?testPlanNote(preview):'Sandbox reconciliation: '+preview.status+'. Paid access and upload quota are unchanged.';}
+  if(state.entitlement_preview_available===true){const preview=await api('billing/sandbox-entitlement',undefined,signal,project,environment,workspace);if(version===billingVersion&&!signal?.aborted&&preview.bound!==false)$('billing-note').textContent=preview.quota_enforced===true?testPlanNote(preview):'Sandbox reconciliation: '+preview.status+'. Paid access and upload quota are unchanged.';}
  }catch{if(version===billingVersion&&!signal?.aborted){billingReady=false;$('billing-portal').hidden=true;$('billing-portal').disabled=true;$('billing-note').textContent='Billing status is unavailable. Refresh billing to check again; no payment was confirmed.';paintBillingAvailability();}}
 }
 $('billing-portal').onclick=async()=>{
@@ -422,7 +426,7 @@ function paintKeys(keyRows){
  }
  if(!keyRows.length){const row=document.createElement('tr'),td=document.createElement('td');td.colSpan=7;td.className='empty';td.textContent='No agent keys yet.';row.append(td);$('keys').append(row);}
  select.value=[...select.options].some(option=>option.value===chosen)?chosen:'';
- if(keyPhase==='ready')$('setup-state').textContent=keyRows.some(key=>writeKeyState(key)==='active')?'An active write-only key is approved. This does not confirm agent connection or an accepted upload. Explicitly upload a reviewed batch next.':'No active write-only key. Start with Agents to approve a new key.';
+ if(keyPhase==='ready')$('setup-state').textContent=keyRows.some(key=>writeKeyState(key)==='active')?'An active write-only key is approved. This does not confirm agent connection or an accepted upload. Explicitly upload a reviewed batch next.':'';
  else $('setup-state').textContent='Key status is not current. Refresh API keys before continuing.';
  updateKeyControls();
  const nextExpiry=Math.min(...keyRows.filter(key=>!key.revoked&&writeKeyState(key)==='active').map(key=>key.expires_at*1000));
@@ -510,7 +514,7 @@ function renderRuns(){
   row.append(idCell,cell('',run.started_at?new Date(run.started_at).toLocaleString():new Date(run.created_at).toLocaleString()),cell('mono',agentLabel(run)),cell('',duration(run.duration_ms)),cell('',dash(run.event_count)),status);
   row.onclick=event=>{if(!event.target.closest('button'))show(run.id);};$('runs').append(row);
  }
- if(!loaded.length){const row=document.createElement('tr'),td=document.createElement('td');td.colSpan=6;td.className='empty';if(filtered())td.textContent='No traces match these filters. Clear filters to see your other traces.';else{const link=document.createElement('a');link.href='/agent-setup.html';link.textContent='setup guide';td.append('No traces yet. Follow the ',link,' to approve an agent and send the reviewed example.');}row.append(td);$('runs').append(row);}
+ if(!loaded.length){const row=document.createElement('tr'),td=document.createElement('td');td.colSpan=6;td.className='empty';if(filtered())td.textContent='No traces match these filters. Clear filters to see your other traces.';else{const link=document.createElement('a');link.href='/docs/quickstart/';link.textContent='setup guide';td.append('No traces yet. Follow the ',link,' to approve an agent and send the reviewed example.');}row.append(td);$('runs').append(row);}
 }
 function renderRecent(){const box=$('recent');box.replaceChildren();const rows=loaded.slice(0,5);if(!rows.length){box.textContent='No traces yet.';return;}for(const run of rows){const b=document.createElement('button');b.type='button';b.className='run';b.append(cellText(run.id),cellText(run.started_at?new Date(run.started_at).toLocaleString():''));b.onclick=()=>{location.hash='traces';show(run.id);};box.append(b);}}
 function cellText(text){const s=document.createElement('span');s.textContent=text;return s;}
@@ -539,13 +543,21 @@ async function accountRunPage(requested,version){
 // card shows snippets with it and waits for the first accepted upload.
 let firstKeyAttempt=null;
 firstTrace=typeof mountFirstTrace==='function'?mountFirstTrace({document,origin:location.origin,copy:globalThis.navigator?.clipboard?text=>globalThis.navigator.clipboard.writeText(text):null,onOpen:id=>show(id)}):null;
-$('first-key').onclick=async()=>{
+async function createFirstKey(explicit=false){
  if(!firstTrace||keySigningOut||keySuspended)return;
  if(activeRole==='viewer'){$('first-key-note').textContent='Viewers cannot create keys. Ask the workspace owner for an ingest key.';return;}
- const button=$('first-key'),identity=keyIdentity();if(firstKeyAttempt?.identity!==identity)firstKeyAttempt=null;
+ const button=$(explicit?'first-create':'first-key'),identity=keyIdentity();if(firstKeyAttempt?.identity!==identity)firstKeyAttempt=null;
  button.disabled=true;$('first-key-note').textContent=firstKeyAttempt?'Retrying the same key request…':'Creating an ingest key…';
  let attempt=firstKeyAttempt;const current=()=>firstKeyAttempt===attempt&&keyIdentity()===identity&&!keySigningOut&&!keySuspended;
  try{
+  if(!attempt){
+   if(!await keys()){$('first-key-note').textContent='Could not check existing keys. Refresh API keys, then try again.';return;}
+   if(!current())return;
+   if(!explicit&&keyCatalog.some(key=>keyType(key)!=='secret'&&writeKeyState(key)==='active')){
+    $('first-key-note').textContent='An active ingest key already exists. Its value cannot be shown again. Use your saved key, or explicitly create another key.';
+    $('first-create').hidden=false;return;
+   }
+  }
   // A publishable ingest key (st_pub_) with no expiry, through the typed key route the API keys page uses. The browser
   // makes the key and sends only its SHA-256; a retry after a lost response re-sends the same hash, which the server repeats.
   if(!attempt)attempt=firstKeyAttempt={identity,...await mintApiKey('publishable')};if(!current())return;
@@ -557,7 +569,9 @@ $('first-key').onclick=async()=>{
   $('first-key-note').textContent=(error.message==='active_key_capacity'?'This project already has the maximum number of active keys. Revoke one under API keys first.':explain(error))+(firstKeyAttempt?' Select the button again to retry the same request.':'');keyRecovery($('first-key-note'),error);
  }
  finally{button.disabled=false;}
-};
+}
+$('first-key').onclick=()=>createFirstKey();
+$('first-create').onclick=()=>createFirstKey(true);
 // Leaving the page, signing out or losing the identity drops a pending Home key request, so a late answer cannot put the key back on screen.
 globalThis.addEventListener?.('pagehide',()=>{firstKeyAttempt=null;firstTrace?.reset();});
 // Live list. One small usage read every ten seconds; the full trace catalog is reloaded only
@@ -596,7 +610,10 @@ const liveWatch=typeof createLiveWatch==='function'?createLiveWatch({onChange:li
  read:async signal=>{
   const project=activeProject,workspace=activeWorkspace??actorTenant??undefined,environment=activeEnvironment;
   if(!project||keySigningOut||keySuspended)throw new Error('live_unavailable');
-  const {storage}=await loadAccountUsage((path,readSignal,pinned)=>api(path,undefined,readSignal,pinned,environment,workspace),{projectId:project,workspaceId:workspace,environmentId:environment,signal});
+  const version=usageVersion;
+  const {storage,monthly}=await loadAccountUsage((path,readSignal,pinned)=>api(path,undefined,readSignal,pinned,environment,workspace),{projectId:project,workspaceId:workspace,environmentId:environment,signal});
+  if(signal.aborted||version!==usageVersion||project!==activeProject||environment!==activeEnvironment||workspace!==(activeWorkspace??actorTenant??undefined)||keySigningOut||keySuspended)throw new Error('live_unavailable');
+  if(!usageJob&&usagePhase==='ready')paintUsageCounters(storage,monthly);
   return liveSignal=liveSignalOf(project,workspace,environment,storage);
  }}):null;
 $('live-toggle').onchange=()=>{if(!liveWatch)return;if($('live-toggle').checked){if(!keySigningOut&&!keySuspended&&activeProject)liveWatch.start(catalogMark);}else stopLive();};

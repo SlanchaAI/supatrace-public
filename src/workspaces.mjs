@@ -1,3 +1,4 @@
+import {effectivePlanId, stripeStateMatches, stripeStateFence, hasLiveBilling} from './stripe-plan-state.mjs';
 import {randomBytes, createHash} from 'node:crypto';
 import {HttpError, boundedText, json, requireOrigin} from './http.mjs';
 import {alphaProject,isOrganizationId,requireProject,projectPrefix} from './alpha-projects.mjs';
@@ -151,7 +152,7 @@ export class Workspaces {
  async createProject(actor,owner,data){
   const access=await this.access(actor,owner);if(!['owner','admin'].includes(access.role)||access.environments)fail(403,'workspace_admin_required');await this.requireMfa(actor,access);
   if(!exact(data,['name']))fail(400,'invalid_project');const name=cleanName(data.name),plan=await this.plan(owner),meta=key(owner,'PROJECT_CAPACITY'),count=(await this.store._get(meta))?.count??0;
-  requireCount(plan,'projects',1+count);const account=await this.store.getTenant(owner);if((account?.plan_id??null)!==plan)fail(409,'workspace_changed');const planCheck={ConditionCheck:{Key:key(owner,'META'),ConditionExpression:account?.plan_id===undefined?'attribute_exists(pk) AND attribute_not_exists(plan_id)':'plan_id = :projectPlan',...(account?.plan_id===undefined?{}:{ExpressionAttributeValues:{':projectPlan':account.plan_id}})}};const cap=countLimit(plan,'projects'),id='proj_'+randomBytes(16).toString('hex');
+  requireCount(plan,'projects',1+count);const account=await this.store.getTenant(owner);if((effectivePlanId(account,this.store.planBillingMode)??null)!==plan)fail(409,'workspace_changed');const planState=stripeStateFence(account);const planCheck={ConditionCheck:{Key:key(owner,'META'),ConditionExpression:account?.plan_id===undefined?'attribute_exists(pk) AND attribute_not_exists(plan_id)':'plan_id = :projectPlan',...(account?.plan_id===undefined?{}:{ExpressionAttributeValues:{':projectPlan':account.plan_id}})}};const projectCheck=planCheck.ConditionCheck;projectCheck.ConditionExpression+=' AND '+planState.condition;projectCheck.ExpressionAttributeValues={...projectCheck.ExpressionAttributeValues,...planState.values};const cap=countLimit(plan,'projects'),id='proj_'+randomBytes(16).toString('hex');
   await this.tx([{Put:{Item:{...key(owner,'PROJECT_META#'+id),id,name,created_at:this.store.now()},ConditionExpression:'attribute_not_exists(pk)'}},
    {Update:{Key:meta,UpdateExpression:'ADD #n :one',ConditionExpression:'attribute_not_exists(#n) OR #n < :cap',ExpressionAttributeNames:{'#n':'count'},ExpressionAttributeValues:{':one':1,':cap':cap-1}}},planCheck,this.audit(owner,'project.create',id,{name})],fence(access));
   return {id,name,workspace_id:owner};
@@ -279,12 +280,13 @@ export class Workspaces {
   for(const owner of new Set([actor,...rows.items.map(r=>r.owner),...(incoming?[incoming]:[])])){
    const account=await this.store.getTenant(owner);if(!account||Number.isSafeInteger(account.deleted_at))continue;
    if(owner!==actor&&owner!==incoming&&account.owner_account!==actor)continue;
-   const plan=planOf(account.plan_id),limit=countLimit(plan.id,'workspaces');
+   const plan=planOf(effectivePlanId(account,this.store.planBillingMode)),limit=countLimit(plan.id,'workspaces');
    if(!best||limit>best.limit)best={owner,account,plan:plan.id,limit};
   }
   if(!best)fail(403,'workspace_unavailable');
   const a=best.account,values={},parts=['attribute_exists(pk)','attribute_not_exists(deleted_at)'];
   if(a.plan_id===undefined)parts.push('attribute_not_exists(plan_id)');else {parts.push('plan_id = :allowancePlan');values[':allowancePlan']=a.plan_id;}
+  const billingState=stripeStateFence(a);parts.push(billingState.condition);Object.assign(values,billingState.values);
   if(best.owner!==actor){parts.push('owner_account = :allowanceOwner');values[':allowanceOwner']=a.owner_account;}
   return {...best,check:{ConditionCheck:{Key:key(best.owner,'META'),ConditionExpression:parts.join(' AND '),...(Object.keys(values).length?{ExpressionAttributeValues:values}:{})}}};
  }
@@ -352,15 +354,16 @@ export class Workspaces {
   // hold a subscription or an open Checkout that is paid later. So an organization with any billing state (a Stripe
   // customer, commercial enrolment, or a binding from the older sandbox) is not deleted here at all.
   const account=await this.store.getTenant(id);
-  if(typeof account?.stripe_customer_id==='string'||typeof account?.stripe_subscription_id==='string'||account?.commercial_managed===true||(typeof this.store.hasStripeTestBinding==='function'&&await this.store.hasStripeTestBinding(id)))fail(409,'billing_bound_organization');
+  if(hasLiveBilling(account)||(stripeStateMatches(account,this.store.planBillingMode)&&(typeof account?.stripe_customer_id==='string'||typeof account?.stripe_subscription_id==='string'))||account?.commercial_managed===true||((this.store.planBillingMode??'test')==='test'&&typeof this.store.hasStripeTestBinding==='function'&&await this.store.hasStripeTestBinding(id)))fail(409,'billing_bound_organization');
   // People who joined it get their slot back: each membership row's pointer and count are released with the deletion.
   const members=await this.store._page(pk(id),'MEMBER#',{limit:SEAT_CEILING}),joined=[];
   for(const row of members.items)if(row.user_id!==actor&&await this.store._get(key(row.user_id,'WORKSPACE#JOIN#'+id)))joined.push(row.user_id);
+  const billingFence=stripeStateFence(account);
   const now=this.store.now(),sso=await this.store._get(key(id,'SSO#CONFIG')),verified=Object.entries(sso?.domains??{}).filter(([,state])=>Number.isSafeInteger(state.verified_at)).map(([domain])=>domain);
   await this.tx([
    {Update:{Key:key(id,'WORKSPACE#META'),UpdateExpression:'SET deleted_at = :now, deleted_by = :actor',ConditionExpression:'attribute_exists(pk) AND attribute_not_exists(deleted_at) AND #owner = :actor',ExpressionAttributeNames:{'#owner':'owner'},ExpressionAttributeValues:{':now':now,':actor':actor}}},
-   // The account row is conditioned on still having no billing state: a Checkout or enrolment that lands first wins.
-   {Update:{Key:key(id,'META'),UpdateExpression:'SET deleted_at = :now',ConditionExpression:'attribute_exists(pk) AND attribute_not_exists(stripe_customer_id) AND attribute_not_exists(stripe_subscription_id) AND attribute_not_exists(commercial_managed)',ExpressionAttributeValues:{':now':now}}},
+   // The account row fences the observed billing state: a Checkout or enrolment that lands first wins.
+   {Update:{Key:key(id,'META'),UpdateExpression:'SET deleted_at = :now',ConditionExpression:'attribute_exists(pk) AND attribute_not_exists(commercial_managed) AND '+billingFence.condition,ExpressionAttributeValues:{':now':now,...billingFence.values}}},
    // The owner's count of created organizations, their count of joined workspaces, and the service-wide count all go down.
    {Update:{Key:key(actor,'ORGANIZATION#CAPACITY'),UpdateExpression:'ADD #n :minus',ConditionExpression:'#n >= :one',ExpressionAttributeNames:{'#n':'count'},ExpressionAttributeValues:{':minus':-1,':one':1}}},
    {Update:{Key:key(actor,'WORKSPACE#CAPACITY'),UpdateExpression:'ADD #n :minus',ConditionExpression:'#n >= :one',ExpressionAttributeNames:{'#n':'count'},ExpressionAttributeValues:{':minus':-1,':one':1}}},

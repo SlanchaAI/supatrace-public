@@ -123,3 +123,52 @@ test('erasure queue pagination uses a partition-only query and rejects a foreign
  await assert.rejects(f.store._page(ERASURE_QUEUE,'',{cursor:foreign}),/invalid_cursor/);
  assert.equal((await eraseAccounts(f.env)).processed,0);
 });
+
+for(const mode of ['test','live'])test(`${mode} erasure protects live bindings and ignores test bindings without provider calls`,async()=>{
+ const f=await fixture(),other=mode==='live'?'test':'live';
+ const meta=f.store.client.items.get('TENANT#github-1\0META');Object.assign(meta,{plan_source:'stripe_'+other,stripe_customer_id:'cus_othermode',stripe_subscription_id:'sub_othermode',...(other==='live'?{stripe_mode:other}:{})});
+ f.env.planBilling={mode,stripe:new Proxy({},{get(){throw Error('opposite-mode provider call');}})};
+ const response=await f.api('account/delete',{confirm:'DELETE'});
+ if(mode==='test'){assert.equal(response.status,409);assert.equal((await response.json()).error,'live_billing_requires_operator_closure');}
+ else{assert.equal(response.status,202);f.advance(601);assert.equal((await eraseAccounts(f.env)).phase,'complete');}
+});
+test('live organization closure ignores test customer and subscription bindings',async()=>{
+ const f=await fixture();f.env.planBilling={mode:'live',stripe:{}};
+ const made=await f.api('orgs',{name:'Old billing'}),org=await made.json();assert.equal(made.status,201);
+ Object.assign(f.store.client.items.get('TENANT#'+org.id+'\0META'),{plan_id:'pro',plan_source:'stripe_test',stripe_customer_id:'cus_testonly',stripe_subscription_id:'sub_testonly'});
+ const response=await f.api('orgs/delete',{organization_id:org.id,confirm:'Old billing'});assert.equal(response.status,200,await response.clone().text());
+});
+
+for(const unavailable of [false,true])test(`live customer erasure fails closed with ${unavailable?'unavailable billing':'a test customer'}`,async()=>{
+ const f=await fixture();let deleted=0;
+ await f.store._send('UpdateCommand',{Key:{pk:'TENANT#github-1',sk:'META'},UpdateExpression:'SET stripe_customer_id = :id, stripe_mode = :mode, plan_source = :source',ExpressionAttributeValues:{':id':'cus_synthetic',':mode':'live',':source':'stripe_live'}});
+ f.env.planBilling={mode:'live',stripe:{customers:{retrieve:async id=>({id,livemode:false}),del:async()=>{deleted++;}}}};
+ assert.equal((await f.api('account/delete',{confirm:'DELETE'})).status,202);f.advance(601);
+ if(unavailable)f.env.planBilling=null;
+ await assert.rejects(eraseAccounts(f.env),unavailable?/erasure_live_billing_requires_operator_closure/:/erasure_live_billing_refused/);assert.equal(deleted,0);
+ assert.equal((await f.store.getTenant('github-1')).erased_at,undefined);
+});
+
+for(const archived of [false,true])test(`rollback preserves ${archived?'archived':'current'} live bindings on account and organization deletion`,async()=>{
+ const f=await fixture();f.env.planBilling={mode:'test',stripe:new Proxy({},{get(){throw Error('live call with test key');}})};
+ const binding={stripe_mode:'live',plan_source:'stripe_live',stripe_customer_id:'cus_livebinding',stripe_subscription_id:'sub_livebinding'};
+ const state=archived?{stripe_previous_live:binding}:binding;
+ Object.assign(f.store.client.items.get('TENANT#github-1\0META'),state);
+ const response=await f.api('account/delete',{confirm:'DELETE'});assert.equal(response.status,409);assert.equal((await response.json()).error,'live_billing_requires_operator_closure');
+ const made=await f.api('orgs',{name:'Live binding'},'github-2'),org=await made.json();assert.equal(made.status,201);
+ Object.assign(f.store.client.items.get('TENANT#'+org.id+'\0META'),state);
+ assert.equal((await f.api('orgs/delete',{organization_id:org.id,confirm:'Live binding'},'github-2')).status,409);
+ // A closure already queued under live credentials must also hold after rollback.
+ await f.put({pk:ERASURE_QUEUE,sk:'github-1',owner:'github-1',ready_at:f.store.now(),phase:'billing',prefixes:[]});
+ f.store.client.items.get('TENANT#github-1\0META').deleted_at=f.store.now();
+ await assert.rejects(eraseAccounts(f.env),/erasure_live_billing_requires_operator_closure/);assert.equal((await f.store.getTenant('github-1')).erased_at,undefined);
+});
+
+test('live erasure cannot skip outstanding settlement when the optional price binding is missing',async()=>{
+ const f=await fixture(),owner='github-1';let deleted=0;
+ Object.assign(f.store.client.items.get('TENANT#'+owner+'\0META'),{stripe_mode:'live',plan_source:'stripe_live',stripe_customer_id:'cus_synthetic'});
+ f.env.planBilling={mode:'live',stripe:{customers:{retrieve:async id=>({id,livemode:true}),del:async()=>{deleted++;}}}};
+ await f.put({pk:'TENANT#'+owner,sk:'PLAN_OVERAGE#live#synthetic',stripe_mode:'live',tenant_id:owner,customer_id:'cus_synthetic',billable_spans:1,reported_spans:1,first_timestamp:f.store.now(),last_timestamp:f.store.now()});
+ assert.equal((await f.api('account/delete',{confirm:'DELETE'})).status,202);f.advance(601);
+ await assert.rejects(eraseAccounts(f.env),/overage_settlement_pending/);assert.equal(deleted,0);assert.equal((await f.store.getTenant(owner)).erased_at,undefined);
+});

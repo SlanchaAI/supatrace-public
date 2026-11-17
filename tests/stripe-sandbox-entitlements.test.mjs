@@ -111,7 +111,7 @@ test('account/project and session guards protect sandbox read and billing writes
   assert.equal((await f.read(undefined,false)).status,401);
   assert.equal((await f.read(alphaProject('github-2').id)).status,403);
   f.switchAccount();assert.equal((await f.read()).status,403);assert.equal((await f.checkout()).status,403);
-  assert.equal((await f.read(alphaProject('github-2').id)).status,409);assert.equal(f.calls.length,count);
+  const unbound=await f.read(alphaProject('github-2').id);assert.equal(unbound.status,200);assert.deepEqual(await unbound.json(),{bound:false});assert.equal(f.calls.length,count);
 });
 
 test('unpaid completed event does not bind; async success can fulfill, failed async cannot',async t=>{

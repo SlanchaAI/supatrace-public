@@ -101,7 +101,7 @@ export async function start({enabled = true, google = false, dashboard = false, 
       if(localDev&&req.method==='GET'&&url.pathname==='/__local__/signin'){
         const id=Number(url.searchParams.get('account'));if(![4242,5252,6262].includes(id)){res.writeHead(400,pageHeaders);res.end('Unknown synthetic account');return;}
         const row=await store.getOrCreateTenant(id),token=await createFixtureSession(store,row.tenant_id);
-        res.writeHead(303,{...pageHeaders,location:'/app/#settings','set-cookie':setCookie('__Host-supatrace',token,3600)});res.end();return;
+        res.writeHead(303,{...pageHeaders,location:'/app/#home','set-cookie':setCookie('__Host-supatrace',token,3600)});res.end();return;
       }
       if(localDev&&env.localBilling&&req.method==='GET'&&url.pathname==='/__local__/checkout.js'){
         res.writeHead(200,{...pageHeaders,'content-type':'text/javascript; charset=utf-8'});res.end("document.querySelector('form').onsubmit=async e=>{e.preventDefault();const b=document.querySelector('button');b.disabled=true;try{const r=await fetch(location.href,{method:'POST',headers:{'content-type':'application/json'},body:'{}',credentials:'same-origin'});if(!r.ok||new URL(r.url).pathname!=='/app/')throw Error();location.assign(r.url);}catch{document.querySelector('p').textContent='Synthetic completion could not be confirmed. Reload to inspect the local state.';b.disabled=false;}};");return;

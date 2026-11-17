@@ -110,7 +110,7 @@ for (const size of Object.keys(sizes)) {
       await app.page.waitForSelector('#github');
       assert.equal(await app.page.locator('#signin a[href="/api/auth/google"]').count(), 0, 'unconfigured Google sign-in is not offered');
       assert.equal(await app.page.locator('#view-settings').isVisible(), false, 'account recovery guidance stays hidden while signed out');
-      assert.equal(await app.page.locator('#status').textContent(), 'Please sign in to continue.');
+      assert.equal(await app.page.locator('#status').textContent(), '');
       assert.equal(await app.page.locator('#workspace').isVisible(), false);
       assert.equal(await app.page.locator('#menu-toggle').isVisible(), false);
       await assertFits(app.page, '/app/ signed out');
@@ -380,7 +380,7 @@ for (const size of Object.keys(sizes)) {
       assert.equal(await landing.page.getByRole('button', {name: 'Forgot password?'}).isVisible(), true);
       for(const link of await landing.page.getByRole('link',{name:'Terms of Service'}).all())assert.equal(await link.getAttribute('href'),'/terms.html');
       await assertSignInPanelFits(landing.page, 'landing with every configured option');
-      await landing.page.getByRole('button', {name: 'Sign up'}).click();
+      await landing.page.getByRole('button', {name: 'Create a free account'}).click();
       await landing.page.waitForSelector('#signup-google');
       assert.deepEqual(await landing.page.locator('#signin [data-view="signup"] .choice').allTextContents(), choices);
       assert.equal(await landing.page.locator('#signup-google').getAttribute('href'), '/api/auth/google');

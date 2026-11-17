@@ -16,6 +16,10 @@ import {PLAN_LIMITS} from '../src/plan-limits.mjs';
 // is a live key, product or price. storage_limit_bytes is only the sandbox ledger's own number in that mode.
 // Free plus the plans sold through Checkout (Base, Pro). Enterprise is assigned by an operator and has no price.
 const testPlans=()=>PLANS.plans.filter(p=>p.id===PLAN_LIMITS.default_plan||p.checkout===true).map((p,i)=>({id:p.id,name:p.name,price_id:p.monthly_base_usd===0?null:'price_test'+p.id,unit_amount:Math.round(p.monthly_base_usd*100),currency:'usd',interval:'month',storage_limit_bytes:1024*(i+1)}));
+export function requireDevTestKey(key = process.env.SUPATRACE_DEV_STRIPE_TEST_KEY) {
+ if(key !== undefined && (typeof key !== 'string' || !/^(?:sk|rk)_test_[A-Za-z0-9]{16,255}$/.test(key))) throw Error('dev_stripe_test_key_required');
+ return key;
+}
 export function configuration(purpose='api',{planLimits=false}={}){
  if(planLimits)return testModeConfiguration(purpose);
  const policy={version:'synthetic-v1',revision:1,merchant_id:'acct_synthetic',environment_id:'synthetic-billing',livemode:false,terms_url:'https://supatrace.dev/synthetic-only',accounting:'cumulative_reserved_bytes',non_active:'block_new_uploads',risk:'block_new_uploads',invoice_policy:'full_price_paid',lease_seconds:60,free_plan_id:'synthetic-free',plans:[{id:'synthetic-free',name:'Synthetic free',price_id:null,unit_amount:0,currency:'usd',interval:'month',storage_limit_bytes:1024},{id:'synthetic-paid',name:'Synthetic paid',price_id:'price_synthetic',unit_amount:200,currency:'usd',interval:'month',storage_limit_bytes:4096}]};
@@ -31,6 +35,7 @@ function testModeConfiguration(purpose){
 }
 const PORTAL_CONFIGURATION='bpc_localtestmode';
 export async function configureLocalBilling(env,{planLimits=false}={}){
+ requireDevTestKey();
  const completed=new Set(),sessions=new Map(),subscriptions=new Map(),invoices=new Map(),calls=[],meterEvents=new Map();
  const secret='whsec_'+ 's'.repeat(24),merchant='acct_synthetic',customer='cus_localowner',version='2026-10-28.endive';
  function Client(key,options){return new Stripe(key,{...options,httpClient:Stripe.createFetchHttpClient(async(url,request)=>{

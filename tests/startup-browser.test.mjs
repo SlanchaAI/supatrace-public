@@ -67,7 +67,7 @@ test('429 respects Retry-After without issuing a request when the cooldown ends'
 test('normal startup and signed-out provider discovery preserve their existing paths',{timeout:30000},async()=>{
  const f=await fixture();try{
   await f.page.goto(f.live.origin+'/app/#settings',{waitUntil:'networkidle'});await ready(f.page);assert.equal(await f.page.locator('#startup-actions').isVisible(),false);assert.match(await f.page.locator('#provider-line').textContent(),/GitHub/);
-  await f.context.clearCookies();await f.page.reload({waitUntil:'networkidle'});await f.page.getByRole('link',{name:'Continue with GitHub',exact:true}).waitFor();assert.equal(await f.page.locator('#shell').isVisible(),false);assert.equal(await f.page.locator('#startup-actions').isVisible(),false);assert.deepEqual(f.errors,[]);assert.deepEqual(f.posts,[]);
+  await f.context.clearCookies();await f.page.reload({waitUntil:'networkidle'});await f.page.getByRole('link',{name:'Continue with GitHub',exact:true}).waitFor();assert.equal(await f.page.locator('#shell').isVisible(),false);assert.equal(await f.page.locator('#status').textContent(),'');assert.equal(await f.page.locator('#startup-actions').isVisible(),false);assert.deepEqual(f.errors,[]);assert.deepEqual(f.posts,[]);
  }finally{await f.close();}
 });
 test('stalled provider discovery is bounded and retains the existing sign-in fallback',{timeout:30000},async()=>{
@@ -144,3 +144,44 @@ test('an API that answers the probe but stalls the account read is reported as s
 });
 // Loaded here (a file in the `test:ui` list) instead of appended to the import tail of ui.test.mjs, which every sibling PR edits.
 import './sign-in-methods-browser.test.mjs';
+
+
+test('auth entry points choose the intended view and consume only the view parameter',{timeout:30000},async()=>{
+ const f=await fixture();await f.context.clearCookies();
+ await f.page.route('**/api/auth/providers',route=>route.fulfill({json:{github:true,email:true}}));
+ try{
+  for(const [path,view] of [['login','main'],['signin','main'],['sign-in','main'],['signup','signup'],['sign-up','signup'],['register','signup']]){
+   const response=await f.page.goto(f.live.origin+'/'+path+'/',{waitUntil:'networkidle'});assert.equal(response.status(),200);
+   await f.page.locator(`[data-view="${view}"]:not([hidden])`).waitFor();assert.equal(new URL(f.page.url()).pathname,'/app/');assert.equal(new URL(f.page.url()).search,'');assert.equal(await f.page.locator('#status').textContent(),'');
+  }
+  for(const [value,view] of [['signup','signup'],['signin','main'],['SIGNUP','main'],['https://example.invalid/','main']]){
+   await f.page.goto(f.live.origin+'/app/?keep=1&view='+encodeURIComponent(value)+'#signin',{waitUntil:'networkidle'});
+   await f.page.locator(`[data-view="${view}"]:not([hidden])`).waitFor();
+   const url=new URL(f.page.url());assert.equal(url.origin,f.live.origin);assert.equal(url.search,'?keep=1');assert.equal(url.hash,'#signin');assert.equal(await f.page.locator('#status').textContent(),'');
+  }
+  assert.deepEqual(f.errors,[]);assert.deepEqual(f.posts,[]);
+ }finally{await f.close();}
+});
+
+test('signup never overrides confirmation or a two-factor challenge',{timeout:30000},async()=>{
+ const f=await fixture();await f.context.clearCookies();
+ await f.page.route('**/api/auth/providers',route=>route.fulfill({json:{github:true,email:true}}));
+ try{
+  await f.page.goto(f.live.origin+'/app/?view=signup&email=synthetic%40example.invalid&token='+'a'.repeat(43),{waitUntil:'networkidle'});
+  await f.page.locator('[data-view="confirm"]:not([hidden])').waitFor();assert.equal(new URL(f.page.url()).searchParams.has('view'),false);
+  await f.page.evaluate(async()=>{
+   history.replaceState({synthetic:true},'','/app/?view=signup&keep=1#signin');
+   const {mountSignIn}=await import('/signin.js');mountSignIn(document.querySelector('#signin'),{github:true,email:true,mfa:true});
+  });
+  await f.page.locator('[data-view="mfa"]:not([hidden])').waitFor();assert.deepEqual(await f.page.evaluate(()=>history.state),{synthetic:true});
+  assert.equal(new URL(f.page.url()).search,'?keep=1');assert.deepEqual(f.errors,[]);assert.deepEqual(f.posts,[]);
+ }finally{await f.close();}
+});
+
+test('a protected read after sign-in still explains an expired session',{timeout:30000},async()=>{
+ const f=await fixture();try{
+  await f.page.goto(f.live.origin+'/app/#traces',{waitUntil:'networkidle'});await ready(f.page);
+  await f.context.clearCookies();await f.page.locator('#refresh').click();
+  await f.page.locator('#status').filter({hasText:'Please sign in to continue.'}).waitFor();assert.deepEqual(f.errors,[]);
+ }finally{await f.close();}
+});

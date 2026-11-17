@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Connect a write-only agent, inspect reviewed traces and export portable JSON. Free to start; paid plans are in test mode until launch.">
+<meta name="description" content="Connect a write-only agent, inspect reviewed traces and export portable JSON. Free plan with no card. Base is $9.99/month. Pro is $25.99/month. Free to start; Base and Pro subscriptions are billed monthly through Stripe.">
 <meta name="theme-color" content="#f6f3e8">
 <title>SupaTrace — Agent traces. Kept simple.</title>
 <link rel="icon" href="/favicon.svg?v=classic-s-2" type="image/svg+xml">
@@ -16,7 +16,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="SupaTrace">
 <meta property="og:title" content="SupaTrace — Agent traces. Kept simple.">
-<meta property="og:description" content="Connect a write-only agent, inspect reviewed traces and export portable JSON. Free to start; paid plans are in test mode until launch.">
+<meta property="og:description" content="Connect a write-only agent, inspect reviewed traces and export portable JSON. Free plan with no card. Base is $9.99/month. Pro is $25.99/month. Free to start; Base and Pro subscriptions are billed monthly through Stripe.">
 <meta property="og:url" content="https://supatrace.dev/">
 <meta property="og:image" content="https://supatrace.dev/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -24,9 +24,9 @@
 <meta property="og:image:alt" content="SupaTrace brand mark with the words Agent traces. Kept simple.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="SupaTrace — Agent traces. Kept simple.">
-<meta name="twitter:description" content="Connect a write-only agent, inspect reviewed traces and export portable JSON. Free to start; paid plans are in test mode until launch.">
+<meta name="twitter:description" content="Connect a write-only agent, inspect reviewed traces and export portable JSON. Free plan with no card. Base is $9.99/month. Pro is $25.99/month. Free to start; Base and Pro subscriptions are billed monthly through Stripe.">
 <meta name="twitter:image" content="https://supatrace.dev/og-image.png">
-<script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "Organization", "@id": "https://supatrace.dev/#organization", "name": "SupaTrace", "url": "https://supatrace.dev/", "logo": "https://supatrace.dev/og-image.png"}, {"@type": "WebSite", "@id": "https://supatrace.dev/#website", "name": "SupaTrace", "url": "https://supatrace.dev/", "description": "Connect a write-only agent, inspect reviewed traces and export portable JSON. Free to start; paid plans are in test mode until launch.", "publisher": {"@id": "https://supatrace.dev/#organization"}}, {"@type": "SoftwareApplication", "name": "SupaTrace", "url": "https://supatrace.dev/", "applicationCategory": "DeveloperApplication", "operatingSystem": "Web", "description": "Agent traces. Kept simple. Explicit JSON batches and reviewed Claude Code snapshots. Connect a write-only agent: the write-only key can upload, never read your traces. Inspect reviewed traces and export portable JSON. Free to start; paid plans are in test mode until launch.", "publisher": {"@id": "https://supatrace.dev/#organization"}}]}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "Organization", "@id": "https://supatrace.dev/#organization", "name": "SupaTrace", "url": "https://supatrace.dev/", "logo": "https://supatrace.dev/og-image.png"}, {"@type": "WebSite", "@id": "https://supatrace.dev/#website", "name": "SupaTrace", "url": "https://supatrace.dev/", "description": "Connect a write-only agent, inspect reviewed traces and export portable JSON. Free plan with no card. Base is $9.99/month. Pro is $25.99/month. Free to start; Base and Pro subscriptions are billed monthly through Stripe.", "publisher": {"@id": "https://supatrace.dev/#organization"}}, {"@type": "SoftwareApplication", "name": "SupaTrace", "url": "https://supatrace.dev/", "applicationCategory": "DeveloperApplication", "operatingSystem": "Web", "description": "Agent traces. Kept simple. Explicit JSON batches and reviewed Claude Code snapshots. Connect a write-only agent: the write-only key can upload, never read your traces. Inspect reviewed traces and export portable JSON. Free plan with no card. Base is $9.99/month. Pro is $25.99/month. Free to start; Base and Pro subscriptions are billed monthly through Stripe.", "publisher": {"@id": "https://supatrace.dev/#organization"}}]}</script>
 </head>
 <body class="landing remodel" data-page="landing">
 <a class="skip" href="#content">Skip to content</a>
@@ -39,9 +39,9 @@
 <main id="content">
 <section class="hero" aria-labelledby="headline">
 <div class="hero-copy">
-<p class="eyebrow">Small, unbilled alpha</p>
+<p class="eyebrow">Small alpha</p>
 <h1 id="headline">Agent traces.<br>Kept simple.</h1>
-<p class="intro">Keep the work, not just the result.</p>
+<p class="intro">Send traces from any OpenTelemetry app. Inspect the steps your app records.</p>
 <p class="supported">Explicit JSON batches and reviewed Claude Code snapshots. Opt-in Claude hooks are a beta; no silent scanning.</p>
 <div class="actions"><a class="button" href="#signin">Get started</a><a class="setup-link" href="/docs/quickstart/">Read the setup guide</a></div>
 </div>
@@ -52,14 +52,14 @@
 </ol>
 </section>
 <section class="signin-section" aria-labelledby="signin-title">
-<div class="signin-copy"><h2 id="signin-title">Open your workspace.</h2><p>Sign in with the provider you used to create your account.</p><p class="provider-note">A first sign-in with Google or GitHub opens your existing account when both verify the same email address. Accounts that already exist stay separate unless you link them in Settings.</p></div>
+<div class="signin-copy"><h2 id="signin-title">Open your workspace.</h2><p>Start with the Free plan. No card.</p></div>
 <aside class="entry" aria-label="Sign in to SupaTrace">
 <div id="signin"><a class="button choice" id="github" href="/api/auth/login">Continue with GitHub</a></div>
 </aside>
 </section>
-<section class="limit-strip" id="limits" aria-label="Current alpha limits"><strong>Small trials, clear limits.</strong><span>Free: 50k spans a month, 1 GB stored</span><span>100 events / 512 KiB per batch</span><span>Write-only ingest keys, revocable</span><a href="/agent-setup.html#limits">All limits and recovery notes</a></section>
+<section class="limit-strip" id="limits" aria-label="Current alpha limits"><strong>Small trials, clear limits.</strong><span>Free: 50k spans a month, 1 GB stored</span><span>100 events / 512 KiB per batch</span><span>Write-only ingest keys, revocable</span><a href="/docs/limits/">All limits and recovery notes</a></section>
 </main>
-<footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/" aria-current="page">Home</a><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/">Security</a><a href="/changelog/">Changelog</a><a href="/status/">Status</a><a href="/agent-setup.html">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a><span id="build" class="build" hidden></span></nav><script type="module" src="/build.js"></script><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>
+<footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/" aria-current="page">Home</a><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/">Security</a><a href="/changelog/">Changelog</a><a href="/status/">Status</a><a href="/docs/quickstart/">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a></nav><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>
 <script type="module" src="/signin.js"></script>
 </body>
 </html>

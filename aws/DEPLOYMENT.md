@@ -83,15 +83,36 @@ support route. `aws/production-ops.yaml` is separate from app Deploy: preserve t
 confirmed alert recipient through `AlertEmailAddress`, verify new mailbox routing,
 and confirm subscriptions before applying any mail configuration update.
 
-Billing accepts Stripe test keys only. See [plan billing](../docs/plan-billing.md).
-Do not supply live keys. Enabling billing needs its own reviewed resources,
-permissions, webhook signing secret, and synthetic checkout verification.
+Billing mode follows the secret key prefix. Test keys keep test behavior; live keys enable live payments. See [plan billing](../docs/plan-billing.md). Enabling billing needs reviewed resources, permissions, a matching webhook signing secret and synthetic checkout verification.
 
 On rollback, reconcile in-flight writes and quota reservations; rolling back code
 does not undo data. Do not fall back to an artifact that ignores current tenant,
 workspace, environment, or key scopes. Diagnose the failed resource before
 requesting recovery privileges. Resource skipping can leave the stack inconsistent
 and needs a separate recovery plan.
+
+## Going live and rolling back
+
+The lead stages Stripe objects and secrets, then controls the flip. Merging this code changes nothing in production while the secret holds a test key. Legal and marketing wording is proposed in [live-billing-copy-changes.md](../docs/live-billing-copy-changes.md) for a separate approved flip-time change.
+
+Required objects in **live mode**:
+
+- Base and Pro products and active USD monthly licensed prices with lookup keys `supatrace_base_monthly` (999 cents) and `supatrace_pro_monthly` (2599 cents).
+- An active monthly metered price with lookup key `supatrace_pro_overage_monthly`, at USD 0.0005 cents per span, attached to the active meter whose event name is `supatrace_pro_overage`. The meter sums `value` and maps customers by `stripe_customer_id`.
+- An active customer portal configuration with `livemode: true` and `metadata.app=supatrace`, allowing cancellation, payment details and invoice access. The app changes plan prices in place and preserves metered items.
+- A webhook endpoint for `POST /api/billing/webhook` subscribing to all six events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`.
+
+Put the live secret or restricted key in `supatrace-plan-billing-test-key` and the matching live endpoint signing secret in `supatrace-plan-billing-test-webhook`. These names are historical. Their ARNs are the existing stack parameters that supply `PLAN_BILLING_SECRET_ARN` and `PLAN_BILLING_WEBHOOK_SECRET_ARN`; no new secret name, parameter or mode flag is needed. The app picks up a new secret version within five minutes through its secret cache. Stage both matching secrets before directing live traffic. During a mismatch, webhook verification fails closed.
+
+A restricted key needs these permissions: customers **write**, Checkout Sessions **write**, billing portal **write**, subscriptions **write**, prices **read**, products **read**, invoices **read**, billing meters **read**, meter events **write**, billing meter event summaries **read**. Keep unrelated permissions disabled.
+
+**One-step rollback:** restore the prior secret versions, moving `AWSPREVIOUS` back to `AWSCURRENT` with `aws secretsmanager update-secret-version-stage`, for the key and webhook secrets as one rollback operation. For each secret, use its previous and current version IDs:
+
+```sh
+aws secretsmanager update-secret-version-stage --secret-id SECRET_NAME --version-stage AWSCURRENT --move-to-version-id PREVIOUS_VERSION_ID --remove-from-version-id CURRENT_VERSION_ID
+```
+
+Alternatively, put the test key and test webhook signing secret back in those same secrets. No deploy or mode parameter change is needed. Allow the five-minute cache window. Other-mode billing state remains stored and is ignored; operator plans are unchanged. Existing live subscriptions remain in Stripe and require lead reconciliation if live traffic is rolled back.
 
 ## References
 

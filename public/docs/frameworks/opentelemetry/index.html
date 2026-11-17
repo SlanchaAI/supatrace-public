@@ -41,7 +41,7 @@
 <h1>OpenTelemetry</h1>
 </div>
 <p class="lede">Send OpenTelemetry traces to supatrace.dev over OTLP/HTTP using stock Python or Node exporters. Protobuf and JSON supported; no gRPC, metrics or logs.</p>
-<p class="preview-note"><strong>SDK preview, package coming.</strong> The <code>supatrace</code> Python package and <code>@supatrace/client</code> JavaScript package are not published to PyPI or npm. The repository is private, so these checkout-only examples are unavailable to outside users. Use the <a href="/docs/quickstart/#home">Home snippets</a>, <a href="/docs/frameworks/opentelemetry/#otlp">stock OpenTelemetry exporters</a> or <a href="/agent-setup.html">reviewed script downloads</a> today.</p>
+<p class="preview-note"><strong>Coming soon.</strong> The Python and JavaScript <code>supatrace</code> packages are not published to PyPI or npm. Until then send traces with the <a href="/docs/frameworks/opentelemetry/#otlp">stock OpenTelemetry exporter</a> or the Python/Node snippets on <a href="/app/#home">Home</a>. These SDK examples run from the <a href="https://github.com/SlanchaAI/supatrace-public">public repository</a> checkout.</p>
 
 <section aria-labelledby="otlp"><h2 id="otlp">OTLP/HTTP ingest <span class="status available">available</span></h2>
 <p>SupaTrace accepts OpenTelemetry traces at <code>POST /v1/traces</code> on supatrace.dev. Any OTLP/HTTP exporter can send traces with two environment variables and an ingest key; no SupaTrace package is needed.</p>
@@ -49,6 +49,14 @@
 <p>Create an ingest key on <a href="/app/">Home</a> or the <strong>API keys</strong> page. Ingest keys from Home or API keys do not expire by default; keys from pairing an agent last 30 days. In a fresh shell, set these two variables, replacing only <code>YOUR_INGEST_KEY</code>:</p>
 <pre data-lang="sh"><code>export OTEL_EXPORTER_OTLP_ENDPOINT=https://supatrace.dev
 export OTEL_EXPORTER_OTLP_HEADERS=&quot;x-supatrace-key=YOUR_INGEST_KEY&quot;</code></pre>
+<p>Both <code>x-supatrace-key: &lt;key&gt;</code> and <code>Authorization: Bearer &lt;key&gt;</code> are accepted. The environment-variable alternative is <code>OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer YOUR_INGEST_KEY"</code>. Some SDKs require the space URL-encoded: <code>Authorization=Bearer%20YOUR_INGEST_KEY</code>, following the <a href="https://opentelemetry.io/docs/specs/otel/protocol/exporter/#specifying-headers-via-environment-variables">OpenTelemetry header format</a>.</p>
+<h3>Try HTTP/JSON</h3>
+<p>This fake span calls no model provider. Replace the key before sending:</p>
+<pre data-lang="sh"><code>curl -X POST https://supatrace.dev/v1/traces \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_INGEST_KEY' \
+  -d '{&quot;resourceSpans&quot;:[{&quot;scopeSpans&quot;:[{&quot;spans&quot;:[{&quot;traceId&quot;:&quot;11111111111111111111111111111111&quot;,&quot;spanId&quot;:&quot;1111111111111111&quot;,&quot;name&quot;:&quot;synthetic.example&quot;,&quot;startTimeUnixNano&quot;:&quot;1794685870000000000&quot;,&quot;endTimeUnixNano&quot;:&quot;1794685871000000000&quot;}]}]}]}'
+# Or replace Authorization with: -H 'x-supatrace-key: YOUR_INGEST_KEY'</code></pre>
 <p>The base URL makes both stock exporters append <code>/v1/traces</code>. Leave any <code>OTEL_EXPORTER_OTLP_TRACES_ENDPOINT</code> and <code>OTEL_EXPORTER_OTLP_TRACES_HEADERS</code> overrides unset.</p>
 <h3>Python</h3>
 <pre data-lang="sh"><code>pip install opentelemetry-sdk opentelemetry-exporter-otlp-proto-http</code></pre>
@@ -106,7 +114,7 @@ trace = supatrace.init(service="checkout", mode="otlp")
 trace.span("checkout.step", {"cart.items": 3})
 print(trace.capture["sending"], trace.capture["skipped"])
 trace.close()</code></pre>
-<pre data-lang="js" data-run="js"><code>import { init } from "@supatrace/client";
+<pre data-lang="js" data-run="js"><code>import { init } from "supatrace";
 
 const trace = init("checkout", { mode: "otlp" });
 trace.span("checkout.step", { "cart.items": 3 });
@@ -121,7 +129,7 @@ export LANGFUSE_SECRET_KEY="YOUR_WRITE_KEY"</code></pre>
 <p>Update events are stored as their own events and are not merged into the observation they update. It was tested with the Langfuse JS SDK 3.39.2 and Python SDK 5.2.0; other versions are untested.</p></section>
 </main>
 </div>
-<footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/">Security</a><a href="/changelog/">Changelog</a><a href="/status/">Status</a><a href="/agent-setup.html">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a><span id="build" class="build" hidden></span></nav><script type="module" src="/build.js"></script><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>
+<footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/">Security</a><a href="/changelog/">Changelog</a><a href="/status/">Status</a><a href="/docs/quickstart/">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a></nav><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>
 <script type="module" src="/docs/docs.js"></script>
 </body>
 </html>

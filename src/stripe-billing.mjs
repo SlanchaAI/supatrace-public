@@ -109,5 +109,6 @@ export async function sandboxEntitlement(env,tenant,projectId){
  const c=configuration(env);
  if(!sandboxEntitlementConfiguration(env))fail(503,'sandbox_entitlements_disabled');
  await authorize(c,'sandbox.entitlement.view',tenant);
- return json(await env.store.getStripeSandboxEntitlement(tenant,projectId));
+ try{return json(await env.store.getStripeSandboxEntitlement(tenant,projectId));}
+ catch(error){if(error.code==='billing_customer_unbound')return json({bound:false});throw error;}
 }

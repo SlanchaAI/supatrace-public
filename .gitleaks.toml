@@ -32,3 +32,11 @@ condition = "AND"
 regexTarget = "secret"
 paths = ['''(?:^|/)tests/ui\.test\.mjs$''']
 regexes = ['''^GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ$''']
+
+[[rules]]
+id = "curl-auth-header"
+
+[[rules.allowlists]]
+description = "Documented placeholder ingest key in curl examples"
+regexTarget = "line"
+regexes = ['''Bearer YOUR_INGEST_KEY''']

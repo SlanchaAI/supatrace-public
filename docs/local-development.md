@@ -1,6 +1,6 @@
 # Integrated local development
 
-Start with the [README](../README.md#run-locally) and the [first-trace recipe](self-hosting.md#send-and-read-one-trace). Use **Team admin account** in its personal workspace for a new ingest key. The seeded Owner workspace starts above the Free key allowance.
+Start with the [README](../README.md#run-locally) and the [first-trace recipe](self-hosting.md#send-and-read-one-trace). Use **Team admin account** in its personal workspace for a new ingest key. The Owner account can also create a key for the seeded team: seed upload keys are revoked after use, leaving room under Free.
 
 Use Node 22 (`.nvmrc`) and Python 3.12. From this repository:
 
@@ -10,7 +10,7 @@ npm --prefix mcp ci --ignore-scripts
 npm run dev
 ```
 
-Open http://127.0.0.1:3000/__local__/. Use `npm run dev -- --port 3001` if the
+Open `http://127.0.0.1:3000/__local__/`. Use `npm run dev -- --port 3001` if the
 port is occupied. The server binds loopback only. Stop it with Ctrl-C; all demo
 state resets. No AWS account, identity-provider login or Stripe key is needed.
 This command imports the existing real-handler loopback harness, MemoryDynamo,

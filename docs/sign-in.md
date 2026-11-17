@@ -1,6 +1,8 @@
 # Sign-in
 
-The public homepage explains supported capture, current limits and the first-trace path. The signed-out app remains a compact sign-in screen. Google follows GitHub when configured; every optional provider stays hidden until configured. Repository defaults do not establish live provider state. The October 25 Google callback failure is historical. The authorized signed-in browser verified Google and the intended Default workspace on November 4, including reload. This does not prove provider switching or account recovery; see the [local development](local-development.md).
+The hosted service supports GitHub, Google, SSO, and email + password, as verified on November 16, 2026. The homepage and signed-out app use the same sign-in component. Provider availability comes from `/api/auth/providers`; optional providers stay hidden on hosts where they are not configured.
+
+For email + password, choose Sign up, enter your email and a password, then open the confirmation link from the support email. Enter the chosen password to confirm the account and sign in. Confirmation opens the app; later visits can use email and password. Forgot password sends a reset code; enter that code and a new password to reset access. Email confirmation links are account verification, not passwordless sign-in.
 
 The legal line is the two links `/terms.html` and `/privacy.html`. It does not ask anyone to agree to email updates. Supatrace collects no email addresses on that line. The sign-in and sign-up line says "By continuing you agree to the Terms of Service and Privacy Policy" with links to the published documents, effective November 16, 2026. The footer also links Acceptable Use and Subprocessors.
 
@@ -16,7 +18,7 @@ Signed-out provider discovery has its own 15-second deadline and retains the exi
 | Continue with Google | Not on the dashboard | Built. Shown only when `GoogleClientId` and `GoogleSecretArn` are both set. `/api/auth/google`. |
 | Continue with ChatGPT | Second button | Experimental disabled scaffold, not an accepted ChatGPT integration. Official identity-token verification and approved client registration must be completed before enabling it. |
 | Continue with SSO | Third button | Built. Off until the email domains, SSO URL, issuer, and IdP certificate secret are all set. |
-| Email and password | After "or" | Built. Off until `EmailFrom` is a real address and the function can send mail. The confirmation page asks for the password and does not sign anyone in. |
+| Email and password | After "or" | Supported on the hosted service. Sign up, then confirm using the emailed link and chosen password to sign in and open the app. Self-hosted deployments require `EmailFrom` and mail delivery. |
 | Forgot password | Under the password field | Built with the email sign-in. One live code per address. Changing the password ends every existing session. |
 | Sign up | "Don't have an account? Sign up" | Built with the email sign-in. The account is created only after the confirmation page password matches the newest sign-up. |
 | Two-factor authentication | Asked when the account has it | Built, and off unless `MfaEnabled` is `true`. Settings buttons turn it on, set it up again, or turn it off. |
@@ -38,6 +40,8 @@ Leave these parameters empty. The deploy passes an empty value for each one the 
 The function role's permissions boundary is `supatrace-alpha-api-boundary`, in the hand-deployed OIDC stack. The deploy role cannot change that policy. Before Google, ChatGPT, or SSO can read a secret, pass that secret's ARN to the OIDC stack (`GoogleSecretArn`, `ChatGptSecretArn`, or `SsoCertSecretArn`) in the same hand deploy. The boundary already allows `ses:SendEmail` on `identity/*`, so turning mail on later does not require a boundary change. The function role itself only receives that permission when `EmailFrom` is set.
 
 ## Email and password
+
+The confirmation email asks you to open the link and enter the password you chose to sign in. The link expires in 10 minutes.
 
 An unconfirmed sign-up is a short-lived challenge, not an account. It does not take a row in the 100-account alpha cap, and it does not reserve the address. Signing up again replaces that challenge and sends a new link. The previous link stops working. Opening the link, or requesting `GET /api/auth/email/verify`, does not create the account. The page asks for the password. The account is created only when that password matches the newest challenge, so the person who registered last cannot own a confirmed account by sending the last email. A different password leaves the account uncreated, and the challenge stays so the matching password can still be tried. A successful confirmation sets a session through the same helper as password sign-in and opens `/app/`. Two-factor authentication, when required, still runs before a session is issued. Opening the link alone never sets a session. A later sign-up for an address that already has an account returns `email_already_registered`. Signing in before the account is created returns the same `invalid_credentials` as an unknown address.
 

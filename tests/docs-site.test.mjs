@@ -10,9 +10,9 @@ import {existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, s
 import {tmpdir} from 'node:os';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {DOCS, DOC_PAGES, pageUrl} from '../scripts/site-pages.mjs';
+import {DOCS, DOC_PAGES, REDIRECTS, pageUrl} from '../scripts/site-pages.mjs';
 import {parseBatch} from '../src/trace.mjs';
-import {OTLP_ENV, OTLP_PYTHON, OTLP_JS} from '../scripts/otlp-snippets.mjs';
+import {OTLP_ENV, OTLP_PYTHON, OTLP_JS, OTLP_CURL} from '../scripts/otlp-snippets.mjs';
 import * as jsSdk from '../packages/supatrace-js/index.mjs';
 
 const repo = fileURLToPath(new URL('..', import.meta.url));
@@ -45,8 +45,7 @@ function sandbox() {
     writeFileSync(join(root, 'package.json'), JSON.stringify({name, type: 'module', main: 'index.mjs', exports: './index.mjs'}));
     writeFileSync(join(root, 'index.mjs'), body);
   }
-  mkdirSync(join(dir, 'node_modules', '@supatrace'), {recursive: true});
-  symlinkSync(join(repo, 'packages/supatrace-js'), join(dir, 'node_modules', '@supatrace', 'client'), 'dir');
+  symlinkSync(join(repo, 'packages/supatrace-js'), join(dir, 'node_modules', 'supatrace'), 'dir');
   return dir;
 }
 // No endpoint, key or content switch may leak in from the developer's shell.
@@ -56,7 +55,7 @@ test('the sidebar lists exactly the pages under public/docs/', () => {
   const found = [];
   const walk = dir => { for (const entry of readdirSync(new URL(dir, pageUrl('docs/')), {withFileTypes: true})) { if (entry.isDirectory()) walk(dir + entry.name + '/'); else if (entry.name === 'index.html') found.push('/docs/' + dir); } };
   walk('');
-  assert.deepEqual(found.sort(), DOCS.flatMap(group => group.items.map(item => item.href)).sort());
+  assert.deepEqual(found.sort(), [...DOCS.flatMap(group => group.items.map(item => item.href)), ...REDIRECTS.filter(page => page.file.startsWith('docs/')).map(page => '/' + page.file.replace('index.html', ''))].sort());
   for (const page of DOC_PAGES) {
     const html = read(page.file);
     assert.ok(html.includes(`<a href="${page.path}" aria-current="page">`), page.file + ' marks itself in the sidebar');
@@ -141,8 +140,8 @@ test('the docs distinguish available hosted OTLP from the unpublished SDK', () =
   assert.match(readFileSync(join(repo, 'docs/otlp-ingest.md'), 'utf8'), /\*\*Available\*\* on https:\/\/supatrace\.dev/);
   for (const page of DOC_PAGES) {
     const html = read(page.file), shown = decode(html.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ');
-    assert.doesNotMatch(shown, /pip install supatrace\b|npm install @supatrace\/client|npx supatrace/, page.file + ' has no registry install');
-    assert.doesNotMatch(shown, /https:\/\/(?:otlp|api|ingest)\.supatrace\.dev|supatrace\.dev\/v1\/traces/, page.file + ' invents no endpoint URL');
+    assert.doesNotMatch(shown, /pip install supatrace\b|npm install (?:@supatrace\/client|@supatrace\/js|supatrace)\b|npx supatrace/, page.file + ' has no registry install');
+    assert.doesNotMatch(shown, /https:\/\/(?:otlp|api|ingest)\.supatrace\.dev/, page.file + ' invents no endpoint URL');
     if (/@supatrace\/client|import supatrace/.test(shown)) assert.match(shown, /not published to PyPI or npm/, page.file + ' says the SDK is unpublished');
     assert.doesNotMatch(shown, /not reachable on|hosted edge pending/, page.file + ' has no stale hosted status');
     assert.doesNotMatch(shown, /#99|not live yet/, page.file + ' has no stale OTLP wording');
@@ -156,10 +155,12 @@ test('the docs distinguish available hosted OTLP from the unpublished SDK', () =
 test('workspace controls named in the docs exist in the app with the same label', () => {
   const app = readFileSync(join(repo, 'public/app/index.html'), 'utf8').replace(/<[^>]+>/g, '\n');
   const docs = DOC_PAGES.map(page => read(page.file)).join('\n');
-  for (const label of ['Export original JSON', 'Export selected environment', 'Export all workspace environments', 'Download prepared archive', 'Prepare redacted copy', 'Refresh Traces', 'API keys', 'Agents', 'Traces']) {
+  for (const label of ['Export original JSON', 'Export selected environment', 'Export all workspace environments', 'Download prepared archive', 'Prepare redacted copy', 'API keys', 'Agents', 'Traces']) {
     assert.ok(docs.includes(`<strong>${label}</strong>`), 'docs name ' + label);
     assert.ok(app.split('\n').some(line => line.trim() === label), 'the app has no control labelled "' + label + '"');
   }
+  assert.ok(docs.includes('<strong>Refresh Traces</strong>'));
+  assert.ok(app.split('\n').some(line => line.trim() === 'Refresh'), 'Traces uses the short Refresh label');
   assert.ok(readFileSync(join(repo, 'agent/upload.py'), 'utf8').includes('Accepted by server'));
   // The Langfuse section describes the in-app server pull the app and template actually ship.
   const importers = read('docs/importers/index.html');
@@ -192,7 +193,7 @@ test('onboarding leads with public paths and keeps stock exporter examples ident
     assert.ok(decode(read(file)).includes(OTLP_ENV));
     assert.match(read(file), /no gRPC, metrics or logs/i);
   }
-  for (const code of [OTLP_ENV, OTLP_PYTHON, OTLP_JS]) assert.ok(md.includes(code));
+  for (const code of [OTLP_ENV, OTLP_PYTHON, OTLP_JS, OTLP_CURL]) assert.ok(md.includes(code));
   assert.match(OTLP_PYTHON, /SimpleSpanProcessor\(OTLPSpanExporter\(\)\)/);
   assert.match(OTLP_JS, /new SimpleSpanProcessor\(new OTLPTraceExporter\(\)\)/);
   for (const code of [OTLP_PYTHON, OTLP_JS]) {
@@ -206,7 +207,7 @@ test('public docs state current allowances, key lifetimes and private-checkout l
   assert.match(read('docs/export/index.html'), /On Free that is 7 days/);
   for (const file of [...DOC_PAGES.map(page => page.file), 'agent-setup.html', 'llms.txt', 'integrations/index.html', 'changelog/index.html']) {
     const html = read(file);
-    assert.doesNotMatch(html, /github\.com\/SlanchaAI\/supatrace/, file);
+    assert.doesNotMatch(html, /github\.com\/SlanchaAI\/supatrace(?:[\/#"]|$)/, file);
     assert.doesNotMatch(html, /not reachable on (?:https:\/\/)?supatrace\.dev yet|hosted edge pending|100k spans|100,000 spans per UTC/, file);
     if (html.includes('private checkout') || html.includes('private repository')) assert.match(html, /unavailable to outside users|private repository access/, file);
   }

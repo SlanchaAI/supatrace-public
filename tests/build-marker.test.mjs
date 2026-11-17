@@ -39,13 +39,13 @@ test('the command writes the marker, and refuses to write one without a commit',
   } finally { rmSync(dir, {recursive: true, force: true}); }
 });
 
-test('the repository copy is unstamped and every public page can show a stamped build', () => {
+test('the repository marker stays available while public footers hide the build', () => {
   assert.equal(readFileSync(pageUrl('build.json'), 'utf8'), serialize(UNSTAMPED));
   assert.equal(UNSTAMPED.commit, null);
   for (const page of PAGES) {
     const html = readFileSync(pageUrl(page.file), 'utf8');
-    assert.ok(html.includes('<span id="build" class="build" hidden></span>'), page.file + ' has the build slot');
-    assert.ok(html.includes('<script type="module" src="/build.js"></script>'), page.file + ' loads build.js');
+    if (['terms.html', 'privacy.html', 'aup.html'].includes(page.file)) continue;
+    assert.doesNotMatch(html, /id="build"|src="\/build.js"/, page.file);
   }
   const script = readFileSync(pageUrl('build.js'), 'utf8');
   assert.match(script, /fetch\('\/build\.json'/);

@@ -23,3 +23,18 @@
 .app #signed-out{margin:auto;width:min(340px,100%)}
 .app #signed-out h1{font-size:22px;margin:0}
 .app #signed-out .lede{margin:0 0 8px;font-size:13px}
+
+/* Shared spacing and field geometry for the landing and workspace cards. */
+.auth [data-view]{display:grid;gap:12px;min-width:0}
+.auth form{display:grid;gap:8px;min-width:0}
+.auth .choice,.entry .auth .choice{margin:0}
+.app #signed-out .lede{margin-bottom:10px}
+.app #signed-out .auth{padding-block:14px}
+.app #gate{padding:12px}
+.landing.remodel .auth .choice.secondary,.app .auth .choice.secondary,
+.landing.remodel .auth form button.primary,.app .auth form button.primary{background:#fffdf5;color:#232922;border:1px solid #aeb7a2}
+.landing.remodel .auth .choice.provider-primary,.app .auth .choice.provider-primary{background:#232922;color:#fffdf5;border:1px solid #232922}
+.landing.remodel .auth .field input,.app .auth .field input{padding-right:64px}
+.landing.remodel .auth .field .reveal,.app .auth .field .reveal{right:4px;top:50%;transform:translateY(-50%);min-height:32px;min-width:52px;padding:4px 6px;border:0;background:transparent;color:#526b3e}
+.auth input::placeholder{color:#707767;opacity:1}
+.auth :is(a,button,input):focus-visible{outline:2px solid #526b3e;outline-offset:3px}

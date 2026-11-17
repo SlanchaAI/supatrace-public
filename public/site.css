@@ -115,3 +115,19 @@
 .landing.remodel.page .components .note{color:var(--muted);font-size:12px}
 .landing.remodel.page .components p{flex-basis:100%;margin:0;font-size:12px}
 .landing.remodel.page .feed-head{font-size:13px}
+
+/* Local scrolling remains visible and keyboard accessible on narrow screens. */
+.landing.remodel .site-links .build{display:none}
+.landing.remodel .compare-cards{display:none}
+.landing.remodel.page .table-scroll,.landing.remodel.docs main pre{max-width:100%;background-image:linear-gradient(to left,rgba(82,107,62,.3),transparent 20px);background-position:right;background-repeat:no-repeat;background-size:24px 100%;background-attachment:scroll}
+.landing.remodel :is(.table-scroll,pre):focus-visible{outline:2px solid #526b3e;outline-offset:3px}
+@media(max-width:639px){
+.landing.remodel .compare-desktop{display:none}
+.landing.remodel .compare-cards{display:grid;gap:16px}
+.landing.remodel .compare-card{min-width:0;border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:16px}
+.landing.remodel.page .compare-card h3{margin:0 0 12px}
+.landing.remodel .compare-card dl{margin:0;font-size:12px}
+.landing.remodel .compare-card dl>div{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:8px 0;border-top:1px solid var(--line);overflow-wrap:anywhere}
+.landing.remodel .compare-card dt{font-weight:650}
+.landing.remodel .compare-card dd{margin:0}
+}

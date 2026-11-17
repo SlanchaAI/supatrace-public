@@ -64,10 +64,10 @@
 <tr><th scope="row">Amazon Web Services</th><td>Hosting, storage, delivery (CloudFront, Lambda, S3, DynamoDB), us-east-1</td><td>Yes: it stores and serves it</td></tr>
 <tr><th scope="row">GitHub</th><td>Sign-in with GitHub (OAuth)</td><td>No</td></tr>
 <tr><th scope="row">Google</th><td>Sign-in with Google (OAuth), where configured</td><td>No</td></tr>
-<tr><th scope="row">Stripe</th><td>TEST-mode billing only; live payments disabled</td><td>No</td></tr>
+<tr><th scope="row">Stripe</th><td>Stripe processes subscription payments.</td><td>No</td></tr>
 <tr><th scope="row">Cloudflare</th><td>DNS for the SupaTrace domains</td><td>No</td></tr>
 </tbody></table></div>
-<p>Stripe handles TEST-mode checkout, subscriptions and invoices; no live payment is processed and no real card is charged. If you start a Langfuse import, SupaTrace calls the Langfuse region you chose with the keys you enter; that is your provider, not a SupaTrace subprocessor.</p></section>
+<p>Stripe handles Checkout, subscriptions, invoices and payment processing. If you start a Langfuse import, SupaTrace calls the Langfuse region you chose with the keys you enter; that is your provider, not a SupaTrace subprocessor.</p></section>
 <section aria-labelledby="not-yet"><h2 id="not-yet">Boundaries and unavailable features</h2>
 <ul class="facts">
 <li><strong>SOC 2:</strong> no report and no audit under way. No auditor or target date has been chosen.</li>
@@ -83,6 +83,6 @@
 </ul>
 <p>The <a href="/enterprise/">Enterprise page</a> tracks which of these are planned.</p></section>
 </main>
-<footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/" aria-current="page">Security</a><a href="/changelog/">Changelog</a><a href="/status/">Status</a><a href="/agent-setup.html">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a><span id="build" class="build" hidden></span></nav><script type="module" src="/build.js"></script><!-- /site:footer --><span>SupaTrace holds no security certification. Review before upload.</span></footer>
+<footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/" aria-current="page">Security</a><a href="/changelog/">Changelog</a><a href="/status/">Status</a><a href="/docs/quickstart/">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a></nav><!-- /site:footer --><span>SupaTrace holds no security certification. Review before upload.</span></footer>
 </body>
 </html>

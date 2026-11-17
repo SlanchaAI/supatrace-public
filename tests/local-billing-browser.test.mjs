@@ -18,3 +18,16 @@ test('integrated local owner Checkout -> signed capture -> separate worker -> pr
   assert.deepEqual(outside,[]);assert.deepEqual(errors,[]);
  }finally{await context.close();await browser.close();await live.close();}
 });
+
+
+test('fresh local Team admin lands on Home without failed billing probes or console errors',async()=>{
+ const live=await start({localDev:true,configureEnvironment:async env=>{env.localBilling=await configureLocalBilling(env);}}),browser=await launch(),context=await browser.newContext();
+ const errors=[],failed=[],previews=[];await context.route(/^(?!http:\/\/127\.0\.0\.1)/,route=>route.abort());
+ try{
+  await seedLocalWorkspace(live);const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));page.on('console',message=>{if(message.type()==='error')errors.push(message.text());});
+  page.on('response',response=>{if(response.status()>=400)failed.push(new URL(response.url()).pathname+':'+response.status());if(new URL(response.url()).pathname==='/api/billing/sandbox-entitlement')previews.push(response);});
+  await page.goto(live.origin+'/__local__/signin?account=5252',{waitUntil:'networkidle'});await page.locator('#shell:not([hidden])').waitFor();
+  assert.equal(new URL(page.url()).hash,'#home');assert.ok(previews.length>0);for(const preview of previews){assert.equal(preview.status(),200);assert.deepEqual(await preview.json(),{bound:false});}
+  assert.doesNotMatch(await page.locator('#billing-note').textContent(),/undefined|unavailable/);assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);
+ }finally{await context.close();await browser.close();await live.close();}
+});

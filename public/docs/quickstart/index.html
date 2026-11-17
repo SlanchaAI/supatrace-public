@@ -55,6 +55,14 @@
 <p>Create an ingest key on <a href="/app/">Home</a> or the <strong>API keys</strong> page. Ingest keys from Home or API keys do not expire by default; keys from pairing an agent last 30 days. In a fresh shell, set these two variables, replacing only <code>YOUR_INGEST_KEY</code>:</p>
 <pre data-lang="sh"><code>export OTEL_EXPORTER_OTLP_ENDPOINT=https://supatrace.dev
 export OTEL_EXPORTER_OTLP_HEADERS=&quot;x-supatrace-key=YOUR_INGEST_KEY&quot;</code></pre>
+<p>Both <code>x-supatrace-key: &lt;key&gt;</code> and <code>Authorization: Bearer &lt;key&gt;</code> are accepted. The environment-variable alternative is <code>OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer YOUR_INGEST_KEY"</code>. Some SDKs require the space URL-encoded: <code>Authorization=Bearer%20YOUR_INGEST_KEY</code>, following the <a href="https://opentelemetry.io/docs/specs/otel/protocol/exporter/#specifying-headers-via-environment-variables">OpenTelemetry header format</a>.</p>
+<h3>Try HTTP/JSON</h3>
+<p>This fake span calls no model provider. Replace the key before sending:</p>
+<pre data-lang="sh"><code>curl -X POST https://supatrace.dev/v1/traces \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_INGEST_KEY' \
+  -d '{&quot;resourceSpans&quot;:[{&quot;scopeSpans&quot;:[{&quot;spans&quot;:[{&quot;traceId&quot;:&quot;11111111111111111111111111111111&quot;,&quot;spanId&quot;:&quot;1111111111111111&quot;,&quot;name&quot;:&quot;synthetic.example&quot;,&quot;startTimeUnixNano&quot;:&quot;1794685870000000000&quot;,&quot;endTimeUnixNano&quot;:&quot;1794685871000000000&quot;}]}]}]}'
+# Or replace Authorization with: -H 'x-supatrace-key: YOUR_INGEST_KEY'</code></pre>
 <p>The base URL makes both stock exporters append <code>/v1/traces</code>. Leave any <code>OTEL_EXPORTER_OTLP_TRACES_ENDPOINT</code> and <code>OTEL_EXPORTER_OTLP_TRACES_HEADERS</code> overrides unset.</p>
 <h3>Python</h3>
 <pre data-lang="sh"><code>pip install opentelemetry-sdk opentelemetry-exporter-otlp-proto-http</code></pre>
@@ -107,9 +115,9 @@ await provider.shutdown();</code></pre>
 </ol>
 <p>The key in <code>supatrace-access.json</code> is a setup-code key: it can upload but cannot read traces, lasts 30 days and can be revoked. Keep the file private. See <a href="/docs/keys/">Keys</a>.</p></section>
 <section aria-labelledby="sdk"><h2 id="sdk">SDK preview, package coming <span class="status preview">preview</span></h2>
-<p class="preview-note"><strong>SDK preview, package coming.</strong> The <code>supatrace</code> Python package and <code>@supatrace/client</code> JavaScript package are not published to PyPI or npm. The repository is private, so these checkout-only examples are unavailable to outside users. Use the <a href="/docs/quickstart/#home">Home snippets</a>, <a href="/docs/frameworks/opentelemetry/#otlp">stock OpenTelemetry exporters</a> or <a href="/agent-setup.html">reviewed script downloads</a> today.</p>
+<p class="preview-note"><strong>Coming soon.</strong> The Python and JavaScript <code>supatrace</code> packages are not published to PyPI or npm. Until then send traces with the <a href="/docs/frameworks/opentelemetry/#otlp">stock OpenTelemetry exporter</a> or the Python/Node snippets on <a href="/app/#home">Home</a>. These SDK examples run from the <a href="https://github.com/SlanchaAI/supatrace-public">public repository</a> checkout.</p>
 <h3 id="python">Python</h3>
-<pre data-lang="sh"><code>pip install ./packages/supatrace   # private checkout only; unavailable to outside users</code></pre>
+<pre data-lang="sh"><code>pip install ./packages/supatrace   # from the public repository root</code></pre>
 <pre data-lang="python" data-run="py"><code>import supatrace
 
 trace = supatrace.init(service="checkout", spool="./spool")
@@ -118,8 +126,8 @@ result = trace.batch([
 ])
 print(result["report"]["valid"], result["report"]["path"])</code></pre>
 <h3 id="javascript">JavaScript</h3>
-<pre data-lang="sh"><code>npm install ./packages/supatrace-js   # private checkout only; unavailable to outside users. Node 22 or later, ESM only</code></pre>
-<pre data-lang="js" data-run="js"><code>import { init } from "@supatrace/client";
+<pre data-lang="sh"><code>npm install ./packages/supatrace-js   # from the public repository root. Node 22 or later, ESM only</code></pre>
+<pre data-lang="js" data-run="js"><code>import { init } from "supatrace";
 
 const trace = init("checkout", { spool: "./spool" });
 const result = trace.batch([
@@ -138,7 +146,7 @@ print(report["valid"], report["errors"], report["path"])</code></pre>
 <p>The trace appears under <strong>Traces</strong> in your <a href="/app/">workspace</a>. <a href="/docs/limits/">Batch limits</a> apply: 100 events and 512 KiB per batch.</p></section>
 </main>
 </div>
-<footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/">Security</a><a href="/changelog/">Changelog</a><a href="/status/">Status</a><a href="/agent-setup.html">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a><span id="build" class="build" hidden></span></nav><script type="module" src="/build.js"></script><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>
+<footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/">Security</a><a href="/changelog/">Changelog</a><a href="/status/">Status</a><a href="/docs/quickstart/" aria-current="page">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a></nav><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>
 <script type="module" src="/docs/docs.js"></script>
 </body>
 </html>

@@ -1,14 +1,14 @@
 # `supatrace` command line
 
-Connect an app to a workspace and watch its traces from a terminal. The CLI is `packages/supatrace-js/cli.mjs`, the `supatrace` bin of the `@supatrace/client` package. It has no dependencies and needs Node 22 or later.
+Connect an app to a workspace and watch its traces from a terminal. The CLI is `packages/supatrace-js/cli.mjs`, the `supatrace` bin of the checkout-only `supatrace` package. It has no dependencies and needs Node 22 or later.
 
-**Not on npm yet.** Publishing the package is a separate decision. Until then run it from a source checkout:
+**Coming soon.** The SupaTrace packages are not published on npm or PyPI. Until then send traces with the stock OpenTelemetry exporter (see the [OTLP quickstart](otlp-ingest.md)) or the Python/Node snippets on Home. Run the CLI from the public source checkout:
 
 ```sh
 node packages/supatrace-js/cli.mjs --help
 ```
 
-After a publish it runs as `npx @supatrace/client <command>`. The short form `npx supatrace` needs the unscoped name `supatrace` on npm, which this repository does not own or claim.
+The JavaScript manifest names the package `supatrace`. Registry install commands are unavailable until it is published.
 
 | Command | What it does |
 | --- | --- |
@@ -54,7 +54,7 @@ SUPATRACE_PROJECT=proj_…
 - If the code is not approved within `--wait` seconds (600 by default), nothing is written and the exit code is 3. Run `init` again in the same folder to keep waiting on the same code. The pending pairing is kept in the user's config directory, not in the project.
 - `init` warns when the env file is not ignored by git.
 
-The write key works with `POST /api/batches` today. The OTLP receiver at `/v1/traces` is in the handler and the local development server but is not routed on https://supatrace.dev yet (see [OTLP ingest](otlp-ingest.md)), so an SDK in `mode: "otlp"` cannot export to the hosted origin until that edge change ships.
+The write key works with `POST /api/batches` and the hosted OTLP/HTTP receiver at `https://supatrace.dev/v1/traces`. See [OTLP ingest](otlp-ingest.md) for stock exporter setup; no SupaTrace package is needed.
 
 ## tail
 

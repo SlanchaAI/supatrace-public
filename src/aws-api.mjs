@@ -14,6 +14,7 @@ import {commercialPlanProjection,commercialBillingState} from './commercial-poli
 import {fulfillCommercialAccount,enrollCommercialAccount} from './commercial-fulfillment.mjs';
 import {checkout as billingCheckout,webhook as billingWebhook,portal as billingPortal,billingStatus,sandboxEntitlement} from './stripe-billing.mjs';
 import {accountRunsPage} from './run-page.mjs';
+import {buildSpans} from '../public/app/span-data.js';
 import {parseBatch,IntakeError} from './trace.mjs';
 import {otlpTraces} from './otlp-ingest.mjs';
 import {drainApi,listDrains,enqueueDrainDeliveries,deliverDrains,DRAIN_LIMITS} from './drains.mjs';
@@ -27,7 +28,7 @@ import {providerFlags,chatgptLogin,chatgptCallback,ssoStart,ssoCallback,emailSig
 import {accountPlanConfiguration} from './plans.mjs';
 import {recordUsageAlert} from './usage-alerts.mjs';
 import {notifyProjectPaused} from './project-pause.mjs';
-import {IDLE_PAUSE,RESUME_PATH,projectLifecycle,retentionDays} from './plan-limits.mjs';
+import {IDLE_PAUSE,RESUME_PATH,projectLifecycle,retentionDays,planLimits} from './plan-limits.mjs';
 import {requireAlphaProject,requireProject} from './alpha-projects.mjs';
 import {auditApi,recordAudit} from './audit.mjs';
 import {ingestAttempt,ingestFailure,recordIngest,ingestLogApi} from './ingest-log.mjs';
@@ -107,11 +108,11 @@ function lifecycleView(life){
  const iso=seconds=>new Date(seconds*1000).toISOString();
  return {lifecycle:life.exempt?{state:'active',pauses_when_idle:false}:{state:life.state,pauses_when_idle:true,idle_days:IDLE_PAUSE.days,warn_days:IDLE_PAUSE.warn_days,last_upload_at:life.last_accepted_at===null?null:iso(life.last_accepted_at),pauses_at:iso(life.pauses_at),resume_url:RESUME_PATH}};
 }
-function planAllowance(usage,account,projectsUsed=1,physical=false){
+function planAllowance(usage,account,projectsUsed=1,physical=false,mode='test'){
  // Retention in force: the plan's days, or the organization's own choice on a plan with custom retention.
  const {period}=usage,plan={...usage.plan,retention_days:retentionDays(account,usage.plan)},iso=seconds=>new Date(seconds*1000).toISOString();
  return {plan_limits:{plan_id:plan.id,name:plan.name,spans_per_month:plan.spans_per_month,stored_bytes:plan.stored_bytes,retention_days:plan.retention_days,projects:plan.projects,hard_stop:usage.spend_cap.enabled,version:usage.limits_version,status:usage.limits_status},
-  monthly:{period:period.id,starts_at:iso(period.starts_at),resets_at:iso(period.resets_at),spans_used:usage.spans_used,spans_limit:plan.spans_per_month,spans_remaining:Math.max(0,plan.spans_per_month-usage.spans_used),bytes_ingested:usage.bytes_ingested,batches:usage.batches},
+  monthly:{test_mode:mode==='test',period:period.id,starts_at:iso(period.starts_at),resets_at:iso(period.resets_at),spans_used:usage.spans_used,spans_limit:plan.spans_per_month,spans_remaining:Math.max(0,plan.spans_per_month-usage.spans_used),bytes_ingested:usage.bytes_ingested,batches:usage.batches},
   projects:{used:projectsUsed,limit:plan.projects},
   // enabled: uploads stop at the included spans. configurable: the plan has overage, so the owner may turn the cap off.
   spend_cap:{enabled:usage.spend_cap.enabled,configurable:usage.spend_cap.configurable,default_enabled:usage.spend_cap.default_enabled,overage_usd_per_million_spans:plan.overage_usd_per_million_spans,overage_spans:Math.max(0,usage.spans_used-plan.spans_per_month)},
@@ -156,7 +157,7 @@ async function storeBatch(env,scope,raw,requestHash,batch){
  const alert=record.usageAlert?await recordUsageAlert(env,scope.store,scope.tenant,record.usageAlert):null;
  const fresh=record.status!=='accepted';
  if(fresh){await env.objects.putImmutable(record.object_key,raw,requestHash);
-  const times=batch.events.map(event=>Date.parse(event.time));await scope.store.acceptReservedBatch(scope.tenant,batch.batch_id,requestHash,{writer:scope.writer,started_at:Math.min(...times),ended_at:Math.max(...times),has_error:batch.events.some(event=>event.kind==='error')});}
+  const spans=buildSpans(batch.events);await scope.store.acceptReservedBatch(scope.tenant,batch.batch_id,requestHash,{writer:scope.writer,started_at:spans.start,ended_at:spans.end,has_error:batch.events.some(event=>event.kind==='error')});}
  scope.attempt?.stored(batch,raw,fresh);
  // Every ingest route (batches, OTLP, Langfuse) records the key's last use here.
  await stampKeyUse(scope.store,scope.binding);
@@ -174,6 +175,7 @@ export async function handle(request,baseEnv){
  if(!ready(baseEnv))return json({error:'service_not_configured'},503);
  const env=envForRequest(request,baseEnv);
  let url=new URL(request.url),path=url.pathname,store=env.store;
+ store.planBillingMode=env.planBilling?.mode ?? 'test';
  for(const p of ['workspace','environment','project'])if(url.searchParams.getAll(p).length>1)throw new HttpError(400,'invalid_query');
  // Scope reloads make several dashboard reads. Allow normal setup and shared NAT use; sensitive routes keep tighter budgets.
  const rate=await store.consumeRate({scope:'request',identity:env.sourceIp||'unknown',limit:300,windowSeconds:60});if(!rate.allowed)return rateLimited(rate);
@@ -193,7 +195,7 @@ export async function handle(request,baseEnv){
  // SCIM 2.0 provisioning: authenticated by an organization's SCIM bearer token, never by a session.
  if(path==='/api/scim/v2'||path.startsWith('/api/scim/v2/'))return await scimApi(request,env);
  if(path.startsWith('/api/mcp/'))return await mcpBridgeApi(request,env,{runView});
- // Stripe events. With test-mode plan billing configured they move plans (src/plan-billing.mjs); otherwise the older sandbox capture answers.
+ // Stripe events. With plan billing configured they move plans (src/plan-billing.mjs); otherwise the older sandbox capture answers.
  if(request.method==='POST'&&path==='/api/billing/webhook')return planBillingAvailable(env)&&env.planBilling.webhookSecret?await planWebhook(request,env):await billingWebhook(request,env);
  if(request.method==='GET'&&path==='/api/auth/providers')return json(await providerFlags(request,env));
  if(request.method==='GET'&&path==='/api/auth/login')return await login(request,env);
@@ -281,7 +283,7 @@ export async function handle(request,baseEnv){
  // What the organization's plan allows, with the counts the limits apply to. The dashboard reads every gate from here.
  if(request.method==='GET'&&path==='/api/entitlements'){
   const plan=typeof store.planId==='function'?await store.planId(tenant):null,answer=entitlementsFor(plan),now=store.now();
-  answer.limits.retention_days=retentionDays(await store.getTenant(tenant));
+  answer.limits.retention_days=retentionDays(await store.getTenant(tenant),planLimits(plan));
   // role and billing_owner tell the dashboard whether this person may manage the plan (the owner, on Default).
   return json({workspace_id:tenant,role:access.role,billing_owner:access.role==='owner'&&destination==='default',...answer,usage:{seats:await spaces.seatsUsed(tenant),environments:(await spaces.environments(tenant)).length,api_keys:(await env.store.listWriteKeys(tenant,{limit:100})).items.filter(k=>!k.revoked&&!k.rotated_to&&k.expires_at>now).length,projects:1+((await env.store._get({pk:'TENANT#'+tenant,sk:'PROJECT_CAPACITY'}))?.count??0)}});
  }
@@ -313,7 +315,7 @@ export async function handle(request,baseEnv){
  if(row.commercial_managed===true&&!quota)throw new HttpError(503,'commercial_controls_unavailable');
  const commercial=await commercialPlanProjection(env,tenant);let planState=accountPlanConfiguration(env.planCatalog,tenant);
  if(quota?.enforced){const p=store.commercialPolicy.policy,plan=p.plans.find(x=>x.id===quota.plan_id);planState={account_plan:{id:plan?.id||'commercial_blocked',name:plan?.name||'Commercial account awaiting reconciliation',scope:'authenticated_account',organization_id:null,commercial_plan_assignment:'versioned_live_policy',billing_status:quota.status,paid_active:quota.status==='active',paid_activation_enabled:quota.status==='active'},plan_configuration:{version:p.version,status:'versioned_live_policy',target_allowances_active:true,verified_billing_required:true}};}
- return json({quota_scope:{workspace_id:tenant,project_id:project.id,environment_id:destination,shared_across_environments:true},billing:commercialBillingState(billingStatus(env),quota),commercial:{...commercial,entitlement:quota||undefined},storage:{used_bytes:row.used_bytes,accepted_uploads:Number.isSafeInteger(row.upload_seq)&&row.upload_seq>=0?row.upload_seq:0,limit_bytes:limit,remaining_bytes:Math.max(0,limit-row.used_bytes),operational_limit_bytes:quota?.operational_limit_bytes??(planUsage?limit:row.byte_limit),accounting:'cumulative_reserved_bytes',limit_kind:quota?.enforced?'commercial_policy_with_operational_ceiling':planUsage?'plan_stored_bytes_allowance':'current_alpha_operational_ceiling'},...(planUsage?planAllowance(planUsage,row,1+((await env.store._get({pk:'TENANT#'+tenant,sk:'PROJECT_CAPACITY'}))?.count??0),env.RETENTION_ERASURE_MODE==='execute'):{}),...(planUsage?lifecycleView(projectLifecycle(row,typeof store.now==='function'?store.now():Math.floor(Date.now()/1000),planUsage.plan)):{}),
+ return json({quota_scope:{workspace_id:tenant,project_id:project.id,environment_id:destination,shared_across_environments:true},billing:commercialBillingState(billingStatus(env),quota),commercial:{...commercial,entitlement:quota||undefined},storage:{used_bytes:row.used_bytes,accepted_uploads:Number.isSafeInteger(row.upload_seq)&&row.upload_seq>=0?row.upload_seq:0,limit_bytes:limit,remaining_bytes:Math.max(0,limit-row.used_bytes),operational_limit_bytes:quota?.operational_limit_bytes??(planUsage?limit:row.byte_limit),accounting:'cumulative_reserved_bytes',limit_kind:quota?.enforced?'commercial_policy_with_operational_ceiling':planUsage?'plan_stored_bytes_allowance':'current_alpha_operational_ceiling'},...(planUsage?planAllowance(planUsage,row,1+((await env.store._get({pk:'TENANT#'+tenant,sk:'PROJECT_CAPACITY'}))?.count??0),env.RETENTION_ERASURE_MODE==='execute',env.planBilling?.mode):{}),...(planUsage?lifecycleView(projectLifecycle(row,typeof store.now==='function'?store.now():Math.floor(Date.now()/1000),planUsage.plan)):{}),
   // Recorded 80%/100% notifications for this month. The banner itself is derived from the live counts.
   ...(alerts?{alerts:alerts.map(a=>({kind:a.kind,level:a.level,period:a.period,used:a.used,limit:a.limit,email:a.email_status,created_at:new Date(a.created_at*1000).toISOString()}))}:{}),
   // Per-account meters by UTC calendar month. reserved_* are what the allowance counts and include uploads that are
@@ -352,7 +354,7 @@ export async function handle(request,baseEnv){
   if(!data||Object.getPrototypeOf(data)!==Object.prototype||Object.keys(data).length||typeof store.resumeProject!=='function')throw new HttpError(400,'invalid_resume_request');
   const result=await store.resumeProject(tenant);return json({resumed:result.resumed,...lifecycleView(result.lifecycle)});
  }
- // Stripe test-mode plan billing: Checkout for Base or Pro, the customer portal, and a re-read of the subscription.
+ // Stripe plan billing: Checkout for Base or Pro, the customer portal, and a re-read of the subscription.
  if(path==='/api/billing/subscribe'){const limited=await store.consumeRate({scope:'checkout',identity:tenant,limit:10,windowSeconds:60});if(!limited.allowed)return rateLimited(limited);return await audited(json(await planSubscribe(env,store,tenant,actor,data)),'billing.checkout_started',null,{plan:data?.plan});}
  if(path==='/api/billing/manage')return await audited(json(await planManage(env,store,tenant,actor,data)),'billing.portal_opened');
  if(path==='/api/billing/change'){const limited=await store.consumeRate({scope:'planchange',identity:tenant,limit:5,windowSeconds:60});if(!limited.allowed)return rateLimited(limited);return json(await changePlan(env,store,tenant,actor,data));}
@@ -362,7 +364,7 @@ export async function handle(request,baseEnv){
  if(path==='/api/billing/spend-cap'){
   // Owner-only and default-environment-only by the /api/billing/ gate above. Body is exactly {enabled:boolean}.
   if(!data||Object.getPrototypeOf(data)!==Object.prototype||Object.keys(data).join()!=='enabled'||typeof data.enabled!=='boolean'||typeof store.setSpendCap!=='function')throw new HttpError(400,'invalid_spend_cap');
-  requireFeature((await store.getTenant(tenant))?.plan_id,'spend_cap');
+  requireFeature(await store.planId(tenant),'spend_cap');
   const binding=data.enabled?null:await prepareOverage(env,store,tenant);
   return json({spend_cap:await store.setSpendCap(tenant,data.enabled,binding)});
  }

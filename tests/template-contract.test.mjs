@@ -260,3 +260,19 @@ test('function concurrency has one bounded parameter and preserves the bootstrap
   assert.match(resourceBlock(template, 'Api'), /ReservedConcurrentExecutions: !Ref ApiConcurrency/);
   assert.equal(templateParameterDefaults(template).ApiConcurrency, '1');
 });
+
+
+test('entry points deploy recursively and bare paths redirect to served directory indexes', async () => {
+  const {REDIRECTS, pageUrl, redirectHtml} = await import('../scripts/site-pages.mjs');
+  const rewrite = directoryIndex(template);
+  const workflow = readFileSync(new URL('../.github/workflows/deploy.yml', import.meta.url), 'utf8');
+  assert.ok(workflow.includes('aws s3 cp public/ "s3://${STATIC_BUCKET}/" --recursive'));
+  for (const page of REDIRECTS) {
+    const slash = '/' + page.file.replace('index.html', '');
+    const redirect = rewrite(event(slash.slice(0, -1)));
+    assert.equal(redirect.statusCode, 301);
+    assert.equal(redirect.headers.location.value, 'https://supatrace.dev' + slash);
+    assert.equal(rewrite(event(slash)).uri, '/' + page.file);
+    assert.equal(readFileSync(pageUrl(page.file), 'utf8'), redirectHtml(page));
+  }
+});

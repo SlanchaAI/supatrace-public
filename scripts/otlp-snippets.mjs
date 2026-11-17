@@ -1,6 +1,11 @@
 // Shared, verbatim stock-exporter examples for the two public onboarding pages.
 export const OTLP_ENV = `export OTEL_EXPORTER_OTLP_ENDPOINT=https://supatrace.dev
 export OTEL_EXPORTER_OTLP_HEADERS="x-supatrace-key=YOUR_INGEST_KEY"`;
+export const OTLP_CURL = `curl -X POST https://supatrace.dev/v1/traces \\
+  -H 'Content-Type: application/json' \\
+  -H 'Authorization: Bearer YOUR_INGEST_KEY' \\
+  -d '{"resourceSpans":[{"scopeSpans":[{"spans":[{"traceId":"11111111111111111111111111111111","spanId":"1111111111111111","name":"synthetic.example","startTimeUnixNano":"1794685870000000000","endTimeUnixNano":"1794685871000000000"}]}]}]}'
+# Or replace Authorization with: -H 'x-supatrace-key: YOUR_INGEST_KEY'`;
 export const OTLP_PYTHON = `from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
@@ -36,6 +41,10 @@ export function otlpExamples() {
   return `
 <p>Create an ingest key on <a href="/app/">Home</a> or the <strong>API keys</strong> page. Ingest keys from Home or API keys do not expire by default; keys from pairing an agent last 30 days. In a fresh shell, set these two variables, replacing only <code>YOUR_INGEST_KEY</code>:</p>
 ${pre('sh', OTLP_ENV)}
+<p>Both <code>x-supatrace-key: &lt;key&gt;</code> and <code>Authorization: Bearer &lt;key&gt;</code> are accepted. The environment-variable alternative is <code>OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer YOUR_INGEST_KEY"</code>. Some SDKs require the space URL-encoded: <code>Authorization=Bearer%20YOUR_INGEST_KEY</code>, following the <a href="https://opentelemetry.io/docs/specs/otel/protocol/exporter/#specifying-headers-via-environment-variables">OpenTelemetry header format</a>.</p>
+<h3>Try HTTP/JSON</h3>
+<p>This fake span calls no model provider. Replace the key before sending:</p>
+${pre('sh', OTLP_CURL)}
 <p>The base URL makes both stock exporters append <code>/v1/traces</code>. Leave any <code>OTEL_EXPORTER_OTLP_TRACES_ENDPOINT</code> and <code>OTEL_EXPORTER_OTLP_TRACES_HEADERS</code> overrides unset.</p>
 <h3>Python</h3>
 ${pre('sh', 'pip install opentelemetry-sdk opentelemetry-exporter-otlp-proto-http')}

@@ -157,13 +157,13 @@ test('/api/usage reports the month, allowance and reset date, and the dashboard 
   const env = {ENABLED: true, APP_ORIGIN: 'https://supatrace.dev', GITHUB_CLIENT_ID: 'synthetic', GITHUB_CLIENT_SECRET: 'synthetic', store: f.store, objects: {}};
   const response = await handle(new Request('https://supatrace.dev/api/usage', {headers: {cookie: '__Host-supatrace=' + token}}), env);
   assert.equal(response.status, 200); const body = await response.json();
-  assert.deepEqual(body.monthly, {period: '2026-11', starts_at: '2026-11-01T00:00:00.000Z', resets_at: '2026-12-01T00:00:00.000Z', spans_used: 7, spans_limit: FREE, spans_remaining: FREE - 7, bytes_ingested: 700, batches: 1});
+  assert.deepEqual(body.monthly, {test_mode: true, period: '2026-11', starts_at: '2026-11-01T00:00:00.000Z', resets_at: '2026-12-01T00:00:00.000Z', spans_used: 7, spans_limit: FREE, spans_remaining: FREE - 7, bytes_ingested: 700, batches: 1});
   const free = planLimits('free');
   assert.deepEqual(body.plan_limits, {plan_id: 'free', name: 'Free', spans_per_month: FREE, stored_bytes: FREE_BYTES, retention_days: free.retention_days, projects: free.projects, hard_stop: true, version: PLANS.version, status: 'approved'});
   assert.deepEqual(body.projects, {used: 1, limit: free.projects});
   assert.deepEqual([body.storage.used_bytes, body.storage.limit_bytes, body.storage.remaining_bytes, body.storage.limit_kind], [700, FREE_BYTES, FREE_BYTES - 700, 'plan_stored_bytes_allowance']);
   const view = validateUsage(body);
-  assert.deepEqual({...view.monthly, spend_cap: undefined}, {spend_cap: undefined, history: [], period: '2026-11', resets_at: '2026-12-01T00:00:00.000Z', spans_used: 7, spans_limit: FREE, spans_remaining: FREE - 7, plan_id: 'free', plan_name: 'Free', retention_days: free.retention_days, retention_enforced: true, retention_physical: false, projects: free.projects, proposal: false});
+  assert.deepEqual({...view.monthly, spend_cap: undefined}, {test_mode: true, spend_cap: undefined, history: [], period: '2026-11', resets_at: '2026-12-01T00:00:00.000Z', spans_used: 7, spans_limit: FREE, spans_remaining: FREE - 7, plan_id: 'free', plan_name: 'Free', retention_days: free.retention_days, retention_enforced: true, retention_physical: false, projects: free.projects, proposal: false});
   assert.deepEqual(view.monthly.spend_cap, {enabled: true, configurable: false, default_enabled: true, overage_spans: 0, overage_usd_per_million_spans: null});
   // Older APIs omit the additive fields; half-present or inconsistent ones are refused, not rendered.
   const {monthly, plan_limits, retention, meters, ...legacy} = body; assert.equal(validateUsage(legacy).monthly, undefined);
@@ -192,4 +192,12 @@ test('the Usage view has the monthly allowance card and the agent uploader expla
   assert.match(html, /<h2>Spans this month<\/h2><p id="usage-monthly" role="status">/); assert.match(html, /id="usage-plan-limits"/);
   assert.match(app, /of \$\{count\(monthly\.spans_limit\)\} spans this month\. Resets \$\{resets\} \(UTC\)\./);
   for (const name of ['monthly_span_allowance_exceeded', 'stored_bytes_allowance_exceeded']) { assert.match(app, new RegExp(name + ':')); assert.match(agent, new RegExp("\\(429, '" + name + "'\\)")); }
+});
+
+test('a test paid plan under live runtime can resume as Free and stamps Free retention',async()=>{
+ const f=await fixture();Object.assign(f.root(),{plan_id:'pro',plan_source:'stripe_test'});f.store.planBillingMode='live';f.at(NOV+45*86400);
+ await assert.rejects(f.reserve('paused'),code('project_paused'));
+ const result=await f.store.resumeProject(tenant);assert.equal(result.resumed,true);assert.equal(result.lifecycle.state,'active');assert.equal(result.lifecycle.exempt,false);
+ await f.reserve('resumed');await f.store.acceptReservedBatch(tenant,'resumed',sha('resumed'));
+ assert.equal((await f.store._get({pk:'TENANT#'+tenant,sk:'BATCH#resumed'})).retention_days,planLimits('free').retention_days);
 });

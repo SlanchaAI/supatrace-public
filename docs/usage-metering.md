@@ -1,8 +1,10 @@
 # Usage metering
 
 SupaTrace counts usage per account per UTC calendar month and can report it to a
-Stripe Billing Meter in **test mode**. Nothing here bills anyone: no live key is
-accepted, and no template, trigger or schedule installs the reporter.
+Stripe Billing Meter. This document describes the older sandbox reporter, which
+accepts only test keys and has no deployed trigger or schedule. Hosted Base and
+Pro subscriptions use live Stripe billing; Pro cap-off overage uses the mode-aware
+reporter described in [plan billing](plan-billing.md).
 
 ## What is counted
 

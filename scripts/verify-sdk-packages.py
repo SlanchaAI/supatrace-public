@@ -99,7 +99,8 @@ with tarfile.open(DIST / "supatrace-0.1.0.tgz") as tar:
     js_readme = tar.extractfile("package/README.md").read().decode()
 
 for readme in (py_readme, js_readme):
-    assert "./packages/" not in readme and "github.com/SlanchaAI" not in readme
+    assert "Coming soon." in readme and "public repository root" in readme
+    assert "github.com/SlanchaAI" not in readme
     assert "YOUR_INGEST_KEY" in readme and "https://supatrace.dev" in readme
 
 print(json.dumps({"wheel_files": wheel_files, "sdist_files": sdist_files, "npm_files": npm_files}, indent=2))

@@ -1,3 +1,4 @@
+import {effectivePlanId, stripePlanMatches, stripeStateFence, planUsagePrefix} from './stripe-plan-state.mjs';
 import {checkoutScope} from './billing-principal.mjs';
 import {validateSandboxEntitlementConfiguration,sandboxEntitlementDecision,TEST_PLAN_SOURCE} from './stripe-sandbox-entitlements.mjs';
 import {commercialRiskIntent} from './commercial-risk.mjs';
@@ -75,14 +76,15 @@ const setupKey = value => tempKey('SETUP', value, 'REQUEST');
 const codeKey = value => tempKey('CODE', digest(value), 'REQUEST');
 const batchKey = (value, batchId) => ({ pk: tpk(value), sk: `BATCH#${id(batchId)}` });
 // One counter row per account per UTC calendar month. A new month is a new row, so the allowance resets without a job.
-const periodKey = (value, periodId) => ({ pk: tpk(value), sk: `USAGE#${periodId}` });
+const periodKey = (value, periodId, mode) => ({ pk: tpk(value), sk: planUsagePrefix(mode) + periodId });
 const counter = value => Number.isSafeInteger(value) && value >= 0 ? value : 0;
 // Stripe test-meter reporting state for one account and month. Separate from the usage row so reporting never rewrites a counter.
 const meterKey = (value, periodId) => ({ pk: tpk(value), sk: `METER#${periodId}` });
 // Spans one account can reserve at once: 30 uploads a minute x 100 events a batch.
 const ALERT_RECONCILE_SPANS = 3000;
 const pauseNoticeKey = (value, pausedAt) => ({ pk: tpk(value), sk: `NOTICE#PAUSE#${String(pausedAt).padStart(12, '0')}` });
-const noticeKey = (value, periodId, level) => ({ pk: tpk(value), sk: `NOTICE#${periodId}#USAGE#${String(level).padStart(3, '0')}` });
+const noticePrefix = (periodId, mode) => `NOTICE#${mode === 'live' ? 'live#' : ''}${periodId}#USAGE#`;
+const noticeKey = (value, periodId, level, mode) => ({ pk: tpk(value), sk: noticePrefix(periodId, mode) + String(level).padStart(3, '0') });
 function printableSubject(value) {
   if (typeof value !== 'string' || value.length < 1 || value.length > 255) return false;
   for (const char of value) { const code = char.codePointAt(0); if (code <= 32 || code === 127) return false; }
@@ -510,7 +512,8 @@ export class DynamoMetadataStore {
   }
   // ---- Publishable/secret keys (#105). Same lookup, list and lease rows as pairing keys, plus `key_type`. ----
   /** The organization's plan id as stored on its account row (unknown ids resolve to Free in planLimits). */
-  async planId(tenantId) { const account = await this.getTenant(tenantId); return typeof account?.plan_id === 'string' ? account.plan_id : null; }
+  effectivePlanId(account) { return effectivePlanId(account, this.planBillingMode); }
+  async planId(tenantId) { return this.effectivePlanId(await this.getTenant(tenantId)) ?? null; }
   // The plan decides how many keys may be active (src/plans.mjs `api_keys`; null is unlimited). limits.activeKeys is the
   // table's hard ceiling of lease slots. A key that already holds a slot above a lowered limit keeps working.
   async _freeKeySlot(tenantId, now) {
@@ -915,11 +918,12 @@ export class DynamoMetadataStore {
     if (Number.isSafeInteger(account?.deleted_at)) fail(403, 'workspace_unavailable');
     // One instant decides the month: the marker's created_at. The marker also records that month, so acceptance
     // meters into the same row even when the request straddles a month boundary.
-    const period = usagePeriod(row.created_at), periodRow = periodKey(tenantId, period.id), month = account ? await this._get(periodRow) : null;
+    const period = usagePeriod(row.created_at), periodRow = periodKey(tenantId, period.id, this.planBillingMode), month = account ? await this._get(periodRow) : null;
     const usage = this._planUsage(account, month, row.created_at), { plan } = usage, storedLimit = this._storedLimit(plan), cap = spendCap(account, plan);
-    requireOverageBinding(account, row.created_at);
+    requireOverageBinding(account, row.created_at, this.planBillingMode);
     const billingFence = planFence(account);
     row.usage_period = period.id;
+    row.usage_mode = this.planBillingMode ?? 'test';
     // An identical request may have reserved the last room since the marker read: return its reservation, not a 429.
     if (account) try { this._requireNotPaused(account, plan, row.created_at); this._requirePlanRoom(usage, { byte_count, event_count }); } catch (error) { const saved = await this._get(Key); if (saved) return check(saved); throw error; }
     if (byte_count > this.limits.globalBytes) fail(429, 'storage_capacity');
@@ -963,8 +967,8 @@ export class DynamoMetadataStore {
   }
   _storedLimit(plan) { return this.limits.accountCeilingBytes === null ? plan.stored_bytes : Math.min(plan.stored_bytes, this.limits.accountCeilingBytes); }
   _planUsage(account, periodRow, at = this.now()) {
-    const plan = planLimits(account?.plan_id), period = usagePeriod(at), storedLimit = this._storedLimit(plan);
-    const row = periodRow?.sk === 'USAGE#' + period.id ? periodRow : null;
+    const plan = planLimits(this.effectivePlanId(account)), period = usagePeriod(at), storedLimit = this._storedLimit(plan);
+    const row = periodRow?.sk === planUsagePrefix(this.planBillingMode) + period.id ? periodRow : null;
     return { plan, period, spend_cap: spendCap(account, plan), alert_level: counter(row?.alert_level), spans_used: counter(row?.spans), bytes_ingested: counter(row?.bytes), batches: counter(row?.batches), accepted_spans: counter(row?.accepted_spans), accepted_bytes: counter(row?.accepted_bytes), accepted_batches: counter(row?.accepted_batches), stored_bytes: counter(account?.used_bytes), stored_limit: storedLimit };
   }
   /** Idle pause: a Free project with no accepted upload for IDLE_PAUSE.days refuses new uploads until resumed. */
@@ -979,7 +983,8 @@ export class DynamoMetadataStore {
    */
   async resumeProject(tenantId) {
     tenant(tenantId); const account = await this._get(tenantKey(tenantId)); if (!account) fail(404, 'tenant_not_found');
-    const now = this.now(), before = projectLifecycle(account, now); if (before.state !== 'paused') return { resumed: false, lifecycle: before };
+    const life = row => projectLifecycle(row, this.now(), planLimits(this.effectivePlanId(row)));
+    const now = this.now(), before = life(account); if (before.state !== 'paused') return { resumed: false, lifecycle: before };
     // A transaction, not a bare update: the request's scoped store adds its session and owner-membership fences to
     // transactions, so a resume decided before an ownership transfer or sign-out cannot be written after it.
     try { await this._tx([{ Update: { Key: tenantKey(tenantId), UpdateExpression: 'SET resumed_at = :now',
@@ -987,10 +992,10 @@ export class DynamoMetadataStore {
     catch (error) {
       if (!conditional(error)) throw error;
       // Either a concurrent resume won (nothing left to do) or a fence refused this writer.
-      const current = projectLifecycle(await this._get(tenantKey(tenantId)), now); if (current.state === 'paused') fail(409, 'workspace_changed');
+      const current = life(await this._get(tenantKey(tenantId))); if (current.state === 'paused') fail(409, 'workspace_changed');
       return { resumed: false, lifecycle: current };
     }
-    return { resumed: true, lifecycle: projectLifecycle(await this._get(tenantKey(tenantId)), now) };
+    return { resumed: true, lifecycle: life(await this._get(tenantKey(tenantId))) };
   }
   /**
    * Notification row for a pause, written once per pause (keyed by the instant it took effect). Returns whether
@@ -1020,12 +1025,12 @@ export class DynamoMetadataStore {
   /** This month's and recent months' meters plus the Stripe test-meter reporting state. Read-only. */
   async getUsageMeters(tenantId, currentPeriodId = usagePeriod(this.now()).id) {
     tenant(tenantId); if (typeof currentPeriodId !== 'string' || !/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(currentPeriodId)) fail(400, 'invalid_usage_period');
-    const current = { id: currentPeriodId }, page = await this._page(tpk(tenantId), 'USAGE#', { limit: 100 });
+    const prefix = planUsagePrefix(this.planBillingMode), current = { id: currentPeriodId }, page = await this._page(tpk(tenantId), prefix, { limit: 100 });
     // Rows created by an accept alone (no reservation that month under the plan path) carry no `period`; the key is authoritative.
-    const rows = page.items.filter(row => /^USAGE#[0-9]{4}-(0[1-9]|1[0-2])$/.test(row.sk)).map(row => ({ ...row, period: row.sk.slice(6) }));
+    const rows = page.items.filter(row => row.sk.startsWith(prefix) && /^[0-9]{4}-(0[1-9]|1[0-2])$/.test(row.sk.slice(prefix.length))).map(row => ({ ...row, period: row.sk.slice(prefix.length) }));
     // reserved_* include uploads still pending or never completed; accepted_* count stored, accepted batches only.
     const view = row => ({ period: row.period, reserved_spans: counter(row.spans), accepted_spans: counter(row.accepted_spans), reserved_bytes: counter(row.bytes), accepted_bytes: counter(row.accepted_bytes), accepted_batches: counter(row.accepted_batches) });
-    const state = await this._get(meterKey(tenantId, current.id));
+    const state = this.planBillingMode === 'live' ? null : await this._get(meterKey(tenantId, current.id));
     return { current: view(rows.find(row => row.period === current.id) ?? { period: current.id }), history: rows.filter(row => row.period < current.id).slice(-11).map(view),
       reporting: !state ? { status: 'not_reported', reported_spans: 0 } : { status: state.hold === true ? 'held' : state.pending ? 'pending' : 'reported', reported_spans: counter(state.reported_spans) } };
   }
@@ -1065,8 +1070,8 @@ export class DynamoMetadataStore {
   async setRetention(tenantId, days) {
     tenant(tenantId); if (days !== null && (!Number.isSafeInteger(days) || days < 1 || days > RETENTION_MAX_DAYS)) fail(400, 'invalid_retention');
     const account = await this._get(tenantKey(tenantId)); if (!account) fail(404, 'tenant_not_found');
-    requireFeature(account.plan_id, 'custom_retention');
-    const plan = planLimits(account.plan_id), before = retentionDays(account, plan);
+    requireFeature(this.effectivePlanId(account), 'custom_retention');
+    const plan = planLimits(this.effectivePlanId(account)), before = retentionDays(account, plan);
     try { await this._tx([{ Update: { Key: tenantKey(tenantId), UpdateExpression: days === null ? 'REMOVE retention_days' : 'SET retention_days = :days',
       ConditionExpression: 'attribute_exists(pk) AND plan_id = :plan', ExpressionAttributeValues: { ':plan': account.plan_id, ...(days === null ? {} : { ':days': days }) } } },
       ...this._auditItems('settings.retention_changed', null, { from: before, to: days ?? plan.retention_days })]); }
@@ -1076,14 +1081,15 @@ export class DynamoMetadataStore {
   async setSpendCap(tenantId, enabled, binding = null) {
     tenant(tenantId); if (typeof enabled !== 'boolean') fail(400, 'invalid_spend_cap');
     const account = await this._get(tenantKey(tenantId)); if (!account) fail(404, 'tenant_not_found');
-    if (account.commercial_managed !== true) requireFeature(account.plan_id, 'spend_cap');
-    const plan = planLimits(account.plan_id); if (!plan.overage || account.commercial_managed === true) fail(409, 'spend_cap_not_configurable');
-    if (!enabled && account.plan_source === 'stripe_test' && (!binding || binding.customer !== account.stripe_customer_id || binding.subscription !== account.stripe_subscription_id)) fail(409, 'overage_binding_required');
+    if (account.commercial_managed !== true) requireFeature(this.effectivePlanId(account), 'spend_cap');
+    const plan = planLimits(this.effectivePlanId(account)); if (!plan.overage || account.commercial_managed === true) fail(409, 'spend_cap_not_configurable');
+    if (!enabled && stripePlanMatches(account, this.planBillingMode) && (!binding || binding.customer !== account.stripe_customer_id || binding.subscription !== account.stripe_subscription_id)) fail(409, 'overage_binding_required');
     const bindingSet = !enabled && binding ? ', overage_customer_id = :oc, overage_subscription_id = :os, overage_price_id = :op' : '';
+    const modeFence = stripeStateFence(account);
     const bindingCondition = bindingSet ? ' AND plan_source = :source AND stripe_customer_id = :oc AND stripe_subscription_id = :os' : '';
     // A transaction, so the request's session and owner-membership fences (and its audit event) apply to this write too.
     try { await this._tx([{ Update: { Key: tenantKey(tenantId), UpdateExpression: 'SET spend_cap = :cap, spend_cap_updated_at = :now'+bindingSet,
-      ConditionExpression: 'attribute_exists(pk) AND attribute_not_exists(deleted_at) AND plan_id = :plan AND byte_limit > :zero'+bindingCondition, ExpressionAttributeValues: { ':cap': enabled, ':now': this.now(), ':plan': account.plan_id, ':zero': 0, ...(bindingSet ? {':source':'stripe_test', ':oc':binding.customer, ':os':binding.subscription, ':op':binding.price} : {}) } } },
+      ConditionExpression: 'attribute_exists(pk) AND attribute_not_exists(deleted_at) AND plan_id = :plan AND byte_limit > :zero AND '+modeFence.condition+bindingCondition, ExpressionAttributeValues: { ':cap': enabled, ':now': this.now(), ':plan': account.plan_id, ':zero': 0, ...modeFence.values, ...(bindingSet ? {':source':account.plan_source, ':oc':binding.customer, ':os':binding.subscription, ':op':binding.price} : {}) } } },
       ...this._auditItems('billing.spend_cap_changed', null, { enabled })]); }
     catch (error) { if (conditional(error)) fail(409, 'spend_cap_conflict'); throw error; }
     return spendCap({ ...account, spend_cap: enabled }, plan);
@@ -1095,8 +1101,8 @@ export class DynamoMetadataStore {
   async recordUsageAlert(tenantId, alert, { email_status = 'not_configured' } = {}) {
     tenant(tenantId);
     if (!USAGE_ALERT_LEVELS.includes(alert?.level) || typeof alert.period !== 'string' || !/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(alert.period) || !Number.isSafeInteger(alert.limit) || !Number.isSafeInteger(alert.used) || !['not_configured', 'no_address', 'pending', 'not_in_plan'].includes(email_status)) fail(400, 'invalid_usage_alert');
-    const Key = noticeKey(tenantId, alert.period, alert.level), notice = { ...Key, tenant_id: tenantId, kind: 'usage_' + alert.level, level: alert.level, period: alert.period, plan: alert.plan, limit: alert.limit, used: alert.used, spend_cap: alert.spend_cap === true, resets_at: alert.resets_at, email_status, created_at: this.now() };
-    const remember = { Update: { Key: periodKey(tenantId, alert.period), UpdateExpression: 'SET alert_level = :level', ConditionExpression: 'attribute_not_exists(alert_level) OR alert_level < :level', ExpressionAttributeValues: { ':level': alert.level } } };
+    const Key = noticeKey(tenantId, alert.period, alert.level, this.planBillingMode), notice = { ...Key, tenant_id: tenantId, kind: 'usage_' + alert.level, level: alert.level, period: alert.period, plan: alert.plan, limit: alert.limit, used: alert.used, spend_cap: alert.spend_cap === true, resets_at: alert.resets_at, email_status, created_at: this.now() };
+    const remember = { Update: { Key: periodKey(tenantId, alert.period, this.planBillingMode), UpdateExpression: 'SET alert_level = :level', ConditionExpression: 'attribute_not_exists(alert_level) OR alert_level < :level', ExpressionAttributeValues: { ':level': alert.level } } };
     try { await this._tx([{ Put: { Item: notice, ConditionExpression: absent } }, remember]); return { created: true, notice }; }
     catch (error) {
       if (!conditional(error)) throw error;
@@ -1107,18 +1113,18 @@ export class DynamoMetadataStore {
   }
   async setUsageAlertEmail(tenantId, periodId, level, status) {
     tenant(tenantId); if (!['sent', 'failed'].includes(status)) fail(400, 'invalid_usage_alert');
-    await this._send('UpdateCommand', { Key: noticeKey(tenantId, periodId, level), UpdateExpression: 'SET email_status = :status', ConditionExpression: 'email_status = :pending', ExpressionAttributeValues: { ':status': status, ':pending': 'pending' } });
+    await this._send('UpdateCommand', { Key: noticeKey(tenantId, periodId, level, this.planBillingMode), UpdateExpression: 'SET email_status = :status', ConditionExpression: 'email_status = :pending', ExpressionAttributeValues: { ':status': status, ':pending': 'pending' } });
   }
   /** This month's alert notifications for the account, oldest first. */
   async listUsageAlerts(tenantId, periodId) {
     tenant(tenantId); if (typeof periodId !== 'string' || !/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(periodId)) fail(400, 'invalid_usage_period');
-    const page = await this._page(tpk(tenantId), `NOTICE#${periodId}#USAGE#`, { limit: 10 });
+    const page = await this._page(tpk(tenantId), noticePrefix(periodId, this.planBillingMode), { limit: 10 });
     return page.items.filter(row => USAGE_ALERT_LEVELS.includes(row.level)).sort((a, b) => a.level - b.level).map(row => ({ kind: row.kind, level: row.level, period: row.period, used: counter(row.used), limit: counter(row.limit), email_status: row.email_status, created_at: row.created_at }));
   }
   /** Own-account plan allowance and this month's meters for /api/usage. Read-only. */
   async getPlanUsage(tenantId) {
     tenant(tenantId); const account = await this._get(tenantKey(tenantId)); if (!account) fail(404, 'tenant_not_found');
-    const usage = this._planUsage(account, await this._get(periodKey(tenantId, usagePeriod(this.now()).id)));
+    const usage = this._planUsage(account, await this._get(periodKey(tenantId, usagePeriod(this.now()).id, this.planBillingMode)));
     return { ...usage, limits_version: PLAN_LIMITS.version, limits_status: PLAN_LIMITS.status };
   }
   /** Call ONLY after S3 putImmutable durably stores/verifies the exact reserved bytes. */
@@ -1139,9 +1145,9 @@ export class DynamoMetadataStore {
       const acceptedAt = this.now();
       // Retention is stamped once, at accept time, from the plan the account has then. A later plan change
       // never rewrites data that is already stored. Commercially enrolled rows are outside the plan table.
-      const retention = account && account.commercial_managed !== true ? retentionDays(account) : null;
+      const retention = account && account.commercial_managed !== true ? retentionDays(account, planLimits(this.effectivePlanId(account))) : null;
       const metered = !!account && account.commercial_managed !== true;
-      if (metered) requireOverageBinding(account, acceptedAt);
+      if (metered) requireOverageBinding(account, acceptedAt, this.planBillingMode);
       const billingFence = metered ? planFence(account) : {condition:'attribute_exists(pk)', values:{}};
       const overage = metered ? await acceptedOverage(this,tenantId,account,row,acceptedAt) : [];
       const stamp = retention === null ? {} : { retention_days: retention, retention_expires_at: acceptedAt + retention * 86400 };
@@ -1181,7 +1187,7 @@ export class DynamoMetadataStore {
         // Accepted meters, in the month recorded on the marker at reservation. The marker's pending -> accepted condition above
         // makes this count each batch exactly once. Reserved counters (spans, bytes) include uploads that never finish.
         ...overage,
-        ...(metered ? [{ Update: { Key: periodKey(tenantId, typeof row.usage_period === 'string' && /^[0-9]{4}-(0[1-9]|1[0-2])$/.test(row.usage_period) ? row.usage_period : usagePeriod(Number.isSafeInteger(row.created_at) && row.created_at >= 0 ? row.created_at : acceptedAt).id),
+        ...(metered ? [{ Update: { Key: periodKey(tenantId, typeof row.usage_period === 'string' && /^[0-9]{4}-(0[1-9]|1[0-2])$/.test(row.usage_period) ? row.usage_period : usagePeriod(Number.isSafeInteger(row.created_at) && row.created_at >= 0 ? row.created_at : acceptedAt).id, row.usage_mode ?? 'test'),
           UpdateExpression: 'ADD accepted_spans :spans, accepted_bytes :bytes, accepted_batches :one',
           ExpressionAttributeValues: { ':spans': row.event_count, ':bytes': row.byte_count, ':one': 1 } } }] : [])
       ]); return receipt; }

@@ -102,6 +102,9 @@ test('a confirmation link does not sign anyone in, and only the newest password 
   const signup = await post(env, '/api/auth/email/sign-up', {email, password});
   assert.equal(signup.status, 200);
   const first = tokenFrom(mailbox[0].text);
+  assert.equal(mailbox[0].subject, 'Finish signing up for Supatrace');
+  assert.ok(mailbox[0].text === `Open this link and enter the password you chose. You will be signed in. The link expires in 10 minutes.\n${env.APP_ORIGIN}/?email=${encodeURIComponent(email)}&token=${first}\n`, 'signup email explains sign-in and expiry and preserves the confirmation link');
+  assert.equal(mailbox[0].text.includes('The link does not create the account or sign you in.'), false);
   assert.equal(await accounts(store), 0);
   assert.equal(await store.getEmailAccount(email), null);
   await post(env, '/api/auth/email/sign-up', {email, password: 'Supatrace!2'});

@@ -24,7 +24,7 @@ The AWS entrypoints read the following settings. They are not a portable `.env` 
 | `IMPORT_POLICY_CONFIG`, `SERVER_PULL_CONFIG` | Optional bounded import-controller configuration. See [server pull imports](server-pull-import.md). |
 | `INGEST_API_ID`, `INGEST_EDGE_TOKEN` | Ingest edge identity supplied by the deployment. Keep the edge token private. |
 | `PLAN_OVERAGE_RULE_ARN`, `ACCOUNT_ERASURE_RULE_ARN` | Expected schedule identities; only matching scheduled events run these jobs. |
-| `PLAN_BILLING_SECRET_ARN`, `PLAN_BILLING_WEBHOOK_SECRET_ARN` | Optional Stripe TEST-mode billing and webhook references. Missing or rejected billing credentials leave sign-in and trace access available. |
+| `PLAN_BILLING_SECRET_ARN`, `PLAN_BILLING_WEBHOOK_SECRET_ARN` | Stripe billing and webhook references; the configured key selects test or live mode. Missing or rejected billing credentials leave sign-in and trace access available. |
 | `BILLING_SANDBOX_CONFIG`, `BILLING_COMMERCIAL_POLICY_CONFIG` | Optional JSON configuration for authorized sandbox actions. See [commercial controls](commercial-controls.md). |
 | `BILLING_INGRESS_ACCOUNT_ID`, `BILLING_INGRESS_API_ID` | Authenticated account and webhook ingress binding; supplied by deployment. |
 | `BILLING_INBOX_TABLE_NAME`, `BILLING_STATE_TABLE_NAME` | Isolated billing capture/state tables, used only by configured billing paths. |

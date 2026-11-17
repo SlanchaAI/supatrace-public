@@ -11,6 +11,9 @@ with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED) as archive:
  for name in ['aws/handler.mjs','aws/stripe-worker.mjs','aws/stripe-entitlement-worker.mjs','aws/stripe-usage-meter-worker.mjs','package.json','package-lock.json']:archive.write(root/name,name)
  for path in sorted((root/'src').rglob('*.mjs')):
   if path.is_file():archive.write(path,path.relative_to(root).as_posix())
+ # Ingest summaries and the trace detail use the same pure span derivation.
+ for name in ['public/app/span-data.js','public/app/model-prices.js']:
+  archive.write(root/name,name)
  # The runtime bundle includes vendored parser modules; retain their license and
  # pin/adaptation record in every distributed copy even though import is local-only.
  for name in ['LICENSE','provenance.json','source-pins.json']:

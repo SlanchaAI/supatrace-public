@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="SupaTrace pricing: Free, Base at $9.99 a month, Pro at $25.99 a month, and Enterprise with custom pricing. Prices shown in USD per month. Base and Pro are billed monthly through Stripe.">
+<meta name="theme-color" content="#f6f3e8">
+<title>Pricing · SupaTrace</title>
+<link rel="icon" href="/favicon.svg?v=classic-s-2" type="image/svg+xml">
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/remodel.css">
+<link rel="stylesheet" href="/site.css">
+<link rel="canonical" href="https://supatrace.dev/pricing/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SupaTrace">
+<meta property="og:title" content="Pricing · SupaTrace">
+<meta property="og:description" content="Free, Base at $9.99 a month, Pro at $25.99 a month, and Enterprise with custom pricing.">
+<meta property="og:url" content="https://supatrace.dev/pricing/">
+<meta property="og:image" content="https://supatrace.dev/og-image.png">
+</head>
+<body class="landing remodel page" data-page="pricing">
+<a class="skip" href="#content">Skip to content</a>
+<!-- site:header --><!-- /site:header -->
+<main id="content">
+<div class="page-head">
+<p class="eyebrow">Pricing</p>
+<h1>Free to start.<br>Priced by spans.</h1>
+<p class="lede">A free plan with no card, then two flat monthly plans that raise your spans, retention and seats. Base and Pro are monthly subscriptions per organization, charged by Stripe.</p>
+<p class="preview-note" id="preview-note"><strong>Payments are handled by Stripe.</strong> Free plan with no card. Base is $9.99/month. Pro is $25.99/month. The limits and features on this page are enforced by the service for the plan an organization is on. <a href="#today">See what applies today.</a></p>
+</div>
+<section aria-labelledby="plans-title">
+<h2 id="plans-title">Plans</h2>
+<!-- plans:cards --><!-- /plans:cards -->
+</section>
+<section aria-labelledby="compare-title">
+<h2 id="compare-title">Compare plans</h2>
+<p>Each limit and feature below is checked by the service on every request. "Custom" means it is set in the Enterprise contract.</p>
+<!-- plans:compare --><!-- /plans:compare -->
+</section>
+<section aria-labelledby="overage-title">
+<h2 id="overage-title">Past the allowance</h2>
+<p>Free and Base stop at the monthly allowance until the next month. Pro has a spend cap that is on by default and does the same. A Pro owner can turn the cap off, and uploads then continue past the allowance at the rate below.</p>
+<!-- plans:overage --><!-- /plans:overage -->
+<p>Overage is counted and shown in Usage. With the Pro spend cap off, accepted spans above the allowance are billed at $5 per million additional spans.</p>
+</section>
+<section aria-labelledby="today" class="today">
+<h2 id="today">What applies today</h2>
+<!-- plans:today --><!-- /plans:today -->
+<p><a href="/docs/limits/">All current limits and recovery notes</a></p>
+</section>
+<section aria-labelledby="faq-title" class="faq">
+<h2 id="faq-title">Questions</h2>
+<details><summary>Where do I choose a plan?</summary><p>Choose Base or Pro in Billing. Stripe collects payment and the plan applies after payment is confirmed.</p></details>
+<details><summary>What happens at the allowance?</summary><p>New uploads are rejected with an error that names the limit and links to Billing, until the first of the next month (UTC) or until you upgrade. Nothing already stored is dropped.</p></details>
+<details><summary>What happens if I downgrade?</summary><p>Nothing is deleted. Members, environments and keys over the new limit stay, and you cannot add more until you are under it. Features of the higher plan are locked again.</p></details>
+<details><summary>What is a span?</summary><p>One recorded step in a trace, such as a model call or a tool call. The service counts one accepted trace event as one span.</p></details>
+<details><summary>Do you charge per member?</summary><p>No. Each plan includes a number of members per organization.</p></details>
+<details><summary>How is Enterprise priced?</summary><p>By contract. There is no self-serve checkout: contact sales and an operator assigns the plan to your organization.</p></details>
+<details><summary>Can I take my data with me?</summary><p>Yes, on every plan. You can export your original JSON from the workspace. Review exports before sharing: traces can contain prompts, tool output and secrets.</p></details>
+</section>
+<section class="cta" aria-labelledby="cta-title">
+<h2 id="cta-title">Start free.</h2>
+<p>Create an account on the Free plan. No card.</p>
+<div class="actions"><a class="button" href="/app/">Start free</a><a class="setup-link" href="/docs/quickstart/">Read the setup guide</a></div>
+</section>
+</main>
+<footer class="site-footer"><!-- site:footer --><!-- /site:footer --><span>Prices shown in USD per month. Base and Pro payments are processed by Stripe.</span></footer>
+</body>
+</html>

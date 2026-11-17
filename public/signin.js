@@ -81,7 +81,7 @@ function legal() {
     el('a', {href: '/terms.html'}, 'Terms of Service'), ' and ',
     el('a', {href: '/privacy.html'}, 'Privacy Policy'));
 }
-function choice(id, href, text) { return el('a', {class: 'button choice', id, href}, text); }
+function choice(id, href, text) { return el('a', {class: 'button choice' + (id.endsWith('github') ? ' provider-primary' : ' secondary'), id, href}, text); }
 
 export async function loadProviders() {
   const response = await fetch('/api/auth/providers', {credentials: 'same-origin', cache: 'no-store'});
@@ -106,11 +106,11 @@ export function mountSignIn(root, providers) {
     openApp();
   }
 
-  const main = el('div', {'data-view': 'main'});
+  const main = el('div', {'data-view': 'main'}, el('h2', {}, 'Sign in'));
   if (providers.github !== false) main.append(choice('github', '/api/auth/login', 'Continue with GitHub'));
   if (providers.google) main.append(choice('google', '/api/auth/google', 'Continue with Google'));
   if (providers.chatgpt) main.append(choice('chatgpt', '/api/auth/chatgpt', 'Continue with ChatGPT'));
-  if (providers.sso) main.append(button('button choice', 'Continue with SSO', () => show('sso')));
+  if (providers.sso) main.append(button('button choice secondary', 'Continue with SSO', () => show('sso')));
   const emailInput = el('input', {id: 'email', type: 'email', autocomplete: 'email', required: true, placeholder: 'you@example.com'});
   const password = passwordField('password', 'current-password');
   const signIn = el('button', {class: 'primary', type: 'submit'}, 'Sign in');
@@ -126,8 +126,8 @@ export function mountSignIn(root, providers) {
     finally { signIn.disabled = false; }
   });
   if (providers.email) {
-    if (main.childNodes.length) main.append(el('div', {class: 'or'}, 'or'));
-    main.append(form, el('p', {class: 'switch'}, 'Don’t have an account? ', button('quiet', 'Sign up', () => show('signup'))));
+    if (main.querySelector('.choice')) main.append(el('div', {class: 'or'}, 'or'));
+    main.append(form, el('p', {class: 'switch'}, 'New here? ', button('quiet', 'Create a free account', () => show('signup'))));
   }
   main.append(legal());
 
@@ -162,11 +162,11 @@ export function mountSignIn(root, providers) {
     finally { signUpButton.disabled = false; }
   });
   const signup = el('div', {'data-view': 'signup', hidden: true},
-    el('h2', {}, 'Get started'), el('p', {class: 'sub'}, 'Create a new account'));
+    el('h2', {}, 'Create a free account'), el('p', {class: 'sub'}, 'Free plan. No card.'));
   if (providers.github !== false) signup.append(choice('signup-github', '/api/auth/login', 'Continue with GitHub'));
   if (providers.google) signup.append(choice('signup-google', '/api/auth/google', 'Continue with Google'));
   if (providers.chatgpt) signup.append(choice('signup-chatgpt', '/api/auth/chatgpt', 'Continue with ChatGPT'));
-  if (providers.sso) signup.append(button('button choice', 'Continue with SSO', () => show('sso')));
+  if (providers.sso) signup.append(button('button choice secondary', 'Continue with SSO', () => show('sso')));
   if (providers.email) {
     if (signup.childNodes.length > 2) signup.append(el('div', {class: 'or'}, 'or'));
     signup.append(signUpForm);
@@ -219,6 +219,12 @@ export function mountSignIn(root, providers) {
     button('quiet', 'Back to sign in', () => show('main')));
 
   const pending = new URLSearchParams(location.search);
+  const requestedView = pending.get('view');
+  if (pending.has('view')) {
+    const clean = new URL(location.href);
+    clean.searchParams.delete('view');
+    history.replaceState(history.state, '', clean.pathname + clean.search + clean.hash);
+  }
   const pendingEmail = pending.get('email') || '';
   const pendingToken = pending.get('token') || '';
   const confirmEmail = el('input', {id: 'confirm-email', type: 'email', value: pendingEmail, readonly: true, autocomplete: 'username'});
@@ -274,15 +280,15 @@ export function mountSignIn(root, providers) {
   }
   root.replaceChildren(status, main, sso, signup, forgot, codeView, reset, check, confirm, mfa, recovery);
   const confirming = !!providers.email && /^[A-Za-z0-9_-]{43}$/.test(pendingToken) && pendingEmail.length > 0 && pendingEmail !== 'confirmed';
-  show(providers.mfa ? 'mfa' : confirming ? 'confirm' : 'main');
+  show(providers.mfa ? 'mfa' : confirming ? 'confirm' : requestedView === 'signup' ? 'signup' : 'main');
   if (confirming) { root.scrollIntoView({block: 'start'}); confirmPassword.input.focus({preventScroll: true}); }
   if (!confirming && pendingEmail === 'confirmed') status.textContent = 'Email confirmed. Sign in with your password.';
   const authError=pending.get('auth_error');
   if (['provider_unavailable','restart_required','not_verified','unavailable'].includes(authError)) {
     const provider=pending.get('provider')==='google'?'Google':'GitHub';
     status.textContent=authError==='restart_required'
-      ? 'That sign-in attempt expired or was already used. Start a fresh sign-in with '+provider+'.'
-      : provider+' sign-in could not finish. Start a fresh sign-in with '+provider+'. If this continues, use the sign-in method you previously used for this account.';
+      ? 'Start a fresh sign-in with '+provider+' because this attempt expired or was already used.'
+      : provider+' sign-in could not finish; start a fresh sign-in with '+provider+'.';
     const clean=new URL(location.href);clean.searchParams.delete('auth_error');clean.searchParams.delete('provider');
     history.replaceState(null,'',clean.pathname+clean.search+clean.hash);
   }
