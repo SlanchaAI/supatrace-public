@@ -50,3 +50,87 @@ for(const viewport of [{width:1280,height:800},{width:390,height:844},{width:320
   assert.deepEqual(errors,[]);
  }finally{await context.close();await live.close();}
 });
+
+test('OTLP list and detail show root duration when a child outlives it',{timeout:60000},async()=>{
+ const live=await start(),context=await browser.newContext({viewport:{width:390,height:844}});
+ await context.route(/^(?!http:\/\/127\.0\.0\.1)/,route=>route.abort());
+ const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(String(error)));
+ try{
+  const tenant=await live.signIn(context),key=await live.writeKey(tenant);
+  const traceId='0123456789abcdef0123456789abcdef',root='1111111111111111',run='otlp.'+traceId;
+  const nano=ms=>String(BigInt(Date.parse(at(ms)))*1000000n);
+  const span=(id,parent,start,end)=>({traceId,spanId:id,...(parent?{parentSpanId:parent}:{}),name:id,startTimeUnixNano:nano(start),endTimeUnixNano:nano(end),attributes:[],status:{code:1}});
+  const response=await fetch(live.origin+'/v1/traces',{method:'POST',headers:{'content-type':'application/json','x-supatrace-key':key},body:JSON.stringify({resourceSpans:[{scopeSpans:[{spans:[span(root,null,0,1000),span('2222222222222222',root,100,2500)]}]}]})});
+  assert.equal(response.status,200);
+  await page.goto(live.origin+'/app/',{waitUntil:'networkidle'});await nav(page,'traces');
+  const row=page.locator(`#runs tr[data-run="${run}"]`);await row.waitFor();assert.equal(await row.locator('td').nth(3).textContent(),'1.0s');
+  await row.getByRole('button',{name:'Open trace '+run,exact:true}).click();
+  await page.locator('#events-note').filter({hasText:'All 2 events loaded'}).waitFor();
+  assert.equal(await page.locator('#span-view [data-total="duration"]').textContent(),'1.00 s');
+  assert.match(await page.locator(`#span-view .span-row[data-span="${root}"] .span-facts`).textContent(),/1.00 s/);
+  assert.match(await page.locator('#span-view .span-row[data-span="2222222222222222"] .span-facts').textContent(),/2.40 s/);
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual(errors,[]);
+ }finally{await context.close();await live.close();}
+});
+
+test('batch long-ID split updates and equal-start roots agree in list and detail',{timeout:60000},async()=>{
+ const live=await start(),context=await browser.newContext({viewport:{width:390,height:844}});
+ await context.route(/^(?!http:\/\/127\.0\.0\.1)/,route=>route.abort());
+ const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(String(error)));
+ try{
+  const tenant=await live.signIn(context),key=await live.writeKey(tenant),id='r'.repeat(30000),run='long-batch';
+  await live.upload(key,{version:1,batch_id:'long-start',run_id:run,events:[
+   event('start',0,'note','root',{spanId:id,startTime:at(0)}),
+   event('later',0,'note','later',{spanId:'a',startTime:at(0),endTime:at(2500)})]});
+  await live.upload(key,{version:1,batch_id:'long-end',run_id:run,events:[event('end',4000,'note','root',{spanId:id,endTime:at(1000)})]});
+  await page.goto(live.origin+'/app/',{waitUntil:'networkidle'});await nav(page,'traces');
+  const row=page.locator(`#runs tr[data-run="${run}"]`);await row.waitFor();assert.equal(await row.locator('td').nth(3).textContent(),'1.0s');
+  await row.getByRole('button',{name:'Open trace '+run,exact:true}).click();
+  await page.locator('#events-note').filter({hasText:'Showing 2 events'}).waitFor();
+  await page.locator('#events-more').click();
+  await page.locator('#events-note').filter({hasText:'All 3 events loaded'}).waitFor();
+  assert.equal(await page.locator('#span-view [data-total="duration"]').textContent(),'1.00 s');
+  assert.deepEqual(errors,[]);
+ }finally{await context.close();await live.close();}
+});
+
+for(const [width,length] of [[1280,129],[390,200]])test(`Langfuse ${length}-character root ID shows its own duration in list and detail`,{timeout:60000},async()=>{
+ const live=await start(),context=await browser.newContext({viewport:{width,height:844}});
+ await context.route(/^(?!http:\/\/127\.0\.0\.1)/,route=>route.abort());
+ const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(String(error)));
+ try{
+  const tenant=await live.signIn(context),key=await live.writeKey(tenant),traceId='long-root',run='lf.'+traceId,id='r'.repeat(length);
+  const response=await fetch(live.origin+'/api/public/ingestion',{method:'POST',headers:{'content-type':'application/json','x-supatrace-key':key},body:JSON.stringify({batch:[
+   {id:'root',type:'span-create',timestamp:at(0),body:{id,traceId,startTime:at(0),endTime:at(1000)}},
+   {id:'child',type:'span-create',timestamp:at(100),body:{id:'child',traceId,parentObservationId:id,startTime:at(100),endTime:at(2500)}}
+  ]})});
+  assert.equal(response.status,207);assert.deepEqual((await response.json()).errors,[]);
+  await page.goto(live.origin+'/app/',{waitUntil:'networkidle'});await nav(page,'traces');
+  const row=page.locator(`#runs tr[data-run="${run}"]`);await row.waitFor();assert.equal(await row.locator('td').nth(3).textContent(),'1.0s');
+  await row.getByRole('button',{name:'Open trace '+run,exact:true}).click();
+  await page.locator('#events-note').filter({hasText:'All 2 events loaded'}).waitFor();
+  assert.equal(await page.locator('#span-view [data-total="duration"]').textContent(),'1.00 s');
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual(errors,[]);
+ }finally{await context.close();await live.close();}
+});
+
+for(const [width,parentObservationId] of [[1280,'x'.repeat(201)],[390,false]])test(`Langfuse unsupported parent keeps list and detail at root duration at ${width}px`,{timeout:60000},async()=>{
+ const live=await start(),context=await browser.newContext({viewport:{width,height:844}});
+ await context.route(/^(?!http:\/\/127\.0\.0\.1)/,route=>route.abort());
+ const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(String(error)));
+ try{
+  const tenant=await live.signIn(context),key=await live.writeKey(tenant),run='lf.parent-presence';
+  const response=await fetch(live.origin+'/api/public/ingestion',{method:'POST',headers:{'content-type':'application/json','x-supatrace-key':key},body:JSON.stringify({batch:[
+   {id:'root',type:'span-create',timestamp:at(0),body:{id:'root',traceId:'parent-presence',startTime:at(0),endTime:at(1000)}},
+   {id:'child',type:'span-create',timestamp:at(-100),body:{id:'child',traceId:'parent-presence',parentObservationId,startTime:at(-100),endTime:at(2500)}}
+  ]})});
+  assert.equal(response.status,207);assert.deepEqual((await response.json()).errors,[]);
+  await page.goto(live.origin+'/app/',{waitUntil:'networkidle'});await nav(page,'traces');
+  const row=page.locator(`#runs tr[data-run="${run}"]`);await row.waitFor();assert.equal(await row.locator('td').nth(3).textContent(),'1.0s');
+  await row.getByRole('button',{name:'Open trace '+run,exact:true}).click();
+  await page.locator('#events-note').filter({hasText:'All 2 events loaded'}).waitFor();
+  assert.equal(await page.locator('#span-view [data-total="duration"]').textContent(),'1.00 s');
+  assert.match(await page.locator('#span-view .span-row[data-span="child"] .span-facts').textContent(),/2.60 s/);
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual(errors,[]);
+ }finally{await context.close();await live.close();}
+});

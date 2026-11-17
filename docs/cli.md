@@ -65,6 +65,8 @@ supatrace tail --once --json   # one page as JSON lines, for scripts
 
 `tail` polls `GET /api/v1/traces` and prints one line per trace: start time, status, duration, event count and id. Options: `--interval` (1 to 300 seconds), `--limit` (1 to 100, how many existing traces to show at the start), `--workspace`, `--environment`.
 
+Duration uses the earliest-starting root span’s own end minus start; missing or unfinished roots and older stored runs without root metadata use the full span range.
+
 It is a poll, not a stream. Each poll reads the 100 most recently started traces and keeps reading older pages while a page still holds a new or changed trace, up to 500 traces a poll; past that it says on stderr that older ones are not shown. A trace that receives more events is printed again, marked `(updated)`, when it is within the pages a poll reads. A change to a trace that started before 100 or more unchanged traces is not seen. Traces are listed by their start time, which comes from the events. A trace uploaded now with older event times (a backfill or an import) sorts among the old traces and is not shown. When it starts, `tail` reads the traces that already exist so that none of them is later printed as new.
 
 The API lists a bounded set of stored traces per request (800 today) and marks its answer `truncated` beyond that. In a workspace with more traces `tail` says once on stderr that the list is partial: some traces, including new ones, can be missing, and an older trace is then recognised by the time the server first received it, to the second. A poll that fails part-way is repeated whole on the next attempt. Each token may make 120 requests a minute.

@@ -14,7 +14,7 @@ import {commercialPlanProjection,commercialBillingState} from './commercial-poli
 import {fulfillCommercialAccount,enrollCommercialAccount} from './commercial-fulfillment.mjs';
 import {checkout as billingCheckout,webhook as billingWebhook,portal as billingPortal,billingStatus,sandboxEntitlement} from './stripe-billing.mjs';
 import {accountRunsPage} from './run-page.mjs';
-import {buildSpans} from '../public/app/span-data.js';
+import {buildSpans,spanTimings,rootDuration} from '../public/app/span-data.js';
 import {parseBatch,IntakeError} from './trace.mjs';
 import {otlpTraces} from './otlp-ingest.mjs';
 import {drainApi,listDrains,enqueueDrainDeliveries,deliverDrains,DRAIN_LIMITS} from './drains.mjs';
@@ -68,7 +68,7 @@ function runView(row){
  const ended=Number.isFinite(row.ended_at)?row.ended_at:null;
  const agents=Array.isArray(row.writers)?row.writers.filter(value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value)):[];
  const events=Number.isSafeInteger(row.event_count)?row.event_count:null;
- return {id:row.run_id||row.id,created_at:new Date(created*1000).toISOString(),started_at:started==null?null:new Date(started).toISOString(),ended_at:ended==null?null:new Date(ended).toISOString(),duration_ms:started==null||ended==null?null:Math.max(0,ended-started),event_count:events,batch_count:Number.isSafeInteger(row.batch_count)?row.batch_count:null,byte_count:Number.isSafeInteger(row.byte_count)?row.byte_count:null,agents,status:row.has_error===true?'error':row.has_error===false?'ok':null,
+ return {id:row.run_id||row.id,created_at:new Date(created*1000).toISOString(),started_at:started==null?null:new Date(started).toISOString(),ended_at:ended==null?null:new Date(ended).toISOString(),duration_ms:rootDuration(row.root_span)??(started==null||ended==null?null:Math.max(0,ended-started)),event_count:events,batch_count:Number.isSafeInteger(row.batch_count)?row.batch_count:null,byte_count:Number.isSafeInteger(row.byte_count)?row.byte_count:null,agents,status:row.has_error===true?'error':row.has_error===false?'ok':null,
   // When this run stops being listed and exported. null: stored before retention stamping, no expiry applies.
   expires_at:Number.isSafeInteger(row.retention_expires_at)&&row.retention_expires_at>0?new Date(row.retention_expires_at*1000).toISOString():null};
 }
@@ -157,7 +157,7 @@ async function storeBatch(env,scope,raw,requestHash,batch){
  const alert=record.usageAlert?await recordUsageAlert(env,scope.store,scope.tenant,record.usageAlert):null;
  const fresh=record.status!=='accepted';
  if(fresh){await env.objects.putImmutable(record.object_key,raw,requestHash);
-  const spans=buildSpans(batch.events);await scope.store.acceptReservedBatch(scope.tenant,batch.batch_id,requestHash,{writer:scope.writer,started_at:spans.start,ended_at:spans.end,has_error:batch.events.some(event=>event.kind==='error')});}
+  const spans=buildSpans(batch.events);await scope.store.acceptReservedBatch(scope.tenant,batch.batch_id,requestHash,{writer:scope.writer,started_at:spans.start,ended_at:spans.end,span_timings:spanTimings(batch.events),has_error:batch.events.some(event=>event.kind==='error')});}
  scope.attempt?.stored(batch,raw,fresh);
  // Every ingest route (batches, OTLP, Langfuse) records the key's last use here.
  await stampKeyUse(scope.store,scope.binding);

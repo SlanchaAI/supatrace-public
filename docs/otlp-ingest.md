@@ -134,6 +134,12 @@ The event keeps the original span, resource and scope under `data.otlp`, and a s
 
 The event kind is `error` for a failed span, `response` for a model call, `tool_call` for a tool span and `note` otherwise. The dashboard shows these events in the existing run view; a dedicated LLM span view is separate work.
 
+Trace list duration (including duration sorting) and the detail Duration total use the earliest-starting root span’s own end minus start. A root has an empty or absent parent span ID. If that root has no usable start/end, or no root exists, duration falls back to the earliest span start through the latest span end. Existing stored runs without root timing metadata keep that fallback; no migration is required.
+
+Roots sharing a start time prefer the earliest end. Timing identities in batch indexes use fixed-size SHA-256 hashes; original IDs remain in stored payloads, and older raw timing identities join without migration.
+
+A nonempty parent ID remains evidence of a child even if the ID exceeds the display limit or has an unsupported format. Partial updates that omit the parent retain that evidence.
+
 ## Responses
 
 Responses follow the OTLP/HTTP specification, in the encoding of the request.

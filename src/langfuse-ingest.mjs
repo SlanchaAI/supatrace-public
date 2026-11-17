@@ -37,6 +37,8 @@ function summary(type, body, traceId) {
   const cost = amount(isObject(body.costDetails) ? body.costDetails.total : undefined) ?? amount(usageSource.totalCost);
   const start = instant(body.startTime), end = instant(body.endTime);
   return {traceId, ...(type === 'trace-create' ? {} : type === 'score-create' ? (text(body.observationId) ? {spanId: body.observationId} : {}) : {spanId: body.id}),
+    // Keep presence even when the parent ID cannot fit the validated summary.
+    ...(body.parentObservationId !== undefined && body.parentObservationId !== null && body.parentObservationId !== '' ? {has_parent: true} : {}),
     ...(text(body.parentObservationId) ? {parentSpanId: body.parentObservationId} : {}),
     ...(start !== null ? {startTime: new Date(start).toISOString()} : {}), ...(end !== null ? {endTime: new Date(end).toISOString()} : {}), ...(start !== null && end !== null && end >= start ? {duration_ms: end - start} : {}),
     kind: kind === 'generation' ? 'llm' : kind, ...(type in UPDATE ? {update: true} : {}), status: body.level === 'ERROR' ? 'error' : 'unset',

@@ -40,3 +40,18 @@ for(const width of [1440,390])test(`trace list and detail share explicit span ti
   assert.match(await page.locator('#detail').textContent(),/80\s*ms/);
  }finally{await context.close();await live.close();}
 });
+
+for(const [width,alias] of [[1440,'parent_span_id'],[390,'parentSpanId']])test(`unsupported ${alias} keeps list and detail at root duration at ${width}px`,async()=>{
+ const live=await start(),context=await browser.newContext({viewport:{width,height:900}}),page=await context.newPage();
+ try{
+  const tenant=await live.signIn(context),key=await live.writeKey(tenant);
+  await live.upload(key,{version:1,batch_id:'unsupported-parent',run_id:'unsupported-parent',events:[
+   {id:'root',time:'2026-11-14T00:00:00.000Z',kind:'note',name:'Root',data:{span_id:'root',startTime:'2026-11-14T00:00:00.000Z',endTime:'2026-11-14T00:00:01.000Z'}},
+   {id:'child',time:'2026-11-13T23:59:59.900Z',kind:'note',name:'Child',data:{span_id:'child',[alias]:'x'.repeat(129),startTime:'2026-11-13T23:59:59.900Z',endTime:'2026-11-14T00:00:02.500Z'}}
+  ]});
+  await page.goto(live.origin+'/app/#traces',{waitUntil:'networkidle'});
+  const row=page.locator('#runs tr.run').filter({hasText:'unsupported-parent'});await row.waitFor();assert.match(await row.textContent(),/1\.0s/);
+  await page.getByRole('button',{name:'Open trace unsupported-parent',exact:true}).click();await page.locator('#events-note').filter({hasText:'All 2 events loaded'}).waitFor();
+  assert.equal(await page.locator('[data-total="duration"]').textContent(),'1.00 s');
+ }finally{await context.close();await live.close();}
+});

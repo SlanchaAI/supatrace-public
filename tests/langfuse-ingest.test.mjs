@@ -9,6 +9,7 @@ import {handle} from '../src/aws-api.mjs';
 import {digest} from '../src/aws-auth.mjs';
 import {decodeTraceRequest} from '../src/otlp-protobuf.mjs';
 import {planLangfuseBatches, langfuseRunId, LANGFUSE_LIMITS, LANGFUSE_STORED_TYPES} from '../src/langfuse-ingest.mjs';
+import {buildSpans} from '../public/app/span-data.js';
 
 const fixture = name => readFileSync(new URL('./fixtures/langfuse/' + name, import.meta.url));
 const jsBatch = fixture('js-3.39.2-ingestion.json'), pythonOtel = fixture('python-5.2.0-otel-protobuf.bin.gz');
@@ -24,6 +25,21 @@ async function events(live, cookie, run) {
 }
 const ingest = (live, body, authorization, headers = {}) => fetch(live.origin + '/api/public/ingestion', {method: 'POST', headers: {'content-type': 'application/json', ...(authorization ? {authorization} : {}), ...headers}, body});
 const event = (type, body, id = type + '-1') => ({id, type, timestamp: '2026-11-14T20:00:00.000Z', body});
+
+test('every Langfuse observation preserves parent presence through summary validation and truncation', () => {
+  const at = ms => new Date(Date.parse('2026-11-14T20:00:00Z') + ms).toISOString();
+  const types = LANGFUSE_STORED_TYPES.filter(type => !['trace-create', 'score-create'].includes(type));
+  for (const type of types) for (const parent of [undefined, null, '', 'root', 'x'.repeat(129), 'x'.repeat(200), 'x'.repeat(201), 42, 0, false, true, [], {}]) {
+    const plan = planLangfuseBatches({batch: [
+      event('span-create', {id: 'root', traceId: 'parents', startTime: at(0), endTime: at(1000)}, 'root'),
+      event(type, {id: 'child', traceId: 'parents', parentObservationId: parent, startTime: at(-100), endTime: at(2500), input: 'p'.repeat(60000)}, 'child')
+    ]});
+    assert.deepEqual(plan.errors, []);
+    const events = plan.batches.flatMap(entry => entry.batch.events);
+    assert.equal(events.find(item => item.data.span.spanId === 'child').data.truncated, true);
+    assert.equal(buildSpans(events).duration_ms, parent === undefined || parent === null || parent === '' ? 2600 : 1000, type + ' parent ' + JSON.stringify(parent));
+  }
+});
 
 test('stock Langfuse JS SDK batch is stored as one run and answered 207 with every event id', async () => {
   const live = await start(); try {

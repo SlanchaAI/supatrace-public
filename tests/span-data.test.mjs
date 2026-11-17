@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {buildSpans,SPAN_LIMITS} from '../public/app/span-data.js';
+import {buildSpans,SPAN_LIMITS,spanTimings,rootSpanTiming,rootDuration} from '../public/app/span-data.js';
 import {priceFor,PRICES_AS_OF,PRICE_SOURCES} from '../public/app/model-prices.js';
 import {mountSpanView,formatDuration,formatCost,WATERFALL_ROWS} from '../public/app/span-ui.js';
 import {parseBatch} from '../src/trace.mjs';import {planOtlpBatches} from '../src/otlp-ingest.mjs';
@@ -183,4 +183,66 @@ test('a Langfuse-ingested generation uses its own startTime and endTime, not the
   {id:'e3',type:'generation-update',timestamp:t(10),body:{id:'g1',traceId:'tr',endTime:t(1)}}]});
  const built=buildSpans(plan.batches.flatMap(entry=>entry.batch.events)),span=built.spans.find(item=>item.id==='g1');
  assert.ok(span,'the generation is one explicit span');assert.equal(span.duration_ms,1000);
+});
+
+const timed=(id,start,end,parent)=>event(id,start??0,'note',id,{span_id:id,...(parent===undefined?{}:{parent_span_id:parent}),...(start===null?{}:{start_time:at(start)}),...(end===null?{}:{end_time:at(end)})});
+test('timing identity preserves accepted IDs independently of display limits and aliases',()=>{
+ for(const alias of ['span_id','spanId'])for(const nested of [false,true])for(const length of [128,129,200,201,512]){
+  const id='r'.repeat(length),data={[alias]:id,startTime:at(0),endTime:at(1000)};
+  const events=[event('root',0,'note','root',nested?{span:data}:data),timed('child',100,2500,id)];
+  const facts=spanTimings(events);
+  assert.equal(facts[0].id,id);assert.deepEqual(rootSpanTiming(facts),{id,start:Date.parse(at(0)),end:Date.parse(at(1000))});
+  assert.equal(buildSpans(events).duration_ms,1000);
+ }
+});
+test('long timing IDs join split updates without truncation collisions',()=>{
+ const id='r'.repeat(129),other=id+'r';
+ const events=[event('start',0,'note','root',{span:{spanId:id,startTime:at(0)}}),
+  event('end',4000,'note','root',{span:{spanId:id,endTime:at(1000)}}),
+  event('later',100,'note','later',{span:{spanId:other,startTime:at(100),endTime:at(5000)}})];
+ for(const ordered of [events,[...events].reverse()]){
+  const root=rootSpanTiming(spanTimings(ordered));assert.equal(root.id,id);assert.equal(rootDuration(root),1000);
+  assert.equal(buildSpans(ordered).duration_ms,1000);
+ }
+});
+test('trace duration is the root own 1000 ms even when its child ends at 2500 ms',()=>{
+ const view=buildSpans([timed('child',100,2500,'root'),timed('root',0,1000,'')]);
+ assert.equal(view.duration_ms,1000);assert.equal(view.end-view.start,2500);
+ assert.equal(view.spans.find(span=>span.id==='child').duration_ms,2400);
+});
+test('equal-start roots settle duration before identity or event order',()=>{
+ for(const events of [[timed('a',0,2500),timed('b',0,1000)],[timed('b',0,2500),timed('a',0,1000)]]){
+  for(const ordered of [events,[...events].reverse()])assert.equal(buildSpans(ordered).duration_ms,1000);
+ }
+});
+for(const alias of ['parent_span_id','parentSpanId'])test(`unsupported ${alias} stays a child for duration selection`,()=>{
+ const other=alias==='parent_span_id'?'parentSpanId':'parent_span_id';
+ for(const nested of [false,true])for(const parent of ['x'.repeat(129),42])for(const empty of [undefined,'',null]){
+  const data={spanId:'child',[alias]:parent,[other]:empty,startTime:at(-100),endTime:at(2500)};
+  const child=event('child',-100,'note','child',nested?{span:data}:data),root=timed('root',0,1000);
+  for(const events of [[root,child],[root,child,event('update',3000,'note','child',{spanId:'child',endTime:at(3000)})],
+   [root,event('partial',-200,'note','child',{spanId:'child',startTime:at(-200)}),child]]){
+   assert.equal(buildSpans(events).duration_ms,1000);
+  }
+  assert.equal(buildSpans([child]).duration_ms,2600,'no root keeps the original range');
+ }
+});
+test('multiple roots select earliest start rather than arrival order or longest duration',()=>{
+ const view=buildSpans([timed('later',100,5000),timed('earliest',0,1000),timed('child',200,2500,'earliest')]);
+ assert.equal(view.duration_ms,1000);
+});
+test('missing roots, orphan children and cycles use the original span range',()=>{
+ for(const parents of [['missing','missing'],['second','first']]){
+  const view=buildSpans([timed('first',0,1000,parents[0]),timed('second',100,2500,parents[1])]);
+  assert.equal(view.duration_ms,2500);
+ }
+});
+test('unfinished or invalid earliest root falls back even if a later root is complete',()=>{
+ for(const [start,end] of [[0,null],[null,1000],[0,-1]]){
+  const view=buildSpans([timed('root',start,end),timed('later',100,500),timed('child',200,2500,'root')]);
+  assert.equal(view.duration_ms,2500);
+ }
+});
+test('a zero length root is a usable duration',()=>{
+ assert.equal(buildSpans([timed('root',0,0),timed('child',100,2500,'root')]).duration_ms,0);
 });

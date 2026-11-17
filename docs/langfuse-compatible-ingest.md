@@ -40,6 +40,10 @@ Every other `/api/public/*` path answers `404` with a message naming this list. 
 
 Each trace becomes one run: `lf.<trace id>`, or `otlp.<trace id>` when the id is a 32-character OpenTelemetry trace id, so batch events and OTLP spans of one trace share a run. Each stored event keeps the Langfuse body under `data.langfuse` and a summary under `data.span` (trace and observation ids, parent, start, end, duration, model, token usage, reported cost, level). A `generation-create` is a `response` event, a `tool-create` a `tool_call`, an event with `level: "ERROR"` an `error`, everything else a `note`.
 
+Trace duration uses the earliest-starting root observation’s own start and end, joining create/update events across uploads. Child updates without a parent ID retain the parent recorded on create. Missing or unfinished roots and older stored runs without timing metadata use the full span range.
+
+Timing retains the full accepted observation ID (up to 200 characters), independently of the waterfall’s 128-character display limit.
+
 OTLP spans from Langfuse SDKs are summarised from `langfuse.observation.type`, `langfuse.observation.model.name`, `langfuse.observation.usage_details` and `langfuse.observation.cost_details`.
 
 ## Limits and errors

@@ -1,3 +1,4 @@
+import {rootSpanTiming} from '../public/app/span-data.js';
 import {effectivePlanId, stripePlanMatches, stripeStateFence, planUsagePrefix} from './stripe-plan-state.mjs';
 import {checkoutScope} from './billing-principal.mjs';
 import {validateSandboxEntitlementConfiguration,sandboxEntitlementDecision,TEST_PLAN_SOURCE} from './stripe-sandbox-entitlements.mjs';
@@ -13,6 +14,12 @@ import {requireCount,requireFeature} from './entitlements.mjs';
 import {retentionDays,RETENTION_MAX_DAYS,PLAN_LIMITS,planLimits,usagePeriod,UPGRADE_PATH,spendCap,usageAlertLevel,USAGE_ALERT_LEVELS,IDLE_PAUSE,RESUME_PATH,projectLifecycle} from './plan-limits.mjs';
 import {auditPut,auditKeyPrefix} from './audit.mjs';
 import {acceptedOverage,planFence,requireOverageBinding} from './plan-overage.mjs';
+
+// Raw IDs stay in object storage. Fixed-size identities keep accepted batch
+// indexes bounded; UTF-16 preserves even distinct unpaired JS surrogates.
+// Version the encoding on the index, so older raw facts join without migration.
+const timingFacts=batch=>batch.span_timings.map(fact=>({...fact,id:batch.span_timing_ids==='sha256-utf16le'?fact.id:
+  createHash('sha256').update(fact.id,'utf16le').digest('hex')}));
 
 export class StoreError extends Error {
   constructor(status, code, details) { super(code); this.name = 'StoreError'; this.status = status; this.code = code; if (details) this.details = details; }
@@ -1150,6 +1157,7 @@ export class DynamoMetadataStore {
   async acceptReservedBatch(tenantId, batchId, requestHash, trace) {
     const Key = batchKey(tenantId, batchId); hash(requestHash);
     const receipt = { accepted: true, batch_id: batchId, request_hash: requestHash };
+    const timings=Array.isArray(trace?.span_timings)?timingFacts(trace):null;
     for (let attempt = 0; attempt < 4; attempt++) {
       const row = await this._get(Key);
       if (!row) fail(404, 'reservation_not_found');
@@ -1174,6 +1182,21 @@ export class DynamoMetadataStore {
       const runKey = { pk: tpk(tenantId), sk: `RUN#${row.run_id}` };
       const existingRun = await this._get(runKey);
       const summary = runSummary(trace, trace ? existingRun : null, row);
+      let rootSpan=null;
+      if(timings!==null){
+        const facts=[...timings];let cursor=null,count=0,complete=true;
+        if(existingRun?.batch_count>0){
+          do{
+            const page=await this._page(`${tpk(tenantId)}#RUN#${row.run_id}`,'BATCH#',{cursor,limit:100});
+            for(const batch of page.items){count++;if(Array.isArray(batch.span_timings))facts.push(...timingFacts(batch));else complete=false;}
+            cursor=page.next;
+          }while(cursor!==null);
+        }
+        // A concurrent acceptance changed the index after our run-row read. Retry
+        // from a new snapshot; the transaction below fences subsequent changes.
+        if(count>(existingRun?.batch_count??0))continue;
+        if(complete&&count===(existingRun?.batch_count??0))rootSpan=rootSpanTiming(facts);
+      }
       // The run row holds the newest expiry across its batches, and none at all once the run holds any batch
       // without a stamp (stored before retention stamping, or accepted for a commercially enrolled account).
       // So appending to a run never hides data that does not expire. null is the explicit "no expiry" value.
@@ -1182,9 +1205,9 @@ export class DynamoMetadataStore {
       const keepRun = runUntil === null && !Number.isSafeInteger(existingRun?.retention_expires_at) ? ['', {}] : [', retention_expires_at = :runUntil', { ':runUntil': runUntil }];
       const runUpdate = summary
         ? { Update: { Key: runKey,
-          UpdateExpression: 'SET run_id = :run, created_at = if_not_exists(created_at, :created), started_at = :started, ended_at = :ended, has_error = :err, writers = :writers' + keepRun[0] + ' ADD batch_count :one, event_count :events, byte_count :bytes',
+          UpdateExpression: 'SET run_id = :run, created_at = if_not_exists(created_at, :created), started_at = :started, ended_at = :ended, has_error = :err, writers = :writers, root_span = :root' + keepRun[0] + ' ADD batch_count :one, event_count :events, byte_count :bytes',
           ConditionExpression: 'attribute_not_exists(batch_count) OR batch_count = :prev',
-          ExpressionAttributeValues: { ':run': row.run_id, ':created': row.created_at, ':one': 1, ...summary, ...keepRun[1] } } }
+          ExpressionAttributeValues: { ':run': row.run_id, ':created': row.created_at, ':one': 1, ...summary, ':root': rootSpan, ...keepRun[1] } } }
         : { Update: { Key: runKey,
           UpdateExpression: 'SET run_id = :run, created_at = if_not_exists(created_at, :created)' + keepRun[0] + ' ADD batch_count :one',
           // The run expiry was derived from the row as read: only apply it to that same row state.
@@ -1198,7 +1221,7 @@ export class DynamoMetadataStore {
         runUpdate,
         { Put: { Item: { pk: `${tpk(tenantId)}#RUN#${row.run_id}`, sk: order, tenant_id: tenantId,
           batch_id: batchId, request_hash: requestHash, object_key: row.object_key, byte_count: row.byte_count,
-          event_count: row.event_count, upload_seq: seq, accepted_at: acceptedAt, ...stamp }, ConditionExpression: absent } },
+          event_count: row.event_count, upload_seq: seq, accepted_at: acceptedAt, ...(timings!==null?{span_timings:timings,span_timing_ids:'sha256-utf16le'}:{}), ...stamp }, ConditionExpression: absent } },
         // last_accepted_at is the activity stamp the idle pause (#113) counts from.
         { Update: { Key: tenantKey(tenantId), UpdateExpression: 'SET upload_seq = :seq, last_accepted_at = :accepted',
           ConditionExpression: 'attribute_exists(pk) AND attribute_not_exists(deleted_at) AND (attribute_not_exists(upload_seq) OR upload_seq = :prev) AND '+billingFence.condition,

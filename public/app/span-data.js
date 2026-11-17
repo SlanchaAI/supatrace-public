@@ -32,6 +32,47 @@ function instant(value){
 }
 const failed=sources=>sources.some(source=>{const status=pick(source,'otel.status_code')??pick(source,'status.code')??pick(source,'status');return status==='ERROR'||status==='error'||status==='STATUS_CODE_ERROR'||status===2;});
 
+// Compact timing facts persist with each accepted batch index, so split/out-of-order
+// Langfuse updates can be joined without loading payloads or growing the run row.
+// Timing identity follows accepted payloads, not the waterfall's display-ID limit.
+const timingId=value=>typeof value==='string'&&value.length>0?value:null;
+export function spanTimings(events){
+ const facts=[];
+ for(const event of events){
+  const data=object(event.data)?event.data:null;if(!data)continue;
+  const described=object(own(data,'span'))&&timingId(own(data.span,'span_id')??own(data.span,'spanId'))!==null?data.span:data;
+  const id=timingId(own(described,'span_id')??own(described,'spanId'));if(id===null)continue;
+  facts.push({id,parent:label(own(described,'parent_span_id')??own(described,'parentSpanId'),SPAN_LIMITS.idChars),
+   has_parent:own(described,'has_parent')===true||['parent_span_id','parentSpanId'].some(key=>{const value=own(described,key);return value!==undefined&&value!==null&&value!=='';}),
+   start:instant(own(described,'start_time')??own(described,'startTimeUnixNano')??own(described,'startTime')),
+   end:instant(own(described,'end_time')??own(described,'endTimeUnixNano')??own(described,'endTime')),observed:Date.parse(event.time)});
+ }
+ return facts;
+}
+export function rootSpanTiming(facts){
+ const spans=new Map();
+ for(const fact of facts){
+  let span=spans.get(fact.id);
+  if(!span){span={id:fact.id,parent:null,has_parent:false,start:null,end:null,observed:fact.observed};spans.set(fact.id,span);}
+  span.parent??=fact.parent;
+  span.has_parent ||= fact.has_parent===true;
+  if(Number.isFinite(fact.start))span.start=span.start===null?fact.start:Math.min(span.start,fact.start);
+  if(Number.isFinite(fact.end))span.end=span.end===null?fact.end:Math.max(span.end,fact.end);
+  span.observed=Math.min(span.observed,fact.observed);
+ }
+ // A missing parent in the loaded tree is not evidence of a root. Only the
+ // producer's empty parent qualifies; an unsupported nonempty ID still has a
+ // parent, even when display-ID validation discarded it. Older facts use parent.
+ let root=null;
+ const order=span=>span.start??span.observed;
+ // Equal-start roots prefer the earliest end before identity: persisted IDs
+ // may be hashed, but list and detail must choose the same duration.
+ const end=span=>span.end??Infinity;
+ for(const span of spans.values())if(span.parent===null&&!span.has_parent&&(!root||order(span)<order(root)||order(span)===order(root)&&(end(span)<end(root)||end(span)===end(root)&&span.id<root.id)))root=span;
+ return root===null?null:{id:root.id,start:root.start,end:root.end};
+}
+export function rootDuration(root){return Number.isFinite(root?.start)&&Number.isFinite(root?.end)&&root.end>=root.start?root.end-root.start:null;}
+
 export function buildSpans(events){
  if(!Array.isArray(events)||events.length>SPAN_LIMITS.events)fail('invalid_span_input');
  const spans=[],explicit=new Map(),openCalls=[],openTools=[];let inferred=false;
@@ -134,5 +175,5 @@ export function buildSpans(events){
   if(row.cost_usd===null){if(row.input_tokens!==null||row.output_tokens!==null)totals.unpriced_spans++;}else{totals.cost_usd+=row.cost_usd;if(row.cost_reported)totals.reported_cost_spans++;}
  }
  totals.total_tokens=totals.input_tokens+totals.output_tokens;
- return {spans:rows,totals,start:rows.length?traceStart:null,end:rows.length?traceEnd:null,duration_ms:rows.length?traceEnd-traceStart:0,inferred};
+ return {spans:rows,totals,start:rows.length?traceStart:null,end:rows.length?traceEnd:null,duration_ms:rootDuration(rootSpanTiming(spanTimings(events)))??(rows.length?traceEnd-traceStart:0),inferred};
 }
