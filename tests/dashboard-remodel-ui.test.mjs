@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import {mkdirSync, writeFileSync} from 'node:fs';
 import {start} from './harness.mjs';
 import {launch} from './browser.mjs';
+import {enablePrivateImportUi} from './private-import-ui-fixture.mjs';
 
 let browser;
 const out = process.env.SUPATRACE_DASHBOARD_SCREENSHOT_DIR;
@@ -37,6 +38,7 @@ for (const viewport of [{width:1280,height:800},{width:390,height:844},{width:32
     const live = await start();
     const context = await browser.newContext({viewport, acceptDownloads:true});
     await context.route(/^(?!http:\/\/127\.0\.0\.1)/, route => route.abort());
+    await enablePrivateImportUi(context);
     const errors = [];
     const page = await context.newPage();
     page.on('pageerror', error => errors.push(String(error)));
@@ -77,11 +79,12 @@ for (const viewport of [{width:1280,height:800},{width:390,height:844},{width:32
         assert.equal(await page.locator('#menu-toggle').getAttribute('aria-expanded'),'false');
         assert.equal(await page.locator('#menu-toggle').evaluate(node => node === document.activeElement),true);
       }
-      for (const view of ['home','traces','agents','keys','usage','billing','members','audit','settings']) {
+      for (const view of ['home','traces','agents','keys','usage','billing','members','settings']) {
         await nav(page,view);
         await fits(page,view);
         await capture(page,view,viewport);
       }
+      assert.equal(await page.locator('#rail [data-nav="audit"]').isVisible(),false);
       await nav(page,'agents');
       assert.equal(await page.locator('#import-start').isDisabled(),true);
       assert.match(await page.locator('#import-start-reason').innerText(),/Review an import plan with an exact trace/);
@@ -130,6 +133,7 @@ for (const viewport of [{width:1280,height:900},{width:390,height:844},{width:32
     const context = await browser.newContext({viewport});
     await context.route(/^(?!http:\/\/127\.0\.0\.1)/, route => route.abort());
     const page = await context.newPage();
+    await enablePrivateImportUi(context);
     const errors = [];
     page.on('pageerror', error => errors.push(String(error)));
     await page.addInitScript(() => {window.__logoCsp = [];document.addEventListener('securitypolicyviolation', event => window.__logoCsp.push(event.violatedDirective));});

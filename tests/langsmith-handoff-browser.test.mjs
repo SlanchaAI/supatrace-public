@@ -1,3 +1,4 @@
+import {enablePrivateImportUi} from './private-import-ui-fixture.mjs';
 // Synthetic loopback only. No user browser profile, source account or saved file.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -26,7 +27,7 @@ for (const viewport of [{width: 1280, height: 900}, {width: 320, height: 740}]) 
   const errors = [], page = await context.newPage(); page.on('pageerror', e => errors.push(String(e)));
   try {
     const tenant = await live.signIn(context), key = await live.writeKey(tenant);
-    await page.goto(live.origin + '/app/#agents', {waitUntil: 'networkidle'});
+    await enablePrivateImportUi(context); await page.goto(live.origin + '/app/#agents', {waitUntil: 'networkidle'});
     await page.locator('#shell:not([hidden])').waitFor();
     const cookies = await context.cookies();
     const before = await fetch(live.origin + '/api/me', {headers: {cookie: cookies.map(c => c.name + '=' + c.value).join('; ')}});
@@ -69,7 +70,7 @@ for (const viewport of [{width: 1280, height: 900}, {width: 320, height: 740}]) 
     const config = {directory, scope: uploadScope, local_origin: live.origin, key};
     assert.equal((await upload(config)).all_batches_acknowledged, true);
     assert.equal((await upload(config)).transport_requests_attempted, 0);
-    await page.goto(live.origin + '/app/#traces', {waitUntil: 'networkidle'});
+    await enablePrivateImportUi(context); await page.goto(live.origin + '/app/#traces', {waitUntil: 'networkidle'});
     await page.reload({waitUntil: 'networkidle'});
     await page.locator('#runs .trace-open').first().click();
     await page.locator('#events li').first().waitFor();

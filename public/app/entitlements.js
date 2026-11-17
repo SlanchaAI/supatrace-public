@@ -8,8 +8,6 @@
 /** Element id -> feature flag. A locked element is made inert and gets a note before it. */
 export const GATES = Object.freeze({
   'drain-form': 'trace_drains',
-  'audit-table': 'audit_log', 'audit-filters': 'audit_log',
-  'audit-export-json': 'audit_log_export', 'audit-export-csv': 'audit_log_export',
   'sso-form': 'sso_saml', 'sso-enforce': 'sso_saml',
   'sso-scim': 'scim',
   'org-security': 'enforce_mfa',
@@ -38,20 +36,29 @@ export function entitlementMessage(body) {
 
 function note(document, id, text) {
   const item = document.createElement('p'); item.className = 'upgrade-note'; item.dataset.upgradeFor = id; item.setAttribute('role', 'note');
-  const link = document.createElement('a'); link.href = '#billing'; link.textContent = 'Upgrade in Billing';
-  item.append(text + ' ', link); return item;
+  if (id === 'drain-form') text = 'Trace drains are on the Pro plan.';
+  item.append(text);
+  if (!document.getElementById(id)?.closest('#view-billing')) { const link = document.createElement('a'); link.href = '#billing'; link.textContent = 'See plans'; item.append(' ', link); }
+  return item;
 }
 /** Applies the gates to whatever panels exist now. Safe to call again and again: it changes nothing that is already right. */
 export function applyGates(document, entitlements) {
   if (!entitlements?.features) return;
+  const grouped = new Set();
   for (const [id, feature] of Object.entries(GATES)) {
-    const element = document.getElementById(id); if (!element) continue;
-    const locked = entitlements.features[feature]?.enabled !== true, existing = document.querySelector(`[data-upgrade-for="${id}"]`);
+    const control = document.getElementById(id); if (!control) continue;
+    const element = control.closest('#sso-controls, #role-builder, #cost-control') ?? control;
+    if (grouped.has(element.id)) continue; grouped.add(element.id);
+    const locked = entitlements.features[feature]?.enabled !== true, existing = document.querySelector(`[data-upgrade-for="${element.id}"]`);
+    const hidden = !!element.closest('#view-billing, #view-members');
+    if (id === 'drain-form' && element.hidden !== locked) element.hidden = locked;
+    if (element.classList.contains('plan-hidden') !== (hidden && locked)) element.classList.toggle('plan-hidden', hidden && locked);
     if (locked) {
       if (!element.inert) element.inert = true;
       if (!element.classList.contains('locked')) element.classList.add('locked');
-      const text = upgradeText(entitlements, feature);
-      if (!existing) element.before(note(document, id, text)); else if (!existing.textContent.startsWith(text)) existing.replaceWith(note(document, id, text));
+      const text = id === 'drain-form' ? 'Trace drains are on the Pro plan.' : upgradeText(entitlements, feature);
+      if (element.closest('#view-billing')) { existing?.remove(); continue; }
+      if (!existing) element.before(note(document, element.id, text)); else if (!existing.textContent.startsWith(text)) existing.replaceWith(note(document, element.id, text));
     } else {
       if (element.inert) element.inert = false;
       if (element.classList.contains('locked')) element.classList.remove('locked');
@@ -96,7 +103,9 @@ export function planCard(document, entitlements) {
   const save = document.createElement('button'); save.type = 'submit'; save.className = 'quiet'; save.textContent = 'Save retention';
   const result = document.createElement('p'); result.id = 'retention-status'; result.className = 'hint'; result.setAttribute('role', 'status');
   label.append(input); form.append(label, save, result);
-  card.append(title, limits, form, heading, list); return card;
+  card.append(title, limits);
+  if (entitlements.features.custom_retention?.enabled === true) card.append(form);
+  card.append(heading, list); return card;
 }
 
 /** Loads the entitlements of the organization on screen and keeps the gates applied as panels appear. */
@@ -113,7 +122,7 @@ export function installEntitlements(document, {fetcher = (...args) => fetch(...a
     if (billing && old?.dataset.plan !== shown) {
       const card = planCard(document, entitlements); card.dataset.plan = shown;
       if (old) old.replaceWith(card); else (document.getElementById('billing-summary') ?? billing.lastElementChild)?.before(card);
-      card.querySelector('#retention-form').addEventListener('submit', event => { event.preventDefault(); void saveRetention(card); });
+      card.querySelector('#retention-form')?.addEventListener('submit', event => { event.preventDefault(); void saveRetention(card); });
     }
   };
   // Saving goes to the owner-only billing route; the server checks the plan again.

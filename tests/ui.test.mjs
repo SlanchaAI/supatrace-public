@@ -131,7 +131,7 @@ for (const size of Object.keys(sizes)) {
       await s.page.waitForSelector('#rail a[aria-current="page"]');
       assert.equal(await s.page.locator('#view-home h1').textContent(), 'Home');
       assert.match(await s.page.locator('#usage').textContent(), /bytes reserved/);
-      assert.match(await s.page.locator('#account-plan').textContent(), /^Free plan\. Plans and upgrade are at the top of Billing\.$/);
+      assert.match(await s.page.locator('#account-plan').textContent(), /^Free plan\. See plans in Billing\.$/);
       await nav(s.page, 'traces');
       await s.page.waitForSelector('#runs .run');
       assert.equal(await s.page.locator('#runs .run').count(), 25, 'first page');
@@ -163,7 +163,7 @@ for (const size of Object.keys(sizes)) {
       const s = await signedIn(live, size, 0);
       await settle(s.page);
       await nav(s.page, 'traces');
-      await s.page.waitForFunction(() => /No traces yet.*setup guide/.test(document.getElementById('runs').textContent));
+      await s.page.waitForFunction(() => /No traces yet.*Send a test trace from Home.*approve an agent in Agents/.test(document.getElementById('runs').textContent));
       await s.clean();
     } finally { await live.close(); }
   });
@@ -182,7 +182,7 @@ for (const size of Object.keys(sizes)) {
       await s.page.waitForSelector('#events li');
       assert.equal(await s.page.locator('#run-title').textContent(), 'run-order');
       assert.equal(await s.page.locator('#export').getAttribute('aria-describedby'),'export-hint');
-      assert.match(await s.page.locator('#export-hint').textContent(),/not redacted.*may contain secrets.*Review the complete file.*not original uploaded batch bytes/);
+      assert.match(await s.page.locator('#export-hint').textContent(),/not redacted.*may include secrets.*Review the file before you share it.*20 MiB.*100,000 events.*live read/);
       assert.equal(await s.page.locator('#export-hint').isVisible(),true);
       await assertNoHorizontalOverflow(s.page,'original export warning');
       assert.deepEqual(await s.page.locator('#events .name').allTextContents(), ['event e1', 'event e2']);
@@ -214,7 +214,7 @@ for (const size of Object.keys(sizes)) {
       assert.equal(await s.page.locator('#detail').isVisible(), false);
       assert.equal(await s.page.locator('#list').isVisible(), true);
       assert.equal(await s.page.locator('#export-account').getAttribute('aria-describedby'),'account-export-note');
-      assert.match(await s.page.locator('#account-export-note').textContent(),/not redacted.*may contain secrets.*per-trace redaction does not apply.*not original uploaded batch bytes/);
+      assert.match(await s.page.locator('#account-export-note').textContent(),/not redacted.*may include secrets.*Per-trace redaction does not apply.*live read, not a snapshot or a byte-for-byte copy/);
       assert.equal(await s.page.locator('#account-export-note').isVisible(),false);
       await s.page.getByText('Export limits and details',{exact:true}).click();
       assert.equal(await s.page.locator('#account-export-note').isVisible(),true);
@@ -240,7 +240,7 @@ for (const size of Object.keys(sizes)) {
       assert.match(await s.page.locator('#who').textContent(), /Signed in with GitHub/);
       await nav(s.page, 'usage');
       assert.match(await s.page.locator('#usage-page').textContent(), /bytes reserved/);
-      assert.match(await s.page.locator('#plan-page').textContent(), /^Free plan\. Plans and upgrade are at the top of Billing\.$/);
+      assert.match(await s.page.locator('#plan-page').textContent(), /^Free plan\. See plans in Billing\.$/);
       await nav(s.page, 'keys');
       await s.page.waitForFunction(() => document.querySelectorAll('#keys .key').length === 1);
 
@@ -482,7 +482,7 @@ for (const size of Object.keys(sizes)) {
       await view.page.getByRole('button', {name: 'Continue to SupaTrace'}).click();
       await view.page.waitForURL('**/app/');
       await view.page.locator('#view-home:not([hidden])').waitFor();
-      await view.page.getByRole('heading', {name: 'Send your first trace', exact: true}).waitFor();
+      await view.page.getByRole('heading', {name: 'Send a test trace', exact: true}).waitFor();
       assert.equal((await live.store.getEmailAccount('new@example.com')).verified, true);
       await view.clean();
     } finally { await live.close(); }

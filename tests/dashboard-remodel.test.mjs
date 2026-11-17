@@ -83,7 +83,7 @@ test('refresh retains export, explicit import and disabled commercial semantics'
   assert.match(html, /id="commercial-checkout"[^>]*disabled/);
   assert.match(html, /id="billing-portal"[^>]*hidden disabled/);
   assert.match(html, /No real purchase, paid access or storage quota change is enabled/);
-  assert.match(html, /No automatic capture/);
+  assert.match(html, /Nothing is captured automatically/);
   assert.doesNotMatch(css, /\[hidden\]|#import-start\s*\{|#commercial-checkout\s*\{/, 'skin cannot override hidden/disabled gates');
 });
 

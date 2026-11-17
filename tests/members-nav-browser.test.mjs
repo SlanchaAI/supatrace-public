@@ -13,7 +13,7 @@ for(const width of [1280,390])test(`Members is reachable from the rail before sh
   const link=page.locator('#rail a[data-nav="members"]');assert.equal(await link.innerText(),'Members');await link.click();
   await page.locator('#view-members:not([hidden])').waitFor();assert.equal(await link.getAttribute('aria-current'),'page');assert.equal(new URL(page.url()).hash,'#members');
   assert.equal(await page.locator('#view-settings').isVisible(),false);
-  assert.match(await page.locator('#members-role').innerText(),/Your role: owner\. Team sharing is off\./);
+  assert.match(await page.locator('#members-role').innerText(),/You are the owner\. Team sharing is off\./);
   assert.equal(await page.locator('#share-workspace').isVisible(),true);assert.equal(await page.locator('#team-members').isVisible(),false);assert.equal(await page.locator('#members-readonly').isVisible(),false);
   await page.locator('#share-workspace input').fill('Launch team');await page.locator('#share-workspace button').click();
   await page.locator('#team-members:not([hidden])').waitFor();

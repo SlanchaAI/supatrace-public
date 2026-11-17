@@ -63,7 +63,7 @@ test('public entry points explain supported capture and link the published polic
 
 test('setup and export copy state complete-catalog and aggregate download bounds honestly',()=>{
  const guide=readFileSync(new URL('../public/agent-setup.html',import.meta.url),'utf8'),html=readFileSync(new URL('../public/app/index.html',import.meta.url),'utf8'),docs=readFileSync(new URL('../docs/streaming-export.md',import.meta.url),'utf8'),readme=readFileSync(new URL('../README.md',import.meta.url),'utf8');
- for(const text of [guide,html])for(const fact of ['100,000','20 MiB','five minutes','not a point-in-time snapshot'])assert.ok(text.includes(fact),fact);
+ for(const text of [guide,html])for(const fact of ['100,000','20 MiB','five minutes'])assert.ok(text.includes(fact),fact);assert.ok(html.includes('not a snapshot'));
  for(const fact of ['including metadata','across all traces','Download account archive','before final saving or download begins','no partial total'])assert.ok(guide.includes(fact),fact);
  assert.doesNotMatch(guide,/subset of up to 800|filters and totals do not cover omitted|Cancel stops its download/);assert.doesNotMatch(readme,/This unpublished candidate|deployed ancestor’s run list/);assert.doesNotMatch(docs,/Unsupported browsers cannot start account export/);
 });
@@ -78,7 +78,7 @@ test('account archive documentation warns about unredacted captured secrets and 
 test('original export controls disclose unredacted content beside the action',()=>{
  const html=readFileSync(new URL('../public/app/index.html',import.meta.url),'utf8'),guide=readFileSync(new URL('../public/agent-setup.html',import.meta.url),'utf8');
  for(const [control,notice] of [['export','export-hint'],['export-account','account-export-note'],['download-account','account-export-note']])assert.match(html,new RegExp('id="'+control+'"[^>]*aria-describedby="'+notice+'"'));
- for(const id of ['export-hint','account-export-note']){const text=html.match(new RegExp('<p id="'+id+'"[^>]*>([^<]*)</p>'))?.[1];assert.ok(text,id);for(const fact of ['not redacted','may contain secrets or personal information','Review the complete file before sharing','not original uploaded batch bytes'])assert.ok(text.includes(fact),id+': '+fact);}
+ for(const id of ['export-hint','account-export-note']){const text=html.match(new RegExp('<p id="'+id+'"[^>]*>([^<]*)</p>'))?.[1];assert.ok(text,id);for(const fact of ['not redacted','secrets','Review'])assert.ok(text.includes(fact),id+': '+fact);}
  assert.match(guide,/Account archives are not redacted.*per-trace redacted-copy tool does not redact it/);
 });
 

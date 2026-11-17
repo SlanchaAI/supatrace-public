@@ -15,6 +15,8 @@ test('owner upgrades to Base, switches to Pro and cancels from Billing in Stripe
   const live = await start({localDev: true, configureEnvironment: async env => { env.localBilling = await configureLocalBilling(env, {planLimits: true}); }}), browser = await launch(), context = await browser.newContext({viewport: {width: 1280, height: 900}});
   const outside = [], errors = [], shots = process.env.SUPATRACE_PROOF_DIR; await context.route(/^(?!http:\/\/127\.0\.0\.1)/, r => { outside.push(r.request().url()); return r.abort(); });
   try {
+    // Exercise the legacy synthetic subscription flow independently of the live plan catalog.
+    await context.route(/\/api\/billing\/catalog(?:\?|$)/,route=>route.fulfill({status:503,json:{error:'synthetic_legacy_only'}}));
     await seedLocalWorkspace(live); const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message));
     const shot = async name => { if (shots) await page.screenshot({path: shots + '/' + name + '.png', fullPage: true}); };
     const note = text => page.locator('#billing-note').filter({hasText: text}).waitFor();

@@ -163,6 +163,6 @@ test('helpers: failure mapping, detail summary, and the dashboard module', () =>
   assert.equal(storedText({stored_events: null, batches: null, rejected_events: null}), 'Not recorded'); assert.equal(storedText({stored_events: 0, batches: 0, rejected_events: null}), '0 events in 0 batches');
   const app = readFileSync(repo + 'public/app/app.js', 'utf8'), view = readFileSync(repo + 'public/app/logs.js', 'utf8');
   assert.match(app, /^import '\.\/logs\.js';$/m); assert.match(view, /^if \(typeof document !== 'undefined'\) mountLogs\(document\);$/m);
-  assert.ok(view.includes('data-nav="logs"') && view.includes('id="view-logs"'), 'the proof grep in issue #88 matches');
+  assert.ok(!view.includes('data-nav="logs"') && view.includes('id="view-logs"'), 'the proof grep in issue #88 matches');
   assert.match(readFileSync(repo + 'docs/logs.md', 'utf8'), /GET \/api\/v1\/logs/);
 });

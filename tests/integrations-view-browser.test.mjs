@@ -14,18 +14,17 @@ test('the Integrations view lists each source with what has really arrived and l
     const page = await context.newPage(), errors = []; page.on('pageerror', e => errors.push(e.message));
     await page.goto(live.origin + '/app/'); await page.locator('#shell:not([hidden])').waitFor();
     assert.equal(await page.locator('#view-integrations').isHidden(), true);
-    const nav = page.locator('#rail a[data-nav="integrations"]'); assert.equal((await nav.innerText()).trim(), 'Integrations'); await nav.click();
-    await page.locator('#view-integrations:not([hidden])').waitFor(); await page.locator('#integrations-sources .card[data-source="uploads"]').waitFor();
-    assert.equal(new URL(page.url()).hash, '#integrations'); assert.equal(await nav.getAttribute('aria-current'), 'page'); assert.equal(await page.locator('#view-home').isHidden(), true);
-    assert.equal(await page.evaluate(() => document.activeElement?.textContent), 'Integrations', 'the heading takes focus like the other views');
+    const nav = page.locator('#rail a[data-nav="agents"]'); assert.equal((await nav.innerText()).trim(), 'Agents'); await nav.click();
+    await page.locator('#view-agents:not([hidden])').waitFor(); await page.locator('#integrations-sources .card[data-source="uploads"]').waitFor();
+    assert.equal(new URL(page.url()).hash, '#agents'); assert.equal(await nav.getAttribute('aria-current'), 'page'); assert.equal(await page.locator('#view-home').isHidden(), true);
+    assert.equal(await page.evaluate(() => document.activeElement?.textContent), 'Agents', 'the heading takes focus like the other views');
     const card = id => page.locator(`#integrations-sources .card[data-source="${id}"]`);
     assert.match(await card('uploads').innerText(), /SDK and direct uploads\s+3 traces · newest received .+\s+1 trace with an error event · latest received/);
     assert.match(await card('otlp').innerText(), /OpenTelemetry \(OTLP\)\s+1 trace · newest received .+\s+No trace with an error event\./);
-    for (const id of ['langfuse', 'import-files', 'claude-hooks']) { assert.match(await card(id).innerText(), /No retained trace from this source\./); assert.equal(await card(id).getAttribute('data-state'), 'none'); }
+    for (const id of ['langfuse', 'import-files', 'claude-hooks']) { assert.match(await card(id).innerText(), /None yet\./); assert.equal(await card(id).getAttribute('data-state'), 'none'); }
     assert.equal(await card('otlp').locator('a').getAttribute('href'), '/docs/frameworks/opentelemetry/#otlp'); assert.equal(await card('otlp').locator('a').getAttribute('aria-label'), 'Setup guide: OpenTelemetry (OTLP)');
     assert.equal(await page.getByRole('link', {name: 'integrations directory', exact: true}).getAttribute('href'), '/integrations/');
-    assert.equal(await page.getByRole('link', {name: 'Open importer forms in Agents', exact: true}).getAttribute('href'), '#agents');
-    assert.match(await page.locator('#integrations-scan').innerText(), /all 4 retained traces/); assert.match(await page.locator('#integrations-jobs-note').innerText(), /No import job is on record.*not enabled on this server/);
+    assert.match(await page.locator('#integrations-scan').innerText(), /4 traces in this environment/); assert.match(await page.locator('#integrations-jobs-note').innerText(), /None yet\./);
     if (process.env.SUPATRACE_PROOF_DIR) { mkdirSync(process.env.SUPATRACE_PROOF_DIR, {recursive: true}); await page.screenshot({path: process.env.SUPATRACE_PROOF_DIR + '/integrations-view.png', fullPage: true}); }
     // New data shows after Refresh, and when the view is opened again.
     await live.upload(key, batch('lf.checkout')); await page.locator('#integrations-refresh').click();
@@ -46,7 +45,7 @@ test('the Integrations view lists each source with what has really arrived and l
     // A direct link opens the view after sign-in, and the page links out to real pages.
     await page.goto(live.origin + '/app/#integrations'); await page.locator('#integrations-sources .card[data-source="uploads"]').waitFor(); assert.equal(await page.locator('#view-integrations').isHidden(), false);
     assert.equal((await context.request.get(live.origin + '/integrations/')).status(), 200); assert.equal((await context.request.get(live.origin + '/docs/frameworks/opentelemetry/')).status(), 200);
-    await page.getByRole('link', {name: 'Open importer forms in Agents', exact: true}).click();
+    await page.locator('#rail a[data-nav=agents]').click();
     await page.locator('#view-agents:not([hidden])').waitFor(); assert.equal(new URL(page.url()).hash, '#agents');
     assert.deepEqual(errors, []);
   } finally { await context.close(); await browser.close(); await live.close(); }
@@ -63,7 +62,7 @@ test('a workspace viewer can open Integrations for the shared workspace and sees
     await post(owner, 'workspaces', {name: 'Shared'}); const invite = await post(owner, 'workspaces/invite', {recipient_id: viewer, role: 'viewer'}); await post(member, 'workspaces/accept', {workspace_id: tenant, token: invite.token});
     const page = await member.newPage(), errors = []; page.on('pageerror', e => errors.push(e.message));
     await page.goto(live.origin + '/app/?workspace=' + tenant + '#integrations'); await page.locator('#shell:not([hidden])').waitFor(); await page.locator('#integrations-sources .card[data-source="uploads"]').waitFor();
-    assert.equal(await page.locator('#rail a[data-nav="integrations"]').isVisible(), true); assert.equal(await page.locator('#rail a[data-nav="keys"]').isHidden(), true);
+    assert.equal(await page.locator('#rail a[data-nav="agents"]').isVisible(), true); assert.equal(await page.locator('#rail a[data-nav="keys"]').isHidden(), true);
     assert.match(await page.locator('#integrations-sources .card[data-source="uploads"]').innerText(), /1 trace ·/);
     assert.match(await page.locator('#integrations-jobs-note').innerText(), /kept for the workspace owner/); assert.equal(await page.locator('#integrations-jobs li').count(), 0);
     assert.deepEqual(errors, []);

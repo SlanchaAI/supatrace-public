@@ -12,10 +12,9 @@ const messages = {
 };
 const ROUTES = {batches: 'Batch upload', otlp: 'OpenTelemetry (OTLP)', langfuse: 'Langfuse SDK'};
 const OUTCOMES = {accepted: 'Accepted', partial: 'Partly stored', rejected: 'Rejected'};
-const VIEW = '<div class="view-head"><div><h1 id="logs-title">Logs</h1><p class="muted">Upload attempts recorded for this workspace and environment, with the reason when one was refused.</p></div><div class="bar"><button id="logs-refresh" type="button" class="quiet">Refresh logs</button></div></div>'
-  + '<article class="card"><form id="logs-filters"><label>Show<select name="stream"><option value="issues">Rejected and partly stored</option><option value="accepted">Accepted</option></select></label><label>Route<select name="route"><option value="">All routes</option><option value="batches">Batch upload</option><option value="otlp">OpenTelemetry (OTLP)</option><option value="langfuse">Langfuse SDK</option></select></label><label>Reason code<input name="reason" maxlength="64" autocomplete="off" placeholder="Any reason" pattern="[a-z][a-z0-9_]*"></label><label>From<input name="from" type="date"></label><label>To<input name="to" type="date"></label><button type="submit">Apply filters</button></form>'
+const VIEW = '<div class="view-head"><div><h2 id="logs-title">Logs</h2><p class="muted">Upload attempts for this environment, including why one was refused.</p></div><div class="bar"><button id="logs-refresh" type="button" class="quiet">Refresh</button></div></div>'
+  + '<article class="card"><form id="logs-filters"><label>Show<select name="stream"><option value="issues">Rejected and partly stored</option><option value="accepted">Accepted</option></select></label><label>Route<select name="route"><option value="">All routes</option><option value="batches">Batch upload</option><option value="otlp">OpenTelemetry (OTLP)</option><option value="langfuse">Langfuse SDK</option></select></label><label>Reason code<input name="reason" maxlength="64" autocomplete="off" placeholder="Any reason" pattern="[a-z][a-z0-9_]*"></label><label>From<input name="from" type="date"></label><label>To<input name="to" type="date"></label><button type="submit">Apply</button></form>'
   + '<p id="logs-status" role="status" aria-live="polite"></p><div class="grid-wrap"><table id="logs-table" class="grid"><thead><tr><th scope="col">Time</th><th scope="col">Route</th><th scope="col">Result</th><th scope="col">Reason</th><th scope="col">Stored</th><th scope="col">Stored trace</th><th scope="col">Key</th></tr></thead><tbody id="logs-rows"></tbody></table></div><div class="bar"><button id="logs-more" type="button" class="quiet" hidden>Load older attempts</button></div><p id="logs-note" class="hint"></p></article>';
-const ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.5h12v2H2zm0 3.5h8v2H2zm0 3.5h12v2H2zm0 3.5h6v1.5H2z"/></svg><span>Logs</span>';
 
 async function request(path) {
   const page = new URLSearchParams(location.search || ''), query = new URLSearchParams(path.split('?')[1] || '');
@@ -53,10 +52,9 @@ export function storedText(a) {
 }
 
 export function mountLogs(document, {api = request} = {}) {
-  const rail = document.getElementById('rail'), settings = rail?.querySelector('[data-nav="settings"]'), anchor = document.getElementById('view-settings');
-  if (!rail || !settings || !anchor || document.getElementById('view-logs')) return null;
-  settings.insertAdjacentHTML('beforebegin', '<a href="#logs" data-nav="logs">' + ICON + '</a>');
-  anchor.insertAdjacentHTML('beforebegin', '<section id="view-logs" data-view="logs" hidden aria-labelledby="logs-title">' + VIEW + '</section>');
+  const list = document.getElementById('list');
+  if (!list || document.getElementById('view-logs')) return null;
+  list.insertAdjacentHTML('beforeend', '<section id="view-logs" aria-labelledby="logs-title">' + VIEW + '</section>');
   const section = document.getElementById('view-logs'), $ = id => document.getElementById(id), form = $('logs-filters'), status = $('logs-status'), rows = $('logs-rows'), more = $('logs-more');
   // `applied` is the filter set of the rows on screen; Load older continues that read, whatever the form now holds.
   let version = 0, loaded = false, next = null, applied = '';
@@ -85,16 +83,16 @@ export function mountLogs(document, {api = request} = {}) {
       if (!older) rows.replaceChildren();
       append(data.attempts); applied = filters; next = data.next; loaded = true; more.hidden = !next;
       const shown = rows.children.length, kind = data.stream === 'accepted' ? 'accepted attempt' : 'rejected or partly stored attempt';
-      status.textContent = (shown ? `${plural(shown, kind)} shown, newest first.` : `No recorded ${kind} matches these filters among the rows read.`)
+      status.textContent = (shown ? `${plural(shown, kind)} shown, newest first.` : `No ${kind}s match these filters.`)
         + (data.truncated ? ' The read stopped at its row limit before reaching the end: Load older attempts continues it.' : next ? ' Older rows remain.' : '');
-      $('logs-note').textContent = `Attempts are kept for ${data.retention_days} days. A request sent without a key, or with a key that is unknown, expired or revoked, cannot be tied to a workspace and is not recorded here; the sender gets HTTP 401.`
-        + (Number.isSafeInteger(data.recorded?.issues_per_minute) ? ` Refusals are recorded up to ${data.recorded.issues_per_minute} a minute for a workspace.` : '') + ' Recording never fails an upload and holds its answer for less than half a second at most, so a row can be missing. Keys appear as the first 12 characters of their ID.';
+      $('logs-note').textContent = `Attempts are kept for ${data.retention_days} days. A request with no key, or with a key that is unknown, expired, or revoked, is not recorded here; the sender gets HTTP 401.`
+        + (Number.isSafeInteger(data.recorded?.issues_per_minute) ? ` Up to ${data.recorded.issues_per_minute} refusals a minute are recorded for a workspace.` : '') + ' A row can be missing, because logging never blocks an upload and keeps its answer for less than half a second. Keys are shown as the first 12 characters of their ID.';
     } catch (error) { if (mine !== version) return; status.textContent = messages[error?.message] || 'The log could not be loaded. Rows below, if any, are from an earlier read; try again.'; }
     finally { if (mine === version) section.removeAttribute('aria-busy'); }
   }
   function reset() { version++; loaded = false; next = null; applied = ''; status.textContent = ''; rows.replaceChildren(); more.hidden = true; $('logs-note').textContent = ''; }
   // Loads when the view is opened by a signed-in account, and again on request. Signing out clears it.
-  const signedIn = () => document.body.classList.contains('signed-in'), open = () => (location.hash || '').replace('#', '').split(/[/?]/)[0] === 'logs';
+  const signedIn = () => document.body.classList.contains('signed-in'), open = () => (location.hash || '').replace('#', '').split(/[/?]/)[0] === 'traces';
   const sync = () => { if (!signedIn()) { if (loaded || status.textContent) reset(); return; } if (open() && !loaded) void load(); };
   form.addEventListener('submit', event => { event.preventDefault(); if (signedIn()) void load(); });
   $('logs-refresh').addEventListener('click', () => { if (signedIn()) void load(); });

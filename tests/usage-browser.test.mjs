@@ -10,7 +10,7 @@ async function until(predicate){const deadline=Date.now()+5000;while(!predicate(
 async function nav(page,name){const toggle=page.locator('#menu-toggle');if(await toggle.isVisible()&&await toggle.getAttribute('aria-expanded')!=='true')await toggle.click();await page.locator(`#rail a[data-nav="${name}"]`).click();}
 for(const viewport of [{width:1280,height:800},{width:390,height:844},{width:320,height:740}])test(`usage refresh/cancel/retry surfaces at ${viewport.width}px`,{timeout:60000},async()=>{
  const live=await start(),context=await browser.newContext({viewport}),releases=[];let mode='ready',reads=0;
- await context.route(/^(?!http:\/\/127\.0\.0\.1)/,route=>route.abort());const page=await context.newPage(),errors=[],posts=[];page.on('pageerror',e=>errors.push(String(e)));page.on('request',r=>{if(r.method()==='POST')posts.push(r.url());});
+ await context.route(/^(?!http:\/\/127\.0\.0\.1)/,route=>route.abort());await context.route('**/api/billing/catalog*',route=>route.fulfill({status:503,json:{error:'synthetic_catalog_unavailable'}}));const page=await context.newPage(),errors=[],posts=[];page.on('pageerror',e=>errors.push(String(e)));page.on('request',r=>{if(r.method()==='POST')posts.push(r.url());});
  await page.route('**/api/usage?*',async route=>{reads++;const current=mode;if(current==='pending')await new Promise(resolve=>releases.push(resolve));const value=data();if(current==='malformed')value.storage.remaining_bytes=96;try{await route.fulfill({status:current==='failed'?503:200,contentType:'application/json',body:JSON.stringify(current==='failed'?{error:'SYNTHETIC-PRIVATE-ERROR'}:value)});}catch{/* A cancelled request can finish after the browser abort. */}});
  try{
   await live.signIn(context);await page.goto(live.origin+'/app/',{waitUntil:'networkidle'});await page.locator('#usage').filter({hasText:'5 of 100'}).waitFor();
@@ -27,6 +27,7 @@ for(const viewport of [{width:1280,height:800},{width:390,height:844},{width:320
 for(const viewport of [{width:1280,height:800},{width:390,height:844},{width:320,height:740}])test(`sandbox Checkout reload and return recovery at ${viewport.width}px`,{timeout:60000},async()=>{
  const live=await start(),context=await browser.newContext({viewport}),page=await context.newPage(),posts=[],errors=[];
  let mode='uncertain';page.on('pageerror',error=>errors.push(String(error)));
+ await context.route('**/api/billing/catalog*',route=>route.fulfill({status:503,json:{error:'synthetic_catalog_unavailable'}}));
  // Synthetic provider page only; every external request is fulfilled locally or aborted.
  await context.route(/^(?!http:\/\/127\.0\.0\.1)/,route=>route.request().url()==='https://checkout.stripe.com/c/pay/cs_test_SyntheticReload'?route.fulfill({contentType:'text/html',body:'<!doctype html><title>Synthetic Checkout</title><p>Synthetic provider placeholder</p>'}):route.abort());
  await page.route('**/api/usage?*',route=>route.fulfill({contentType:'application/json',body:JSON.stringify(data())}));

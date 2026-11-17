@@ -41,12 +41,12 @@ for(const mode of ['test','live'])test(`Billing shows payment copy only for ${mo
   await page.route('**/api/usage*',async r=>{const response=await r.fetch(),json=await response.json();json.monthly.test_mode=mode==='test';json.spend_cap.enabled=false;return r.fulfill({json});});
   await page.goto(live.origin+'/app/#billing');await page.locator('#plan-billing-title').filter({hasText:'on Pro'}).waitFor();
   const text=await page.locator('#plan-billing-mode').innerText();
-  if(mode==='test'){assert.match(text,/Stripe test mode/);assert.match(text,/4242/);}else{assert.match(text,/You are charged by Stripe/);assert.doesNotMatch(await page.locator('#view-billing').innerText(),/test|4242|no real/i);}
+  assert.equal(text,'Payments are processed by Stripe.'); if(mode==='live')assert.doesNotMatch(await page.locator('#view-billing').innerText(),/test|4242|no real/i);
   assert.match(await page.locator('#plan-billing-plans [data-plan=base] .plan-price').innerText(),/9\.99/);
   let message;page.once('dialog',async d=>{message=d.message();await d.dismiss();});
   await page.locator('#plan-billing-plans [data-plan=base] button[data-action=change]').click();
   if(mode==='test')assert.match(message,/Test mode/);else assert.doesNotMatch(message,/test|no real/i);
-  await page.locator('#spend-cap-detail').filter({hasText:mode==='test'?'Billing is in test mode':'You are charged by Stripe'}).waitFor();
+  await page.locator('#spend-cap-detail').filter({hasText:mode==='test'?'Billing is in test mode':'Payments are processed by Stripe.'}).waitFor();
   if(mode==='live'){assert.doesNotMatch(await page.locator('#usage-plan-limits').innerText(),/test|no real/i);assert.doesNotMatch(await page.locator('#spend-cap-detail').innerText(),/test|no real/i);}
   assert.deepEqual(errors,[]);
  }finally{await context.close();await browser.close();await live.close();}

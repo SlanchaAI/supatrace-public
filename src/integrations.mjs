@@ -7,11 +7,11 @@
 import {json} from './http.mjs';
 
 export const INTEGRATION_SOURCES = Object.freeze([
-  {id: 'otlp', prefix: 'otlp.', kind: 'ingest', name: 'OpenTelemetry (OTLP)', note: 'Spans sent to the OTLP receiver. Langfuse SDK traces that carry an OpenTelemetry trace id are stored under the same traces and counted here.', guide: '/docs/frameworks/opentelemetry/#otlp'},
-  {id: 'langfuse', prefix: 'lf.', kind: 'ingest and import', name: 'Langfuse', note: 'Traces sent by a Langfuse SDK and traces imported from Langfuse.', guide: '/docs/importers/#langfuse'},
-  {id: 'import-files', prefix: 'imp.', kind: 'import', name: 'Imported files and API pulls', note: 'LangSmith, Braintrust, Weave, Opik, Datadog LLM Observability, MLflow, Helicone and OTLP JSON exports converted by the local importers.', guide: '/docs/importers/#files'},
-  {id: 'claude-hooks', prefix: 'claude-', kind: 'ingest', name: 'Claude Code hooks', note: 'Events recorded by the opt-in Claude Code command hook.', guide: '/docs/importers/#claude'},
-  {id: 'uploads', prefix: null, kind: 'ingest', name: 'SDK and direct uploads', note: 'Batches uploaded with a write key: the SDKs, the agent uploader and anything else that does not use one of the paths above.', guide: '/docs/quickstart/'}
+  {id: 'otlp', prefix: 'otlp.', kind: 'ingest', name: 'OpenTelemetry (OTLP)', note: 'Traces sent to the OTLP receiver. Langfuse SDK traces that carry an OpenTelemetry trace id are counted here too.', guide: '/docs/frameworks/opentelemetry/#otlp'},
+  {id: 'langfuse', prefix: 'lf.', kind: 'ingest and import', name: 'Langfuse', note: 'Traces from a Langfuse SDK, and traces imported from Langfuse.', guide: '/docs/importers/#langfuse'},
+  {id: 'import-files', prefix: 'imp.', kind: 'import', name: 'Imported files and API pulls', note: 'Local importers for LangSmith, Braintrust, Weave, Opik, Datadog LLM Observability, MLflow, Helicone, and OTLP JSON.', guide: '/docs/importers/#files'},
+  {id: 'claude-hooks', prefix: 'claude-', kind: 'ingest', name: 'Claude Code hooks', note: 'Events from the optional Claude Code hook.', guide: '/docs/importers/#claude'},
+  {id: 'uploads', prefix: null, kind: 'ingest', name: 'SDK and direct uploads', note: 'Batches sent with a write key, including the SDKs and the agent uploader.', guide: '/docs/quickstart/'}
 ]);
 // Job states that need a person to look, as opposed to finished or in progress.
 const ATTENTION = new Set(['reconciliation_required', 'cancellation_requested', 'bounded_incomplete', 'conversion_rejected']);

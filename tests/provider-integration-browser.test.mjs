@@ -1,3 +1,4 @@
+import {enablePrivateImportUi} from './private-import-ui-fixture.mjs';
 // One disposable local workspace; no provider account, real grant or user file.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -46,7 +47,7 @@ test('both provider forms preserve independent scopes through one account archiv
   page.on('request', request => {if (/braintrust\.dev|smith\.langchain\.com|\/api\/imports\//.test(request.url())) unexpected.push(request.url());});
   try {
     const tenant = await live.signIn(context), key = await live.writeKey(tenant);
-    await page.goto(live.origin + '/app/#agents', {waitUntil: 'networkidle'});
+    await enablePrivateImportUi(context); await page.goto(live.origin + '/app/#agents', {waitUntil: 'networkidle'});
     await page.locator('#shell:not([hidden])').waitFor();
     await prepare(page, 'braintrust', bt.spec); await prepare(page, 'langsmith', ls.spec);
     const braintrustPreview = await page.locator('#braintrust-spec').textContent();
@@ -86,7 +87,7 @@ test('both provider forms preserve independent scopes through one account archiv
     const wrongWorkspace = ls.fakeOptions([]);
     await assert.rejects(runPrivateLangsmithImport(langsmith, {...wrongWorkspace.options, directory: btDirectory}), /workspace_scope_mismatch/);
     assert.equal(wrongWorkspace.requests.length, 0);
-    await page.goto(live.origin + '/app/#traces', {waitUntil: 'networkidle'});
+    await enablePrivateImportUi(context); await page.goto(live.origin + '/app/#traces', {waitUntil: 'networkidle'});
     await page.locator('#export-account').click(); await page.locator('#download-account').waitFor({state: 'visible'});
     const pending = page.waitForEvent('download'); await page.locator('#download-account').click();
     const archive = JSON.parse(readFileSync(await (await pending).path(), 'utf8'));
@@ -96,7 +97,7 @@ test('both provider forms preserve independent scopes through one account archiv
     assert.equal(all.filter(event => JSON.stringify(event).includes(bt.marker)).length, 2, 'only explicit LangSmith content retains the private marker');
     assert.equal(all.filter(event => event.data.span.parentSpanId === 'root').length, 1);
     assert.equal(all.filter(event => event.data.span.parentSpanId === ls.root).length, 1);
-    await page.goto(live.origin + '/app/#agents', {waitUntil: 'networkidle'});
+    await enablePrivateImportUi(context); await page.goto(live.origin + '/app/#agents', {waitUntil: 'networkidle'});
     await prepare(page, 'braintrust', bt.spec); await prepare(page, 'langsmith', ls.spec);
     await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
     for (const provider of ['braintrust', 'langsmith']) {

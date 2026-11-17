@@ -75,9 +75,7 @@ export function installPlanBilling(document, {fetcher = (...args) => fetch(...ar
 
   function render(catalog) {
     section.hidden = false;
-    mode.textContent = catalog.checkout_available
-      ? catalog.test_mode === true ? 'Payments are in Stripe test mode. No real card is charged: at Checkout use the test card 4242 4242 4242 4242, any future date and any CVC.' : 'You are charged by Stripe.'
-      : 'Checkout is not switched on for this deployment yet. The plans and limits below are what the service enforces.';
+    mode.textContent = 'Payments are processed by Stripe.';
     const sub = catalog.subscription;
     section.dataset.plan = catalog.current_plan;
     title.textContent = 'Plans · this organization is on ' + catalog.current_plan_name;
@@ -91,7 +89,7 @@ export function installPlanBilling(document, {fetcher = (...args) => fetch(...ar
       if (plan.price_kind === 'custom') fact('Volume and retention by contract');
       else { fact(count(plan.limits.spans_per_month) + ' spans per month'); fact(plan.limits.retention_days + ' days retention'); }
       fact(count(plan.limits.seats) + ' members · ' + count(plan.limits.environments) + ' environments · ' + count(plan.limits.api_keys) + ' API keys');
-      for (const feature of plan.features) fact(feature.label);
+      for (const feature of plan.features) fact(({usage_alerts:'Usage alerts at 80% and 100%',spend_cap:'Spend cap (run past the allowance)',trace_drains:'Trace drains',rbac_roles:'Developer and read-only roles, with environment limits',sla:'Uptime SLA (by contract)'})[feature.id] ?? feature.label);
       item.append(name, price, facts);
       const action = planAction(plan);
       if (action?.kind === 'link') { const link = document.createElement('a'); link.className = 'button'; link.href = action.href; link.textContent = action.label; item.append(link); }

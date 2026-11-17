@@ -209,13 +209,13 @@ test('Billing owns each management element once; Usage remains capacity and a re
  const usageSection=html.slice(html.indexOf('<section id="view-usage"'),html.indexOf('<section id="view-billing"'));
  assert.match(html, /href="#billing" data-nav="billing"/);assert.match(billing, /<h1 id="billing-title">Billing<\/h1>/);
  for(const id of ['billing-controls','plan-page','commercial-selector','billing-refresh','billing-cancel','billing-action-cancel']){assert.equal([...html.matchAll(new RegExp('id="'+id+'"','g'))].length,1);assert.ok(billing.includes('id="'+id+'"'));assert.ok(!usageSection.includes('id="'+id+'"'));}
- assert.match(usageSection, /Go to Billing/);assert.match(usageSection, /This is not an invoice/);assert.match(billing, /Payments and invoices/);
+ assert.match(usageSection, /See plans/);assert.match(usageSection, /This is not a bill/);assert.match(billing, /Payments and invoices/);
 });
 test('default-off catalog and runtime are actionable without invented plans, cards or invoices',async()=>{
  for(const reason of ['billing_disabled','billing_runtime_unavailable']){
   const value=usage({available:false});value.billing.reason=reason;const ui=app(async()=>response(value));await ui.a.usage();
   assert.equal(ui.get('billing-availability').hidden,false);assert.match(ui.get('billing-availability-note').textContent,/^Plans, prices and upgrade are in the Plans card at the top of this page\.$/);
-  assert.match(ui.get('billing-management').textContent,/Payment methods and invoices are not available/);assert.equal(ui.get('commercial-selector').hidden,true);assert.equal(ui.get('billing-portal').hidden,true);
+  assert.match(ui.get('billing-management').textContent,/Payments are processed by Stripe/);assert.equal(ui.get('commercial-selector').hidden,true);assert.equal(ui.get('billing-portal').hidden,true);
   assert.doesNotMatch(ui.get('billing-management').textContent,/on file|paid invoice|subscription active/i);assert.equal(ui.calls.length,1);
  }
 });

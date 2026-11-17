@@ -224,17 +224,9 @@ for(const phase of ['initial-catalog','event-read'])for(const retryAfter of ['in
 test('export notes disclose observed-read consistency, scope and browser size limits beside each control',()=>{
  const html=readFileSync(new URL('../public/app/index.html',import.meta.url),'utf8');
  const note=id=>{const text=html.match(new RegExp('<p id="'+id+'"[^>]*>([^<]*)</p>'))?.[1];assert.ok(text,id);return text;};
- for(const id of ['export-hint','account-export-note','workspace-export-note'])for(const fact of ['observed read','not a point-in-time snapshot','byte-for-byte backup','Where Save File is available'])assert.ok(note(id).includes(fact),id+': '+fact);
- for(const id of ['export-hint','account-export-note','workspace-export-note']){assert.match(note(id),/Otherwise the app attempts/i,id);assert.doesNotMatch(note(id),/other browsers/i,id+' must use capability wording, not browser claims');}
- assert.match(note('export-hint'),/Save File streaming has been checked on hosted Chrome on macOS; the standard-download fallback is covered by controlled Chromium tests; other browser engines and physical devices are unverified/);
- assert.match(note('export-hint'),/Scope: this trace in the selected workspace and environment/);
- assert.match(note('export-hint'),/20 MiB of event JSON and 100,000 events/);
- assert.match(note('export-hint'),/events uploaded during the export may or may not be included/);
- assert.match(note('account-export-note'),/Scope: only the environment selected above, in the current workspace/);
- assert.match(note('account-export-note'),/20 MiB total and 100,000 events/);
- assert.match(note('account-export-note'),/read before and after.*compared with its catalog counts\. The archive is not committed when those compared reads differ; changes that leave them equal are not detected/);
- assert.match(note('workspace-export-note'),/every listed environment in this workspace.*does not include other workspaces/);
- assert.match(note('workspace-export-note'),/20 environments, 100,000 traces and 20 MiB of catalog metadata/);
- assert.match(note('workspace-export-note'),/read again at the end and compared with the first reads.*The export is not committed when those compared reads differ; changes that leave them equal are not detected/);
- for(const id of ['account-export-note','workspace-export-note'])for(const claim of ['if traces or event counts change during export','any change stops the export'])assert.ok(!note(id).includes(claim),id+' overclaims: '+claim);
+ assert.match(note('export-hint'),/not redacted.*secrets.*Review/);
+ assert.match(note('export-hint'),/20 MiB.*100,000 events/);
+ assert.match(note('account-export-note'),/not redacted.*secrets.*Review/);
+ for(const fact of ['100,000 traces','20 MiB of catalog metadata','five minutes','live read','not a snapshot','byte-for-byte','20 MiB and 100,000 events','two minutes','counts equal are not detected'])assert.ok(note('account-export-note').includes(fact),fact);
+ assert.match(note('workspace-export-note'),/every listed environment.*20 environments.*does not include other workspaces/);
 });

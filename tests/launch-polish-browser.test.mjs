@@ -140,8 +140,12 @@ for(const width of [1440,390])test(`authenticated chrome hides IDs and updates p
   await page.locator('#copy-account-id').click();assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),tenant);
   const project=await page.evaluate(()=>document.documentElement.dataset.project);
   await page.locator('#copy-project-id').click();assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),project);
-  for(const [route,title] of Object.entries({home:'Home',traces:'Traces',agents:'Agents',keys:'API keys',usage:'Usage',billing:'Billing',members:'Members',audit:'Audit log',integrations:'Integrations',logs:'Logs',settings:'Settings'})){
+  for(const [route,title] of Object.entries({home:'Home',traces:'Traces',agents:'Agents',keys:'API keys',usage:'Usage',billing:'Billing',members:'Members',audit:'Home',integrations:'Agents',logs:'Traces',settings:'Settings'})){
    await page.evaluate(route=>location.hash=route,route);await page.waitForFunction(title=>document.title===title+' · SupaTrace',title);await fits(page);
+  }
+  for(const id of ['workspace-select','project-select','environment-select']){
+   const fit=await page.locator('#'+id).evaluate(select=>{const ctx=document.createElement('canvas').getContext('2d'),style=getComputedStyle(select);ctx.font=style.font;return {text:select.selectedOptions[0].textContent,width:select.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight)-20,textWidth:ctx.measureText(select.selectedOptions[0].textContent).width};});
+   assert.ok(fit.width>=fit.textWidth,id+' '+JSON.stringify(fit));
   }
   const toggle=page.locator('#menu-toggle');if(await toggle.isVisible())await toggle.click();
   const org=await page.locator('#org-select').evaluate(select=>{const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d'),style=getComputedStyle(select);ctx.font=style.font;return {text:select.selectedOptions[0].textContent,width:select.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight)-20,textWidth:ctx.measureText(select.selectedOptions[0].textContent).width};});

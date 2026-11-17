@@ -18,7 +18,7 @@ test('idle Free project: warning banner, paused banner, refused upload, one-clic
     const day = seconds => new Date(seconds * 1000).toLocaleDateString('en-US', {year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC'});
     // Active: no banner, and Usage states the rule and the date.
     clock(1); await open(); assert.equal(await page.locator('#pause-banner').isVisible(), false);
-    assert.equal(await page.locator('#usage-lifecycle').innerText(), `Free projects pause after 30 days with no accepted trace. Last accepted trace: ${day(last)}. Without a new trace it pauses on ${day(last + 30 * DAY)} (UTC).`);
+    assert.equal(await page.locator('#usage-lifecycle').innerText(), `A Free project pauses after 30 days with no accepted trace. Without a new trace, this one pauses on ${day(last + 30 * DAY)} (UTC).`);
     // Three days before: a warning on every view, nothing to click yet.
     clock(28); await open();
     assert.equal(await page.locator('#pause-banner').innerText(), `No trace has been accepted recently. This Free project pauses on ${day(last + 30 * DAY)} (UTC) unless a trace is uploaded before then. A paused project keeps its traces and resumes in one click.`);
@@ -27,7 +27,7 @@ test('idle Free project: warning banner, paused banner, refused upload, one-clic
     clock(31); await open(); const before = await root();
     assert.match(await page.locator('#pause-text').innerText(), /^This project is paused: no trace was accepted for 30 days\. New uploads are refused until it is resumed\. Nothing was deleted; the plan’s retention period still decides which traces are listed\.$/);
     assert.equal(await page.locator('#pause-banner').getAttribute('data-state'), 'paused'); assert.equal(await page.locator('#project-resume').isVisible(), true);
-    assert.equal(await page.locator('#usage-lifecycle').innerText(), 'Free projects pause after 30 days with no accepted trace. This project is paused; its stored traces are kept.');
+    assert.equal(await page.locator('#usage-lifecycle').innerText(), 'A Free project pauses after 30 days with no accepted trace. This project is paused; its stored traces are kept.');
     await assert.rejects(live.store.reserveBatch('github-4242', {batch_id: 'paused1', run_id: 'run-paused', request_hash: 'a'.repeat(64), byte_count: 10, event_count: 1}), error => error.status === 403 && error.code === 'project_paused');
     assert.deepEqual(await root(), before); await shot('2-paused');
     await page.goto(live.origin + '/app/#traces'); assert.equal(await page.locator('#pause-banner').isVisible(), true);   // on every view
@@ -37,7 +37,7 @@ test('idle Free project: warning banner, paused banner, refused upload, one-clic
     await page.locator('#project-resume').click(); await page.locator('#usage-lifecycle').filter({hasText: 'Without a new trace'}).waitFor();
     assert.equal(await page.locator('#pause-banner').isVisible(), false);
     assert.equal((await root()).resumed_at, last + 31 * DAY); assert.equal((await root()).used_bytes, before.used_bytes);
-    assert.equal(await page.locator('#usage-lifecycle').innerText(), `Free projects pause after 30 days with no accepted trace. Last accepted trace: ${day(last)}. Without a new trace it pauses on ${day(last + 61 * DAY)} (UTC).`);
+    assert.equal(await page.locator('#usage-lifecycle').innerText(), `A Free project pauses after 30 days with no accepted trace. Without a new trace, this one pauses on ${day(last + 61 * DAY)} (UTC).`);
     await live.store.reserveBatch('github-4242', {batch_id: 'resumed1', run_id: 'run-resumed', request_hash: 'b'.repeat(64), byte_count: 10, event_count: 1}); await shot('3-resumed');
     assert.deepEqual(errors, []);
   } finally { await context.close(); await browser.close(); await live.close(); }

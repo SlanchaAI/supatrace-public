@@ -34,18 +34,18 @@ for (const width of [1280, 320]) test(`workspace quota and billing guidance rema
       await page.goto(live.origin + '/app/?workspace=github-4242&environment=development#usage', {waitUntil: 'networkidle'});
       await page.locator('#usage-page').filter({hasText: 'bytes reserved'}).waitFor();
       const used = await page.locator('#usage-page').innerText(), explanation = await page.locator('#usage-explanation').innerText();
-      assert.match(explanation, new RegExp(alphaProject('github-4242').id));
-      assert.match(explanation, /shared by all workspace environments; viewing development/);
-      assert.match(explanation, /accepted and pending uploads.*does not reset monthly/);
-      assert.match(explanation, /revoking a key does not confirm.*space was freed/);
-      assert.match(explanation, /Retention and space-reclamation actions are not available here/);
+      assert.doesNotMatch(explanation, new RegExp(alphaProject('github-4242').id));
+      assert.match(explanation, /All environments in this workspace share this limit, including uploads still pending/);
+      assert.match(explanation, /does not reset each month/);
+      assert.match(explanation, /revoking a key does not free space by itself/);
+      assert.match(explanation, /cannot change retention or reclaim space here/);
       await nav(page, 'billing');
       assert.match(await page.locator('#billing-note').innerText(), role === 'owner' ? /selector.*Default.*billing/ : /managed by the workspace owner/);
       assert.equal(await page.locator('#billing-portal').isVisible(), false);
       assert.equal(await page.locator('#commercial-selector').isVisible(), false);
       await nav(page, 'home');
       assert.equal(await page.locator('#usage').innerText(), used);
-      assert.match(await page.locator('#usage-explanation-home').innerText(), /All environments share accepted and pending reservations; no monthly reset/);
+      assert.match(await page.locator('#usage-explanation-home').innerText(), /All environments share this limit. It does not reset each month/);
       await page.getByLabel('Environment', {exact: true}).selectOption('production');
       await page.waitForURL(url => url.searchParams.get('environment') === 'production');
       await page.waitForLoadState('networkidle');
@@ -106,8 +106,8 @@ test('Usage shows spans this month against the plan allowance with the reset dat
     // The limits are approved, so there is no "proposed" label, and paid plans exist.
     const limitsText = await page.locator('#usage-plan-limits').innerText();
     assert.equal(limitsText.startsWith(`Free plan: ${F} spans per calendar month. `), true, limitsText);
-    assert.match(limitsText, /Uploads over the allowance are rejected, never billed\. Billing shows the plans with a higher allowance\.$/); assert.doesNotMatch(limitsText, /proposed|not available yet/);
-    assert.equal(await page.locator('#usage-retention').innerText(), `${FREE.retention_days}-day retention on the Free plan. Traces uploaded from now on stop being listed, opened and exported ${FREE.retention_days} days after upload. Traces stored before this was introduced have no expiry. Expired data is hidden, not yet deleted, and still counts toward reserved bytes.`);
+    assert.match(limitsText, /Uploads over the limit are rejected, not billed\.$/); assert.doesNotMatch(limitsText, /proposed|not available yet/);
+    assert.equal(await page.locator('#usage-retention').innerText(), `Free plan: ${FREE.retention_days} days. New traces drop out of the list, and cannot be opened or exported, ${FREE.retention_days} days after upload. Traces stored before retention started have no expiry. Expired data is hidden, not yet deleted, and still counts toward reserved bytes.`);
     if (shots) await page.screenshot({path: shots + '/usage-monthly-allowance.png', fullPage: true});
     await live.store._send('UpdateCommand', {Key: {pk: 'TENANT#github-4242', sk: 'USAGE#' + period.id}, UpdateExpression: 'SET spans = :full', ExpressionAttributeValues: {':full': FREE.spans_per_month}});
     await page.locator('#usage-refresh').click();
@@ -140,7 +140,7 @@ test('usage banner appears at 80% and 100%, and the owner can switch the Pro spe
     await nav(page, 'billing'); assert.equal(await page.locator('#usage-banner').isVisible(), true);
     assert.equal(await page.locator('#spend-cap-state').innerText(), 'Free plan: uploads always stop at the monthly allowance. Nothing is billed for usage.');
     assert.equal(await page.locator('#spend-cap-toggle').isVisible(), false);
-    assert.equal(await page.locator('[data-upgrade-for="spend-cap-toggle"]').innerText(), 'Spend cap control (run past the allowance) needs the Pro plan. This organization is on Free. Upgrade in Billing');
+    assert.equal(await page.locator('#cost-control').isVisible(), false);
     // Pro: cap on by default; the owner turns it off after confirming, and uploads past the allowance are then allowed.
     // The page is loaded afresh on the new plan, as after a return from Checkout. (The next test covers a plan change
     // picked up by Refresh billing alone.)
@@ -179,7 +179,8 @@ test('a plan change picked up by Refresh billing unlocks the Pro spend cap witho
   const page = await context.newPage();
   try {
     await page.goto(live.origin + '/app/#billing', {waitUntil: 'networkidle'});
-    await page.locator('#spend-cap-state').filter({hasText: 'Free plan: uploads always stop at the monthly allowance.'}).waitFor();
+    await page.locator('#spend-cap-state').filter({hasText: 'Free plan: uploads always stop at the monthly allowance.'}).waitFor({state:'attached'});
+    assert.equal(await page.locator('#cost-control').isVisible(), false);
     // The account moves to Pro while the dashboard is open (an operator assigns it, or another tab upgrades).
     await live.store._send('UpdateCommand', {Key: {pk: 'TENANT#github-4242', sk: 'META'}, UpdateExpression: 'SET plan_id = :plan', ExpressionAttributeValues: {':plan': 'pro'}});
     await page.locator('#billing-refresh').click(); await page.locator('#spend-cap-state').filter({hasText: 'Spend cap is on'}).waitFor();

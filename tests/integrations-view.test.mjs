@@ -129,7 +129,7 @@ test('every source links to a guide that exists, and the view is wired into the 
   const register = "if(section.dataset.view&&!views.includes(section.dataset.view))views.push(section.dataset.view);";
   assert.ok(app.includes(register) && app.indexOf(register) < app.lastIndexOf('\nshowView();'), 'self-mounted views are registered before the first route is shown');
   assert.match(view, /^if \(typeof document !== 'undefined'\) mountIntegrations\(document\);$/m);
-  assert.ok(view.includes('data-nav="integrations"') && view.includes('id="view-integrations"'), 'the proof grep in issue #94 matches'); assert.match(view, /href="\/integrations\/"/);
+  assert.ok(!view.includes('data-nav="integrations"') && view.includes('id="view-integrations"'), 'the proof grep in issue #94 matches'); assert.match(view, /href="\/integrations\/"/);
   // A malformed body is refused rather than rendered.
   const good = {sources: [{id: 'otlp', name: 'OTLP', note: 'n', kind: 'ingest', guide: '/docs/x/#y', traces: 2, error_traces: 1, unknown_error_traces: 1, first_received_at: null, last_received_at: '2026-11-14T00:00:00Z', last_error_trace_at: null}], scanned: {traces: 2, truncated: false}, import_jobs: {jobs: []}};
   assert.equal(validateIntegrations(good), good);

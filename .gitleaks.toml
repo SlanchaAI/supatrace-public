@@ -45,5 +45,7 @@ id = "curl-auth-header"
 
 [[rules.allowlists]]
 description = "Documented placeholder ingest key in curl examples"
-regexTarget = "line"
-regexes = ['''Bearer YOUR_INGEST_KEY''']
+condition = "AND"
+regexTarget = "secret"
+paths = ['''(?:^|/)(?:docs/otlp-ingest\.md|scripts/otlp-snippets\.mjs|public/docs/quickstart/index\.html|public/docs/frameworks/opentelemetry/index\.html)$''']
+regexes = ['''^YOUR_INGEST_KEY$''']

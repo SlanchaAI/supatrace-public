@@ -10,7 +10,7 @@ for(const viewport of [{width:1280,height:900},{width:390,height:844}])test(`new
  const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(String(error)));
  try{
   const tenant=await live.signIn(context);await page.goto(live.origin+'/app/',{waitUntil:'networkidle'});await nav(page,'home');
-  await page.locator('#first-trace').getByRole('heading',{name:'Send your first trace'}).waitFor();assert.equal(await page.locator('#first-snippets').isVisible(),false);assert.equal(await page.locator('#first-wait').isVisible(),false);
+  await page.locator('#first-trace').getByRole('heading',{name:'Send a test trace'}).waitFor();assert.equal(await page.locator('#first-snippets').isVisible(),false);assert.equal(await page.locator('#first-wait').isVisible(),false);
   const started=Date.now();await page.locator('#first-key').click();
   await page.locator('#first-wait').filter({hasText:'Waiting for your first trace'}).waitFor({timeout:20000});await page.locator('#first-key-note').filter({hasText:'until you dismiss'}).waitFor();
   for(const [tab,opening] of [['python',/^import hashlib/],['curl',/^BODY='/],['node',/^import \{createHash\}/]]){await page.locator('#first-tab-'+tab).click();assert.match(await page.locator('#first-snippet').textContent(),opening);assert.equal(await page.locator('#first-tab-'+tab).getAttribute('aria-selected'),'true');}

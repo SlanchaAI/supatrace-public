@@ -22,7 +22,7 @@ export function openProject(projects,search){
  if(workspace)return projects.find(p=>p.workspace_id===workspace)??null;
  return projects.find(p=>p.personal)??null;
 }
-const PANEL='<h2>Projects</h2><p>Projects separate traces, keys and environments. All projects in an organization share its members, billing and usage limits.</p><p id="projects-status" role="status"></p><ul id="project-list" aria-label="Projects"></ul><p id="projects-count" class="hint"></p><form id="rename-project" hidden><h3>Rename this project</h3><label>Project name<input name="name" maxlength="60" required></label><button type="submit">Rename project</button></form><form id="create-project"><h3>Create project</h3><p>Add a project to the organization currently open. Its plan limits apply.</p><label>Project name<input name="name" placeholder="My project" maxlength="60" required></label><button type="submit">Create project</button></form>';
+const PANEL='<h2>Projects</h2><p>Each project has its own traces, keys, and environments. All projects in the organization share members, billing, and usage limits.</p><p id="projects-status" role="status"></p><ul id="project-list" aria-label="Projects"></ul><p id="projects-count" class="hint"></p><form id="rename-project" hidden><h3>Rename this project</h3><label>Project name<input name="name" maxlength="60" required></label><button type="submit">Rename</button></form><form id="create-project"><h3>Create project</h3><p>Add a project to this organization. The plan limits apply.</p><label>Project name<input name="name" placeholder="My project" maxlength="60" required></label><button type="submit">Create project</button></form>';
 export function mountProjects(document,{api=request,navigate=url=>location.assign(url),reload=()=>location.reload()}={}){
  const settings=document.querySelector('#view-settings .settings');if(!settings||document.getElementById('projects-section'))return null;
  const section=document.createElement('div');section.className='setting';section.id='projects-section';section.innerHTML=PANEL;settings.insertBefore(section,settings.children[1]??null);
@@ -34,7 +34,7 @@ export function mountProjects(document,{api=request,navigate=url=>location.assig
  async function refresh(initial){
   const mine=++version;status.textContent='Loading projects…';
   try{const data=validateProjects(initial??await api('projects'));if(mine!==version)return false;current=openProject(data.projects,location.search);
-   list.replaceChildren(...data.projects.map(p=>{const li=el('li','');li.dataset.project=p.id;li.dataset.organization=p.workspace_id;li.append(el('strong',p.name),el('span',' · '+p.workspace_name+' · '+p.role+' · '),el('code',p.id));
+   list.replaceChildren(...data.projects.map(p=>{const li=el('li','');li.dataset.project=p.id;li.dataset.organization=p.workspace_id;li.append(el('strong',p.name));
     if(p.id===current?.id){li.dataset.current='true';li.append(el('span',' · open now'));}else{const b=el('button','Open project');b.type='button';b.setAttribute('aria-label','Open project '+p.name);b.onclick=()=>{if(!blocked())navigate(projectUrl(location.pathname,p.workspace_id,p.id));};li.append(' ',b);}return li;}));
    const manageable=current&&['owner','admin'].includes(current.role)&&!Array.isArray(current.environments);rename.hidden=create.hidden=!manageable;
    remove.hidden=!manageable||data.projects.find(p=>p.workspace_id===current.workspace_id)?.id===current.id;

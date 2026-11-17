@@ -75,8 +75,8 @@ test('provider/account changes replace old identity and confirmed logout clears 
 });
 test('recovery copy stays inside authenticated Settings and states the linking rules without sign-in links',()=>{
  const settings=html.slice(html.indexOf('<section id="view-settings"'));assert.match(settings,/<p id="provider-line" role="status"><\/p>/);
- assert.match(settings,/same email address/);assert.match(settings,/original provider and the same provider account/);
- assert.match(settings,/Trace data is never merged/);assert.match(settings,/stay separate until you link them under Sign-in methods/);assert.match(settings,/before uploading again/);assert.match(settings,/A provider that is not linked opens a different account/);
+ assert.match(settings,/same email/);assert.match(settings,/original provider/);
+ assert.match(settings,/Traces are never merged/);assert.match(settings,/stay separate until you link them under Sign-in methods/);assert.match(settings,/A provider that is not linked opens a different account/);
  assert.doesNotMatch(settings,/href="\/api\/auth\/(google|login|chatgpt|sso)|onclick=|account\/link/);
 });
 

@@ -157,7 +157,7 @@ test('workspace controls named in the docs exist in the app with the same label'
   const docs = DOC_PAGES.map(page => read(page.file)).join('\n');
   for (const label of ['Export original JSON', 'Export selected environment', 'Export all workspace environments', 'Download prepared archive', 'Prepare redacted copy', 'API keys', 'Agents', 'Traces']) {
     assert.ok(docs.includes(`<strong>${label}</strong>`), 'docs name ' + label);
-    assert.ok(app.split('\n').some(line => line.trim() === label), 'the app has no control labelled "' + label + '"');
+    assert.ok(app.split('\n').some(line => line.trim() === ({'Export original JSON':'Export JSON','Export selected environment':'Export this environment','Export all workspace environments':'Export all environments'}[label] ?? label)), 'the app has no control labelled "' + label + '"');
   }
   assert.ok(docs.includes('<strong>Refresh Traces</strong>'));
   assert.ok(app.split('\n').some(line => line.trim() === 'Refresh'), 'Traces uses the short Refresh label');

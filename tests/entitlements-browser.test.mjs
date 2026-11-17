@@ -47,7 +47,7 @@ test('Free locks drains, roles and the audit log with an upgrade note; Pro unloc
 
     // Free: the drain form is locked and says why, with a link to Billing. The server refuses the same request.
     await open('#settings'); await page.locator('#drains-section:not([hidden])').waitFor(); await page.locator('[data-upgrade-for=drain-form]').waitFor();
-    assert.equal(await page.locator('[data-upgrade-for=drain-form]').innerText(), 'Data export to your systems (trace drains) needs the Pro plan. This organization is on Free. Upgrade in Billing');
+    assert.equal(await page.locator('[data-upgrade-for=drain-form]').innerText(), 'Trace drains are on the Pro plan. See plans');
     assert.equal(await page.locator('[data-upgrade-for=drain-form] a').getAttribute('href'), '#billing');
     assert.equal(await page.locator('#drain-form').evaluate(form => form.inert), true);
     const refused = await page.evaluate(async () => { const raw = JSON.stringify({url: 'https://hooks.example.com/x'}), hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw))), v => v.toString(16).padStart(2, '0')).join(''); const r = await fetch('/api/drains', {method: 'POST', headers: {'Content-Type': 'application/json', 'x-amz-content-sha256': hash}, body: raw}); return [r.status, (await r.json()).error]; });
@@ -120,17 +120,17 @@ test('Enterprise panels: the owner defines a custom role that then appears where
     const page = await context.newPage(), errors = []; page.on('pageerror', e => errors.push(e.message));
     const post = (path, body) => page.evaluate(async ([p, b]) => { const raw = JSON.stringify(b), hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw))), v => v.toString(16).padStart(2, '0')).join(''); const r = await fetch('/api/' + p, {method: 'POST', headers: {'Content-Type': 'application/json', 'x-amz-content-sha256': hash}, body: raw}); return r.status; }, [path, body]);
     await page.goto(live.origin + '/app/#members'); await page.locator('#shell:not([hidden])').waitFor();
-    assert.equal(await post('workspaces', {name: 'Acme'}), 201); await page.reload(); await page.locator('#role-builder:not([hidden])').waitFor();
+    assert.equal(await post('workspaces', {name: 'Acme'}), 201); await page.reload(); await page.locator('#role-builder').waitFor({state:'attached'});
 
     // Pro: the role form and the retention form are locked, each naming Enterprise.
-    await page.locator('[data-upgrade-for=role-form]').waitFor();
-    assert.equal(await page.locator('[data-upgrade-for=role-form]').innerText(), 'Custom roles needs the Enterprise plan. This organization is on Pro. Upgrade in Billing');
-    assert.equal(await page.locator('#role-form').evaluate(form => form.inert), true);
-    await page.goto(live.origin + '/app/#billing'); await page.locator('[data-upgrade-for=retention-form]').waitFor();
-    assert.equal(await page.locator('#retention-form').evaluate(form => form.inert), true);
+    await page.locator('[data-upgrade-for=role-builder]').waitFor();
+    assert.equal(await page.locator('[data-upgrade-for=role-builder]').innerText(), 'Custom roles needs the Enterprise plan. This organization is on Pro. See plans');
+    assert.equal(await page.locator('#role-builder').isVisible(), false);
+    await page.goto(live.origin + '/app/#billing'); await page.locator('#plan-entitlements').waitFor();
+    assert.equal(await page.locator('#retention-form').count(), 0);
 
     // Enterprise: define a role; it is listed and offered in the invitation form.
-    plan('enterprise'); await page.goto(live.origin + '/app/#members'); await page.reload(); await page.locator('#role-builder:not([hidden])').waitFor();
+    plan('enterprise'); await page.goto(live.origin + '/app/#members'); await page.reload(); await page.locator('#role-builder').waitFor({state:'attached'});
     await page.waitForFunction(() => document.getElementById('role-form').inert === false);
     await page.locator('#role-form input[name=name]').fill('Auditor'); await page.locator('#role-form select[name=base]').selectOption('viewer'); await page.locator('#role-form button[type=submit]').click();
     await page.locator('#role-list li').waitFor();

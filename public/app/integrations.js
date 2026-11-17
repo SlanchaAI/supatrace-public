@@ -13,8 +13,7 @@ const STATUS = {
   reviewed: 'scope reviewed, not approved', consented: 'approved, not started', capturing: 'reading the source', ready: 'ready to store', reserve_consumed: 'storing', object_ready: 'storing', object_consumed: 'storing',
   ack_ready: 'storing', ack_consumed: 'storing', verifying: 'verifying', complete: 'complete', empty: 'complete, source had no rows', bounded_incomplete: 'stopped at a limit before the end', conversion_rejected: 'source data was rejected', revoked: 'approval revoked'
 };
-const VIEW = '<div class="view-head"><div><h1>Integrations</h1><p class="muted">What has arrived in this workspace, by source, and the state of import jobs. <a href="#agents">Open importer forms in Agents</a>. Setup guides and every supported source are in the <a href="/integrations/">integrations directory</a>.</p></div><div class="bar"><button id="integrations-refresh" type="button" class="quiet">Refresh integrations</button></div></div><p id="integrations-status" role="status" aria-live="polite"></p><p id="integrations-scan" class="hint"></p><div id="integrations-sources" class="cards" aria-label="Sources"></div><article class="card" id="integrations-jobs-card"><h2>Import jobs</h2><p id="integrations-jobs-note" class="hint"></p><ul id="integrations-jobs" class="token-list" aria-label="Import jobs"></ul></article>';
-const ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h5v5H2zm7 0h5v5H9zM2 9h5v5H2zm8.5 0h2v1.5H14v2h-1.5V14h-2v-1.5H9v-2h1.5z"/></svg><span>Integrations</span>';
+const VIEW = '<div class="view-head"><div><h2>Integrations</h2><p class="muted">Traces in this environment, grouped by source. See the <a href="/integrations/">integrations directory</a> for setup guides.</p></div><div class="bar"><button id="integrations-refresh" type="button" class="quiet">Refresh</button></div></div><p id="integrations-status" role="status" aria-live="polite"></p><p id="integrations-scan" class="hint"></p><div id="integrations-sources" class="cards" aria-label="Sources"></div><article class="card" id="integrations-jobs-card"><h2>Import jobs</h2><p id="integrations-jobs-note" class="hint"></p><ul id="integrations-jobs" class="token-list" aria-label="Import jobs"></ul></article>';
 
 async function request(path) {
   const page = new URLSearchParams(location.search || ''), query = new URLSearchParams();
@@ -36,16 +35,15 @@ export function validateIntegrations(data) {
 }
 
 export function mountIntegrations(document, {api = request} = {}) {
-  const rail = document.getElementById('rail'), workspace = document.getElementById('workspace');
-  if (!rail || !workspace || !rail.querySelector('[data-nav="settings"]') || !document.getElementById('view-settings') || document.getElementById('view-integrations')) return null;
-  rail.querySelector('[data-nav="settings"]').insertAdjacentHTML('beforebegin', '<a href="#integrations" data-nav="integrations">' + ICON + '</a>');
-  document.getElementById('view-settings').insertAdjacentHTML('beforebegin', '<section id="view-integrations" data-view="integrations" hidden>' + VIEW + '</section>');
+  const agents = document.getElementById('view-agents');
+  if (!agents || document.getElementById('view-integrations')) return null;
+  agents.insertAdjacentHTML('beforeend', '<section id="view-integrations">' + VIEW + '</section>');
   const section = document.getElementById('view-integrations');
   const $ = id => document.getElementById(id), status = $('integrations-status'), sources = $('integrations-sources'), jobs = $('integrations-jobs');
   let version = 0, loaded = false;
   const el = (tag, text, className) => { const node = document.createElement(tag); if (text !== undefined) node.textContent = text; if (className) node.className = className; return node; };
   function render(data) {
-    $('integrations-scan').textContent = data.scanned.truncated ? `Counts and times cover the ${data.scanned.traces.toLocaleString()} retained traces read in one pass, which are not the newest ones in particular. This environment holds more, so totals are a lower bound and newer traces may exist.` : `Counts cover all ${plural(data.scanned.traces, 'retained trace')} in this environment; traces past their retention period are not counted. Sources are told apart by the trace id prefix each path writes.`;
+    $('integrations-scan').textContent = data.scanned.truncated ? `Counts and times cover the ${data.scanned.traces.toLocaleString()} retained traces read in one pass, which are not the newest ones in particular. This environment holds more, so totals are a lower bound and newer traces may exist.` : `${plural(data.scanned.traces, 'trace')} in this environment. Expired traces are not counted.`;
     sources.replaceChildren(...data.sources.map(source => {
       const card = el('article', undefined, 'card'); card.dataset.source = source.id; card.dataset.state = source.traces ? 'receiving' : 'none';
       const guide = el('a', 'Setup guide'); guide.href = source.guide; guide.setAttribute('aria-label', 'Setup guide: ' + source.name);
@@ -53,7 +51,7 @@ export function mountIntegrations(document, {api = request} = {}) {
       // Only retained traces are read, and a partial read sees some of them. The wording claims no more than that: times are
       // "among the traces read" when the read was partial, and an empty source has no retained trace rather than "never".
       const among = data.scanned.truncated ? ' among the traces read' : '';
-      card.append(el('h2', source.name), el('p', source.traces ? plural(source.traces, 'trace') + (last ? ` · newest${among} received ${last}` : '') : data.scanned.truncated ? `No trace from this source among the ${data.scanned.traces.toLocaleString()} traces read.` : 'No retained trace from this source.'));
+      card.append(el('h2', source.name), el('p', source.traces ? plural(source.traces, 'trace') + (last ? ` · newest${among} received ${last}` : '') : data.scanned.truncated ? `No trace from this source among the ${data.scanned.traces.toLocaleString()} traces read.` : 'None yet.'));
       if (source.traces) {
         const unknown = source.unknown_error_traces ? `Error state was not recorded for ${plural(source.unknown_error_traces, 'older trace')}.` : '';
         card.append(el('p', source.error_traces ? plural(source.error_traces, 'trace') + ' with an error event' + (lastError ? ` · latest${among} received ${lastError}` : '') + (unknown ? '. ' + unknown : '') : unknown ? `No error event recorded${among}. ` + unknown : `No trace with an error event${among}.`, 'hint'));
@@ -62,6 +60,9 @@ export function mountIntegrations(document, {api = request} = {}) {
       card.lastChild.append(guide); return card;
     }));
     const scope = data.import_jobs, note = $('integrations-jobs-note');
+    const available = scope.scope === 'listed' && scope.server_pull_available === true;
+    if ($('langfuse-import-card')) $('langfuse-import-card').hidden = !available;
+    if ($('importers-unavailable')) $('importers-unavailable').hidden = available;
     jobs.replaceChildren(...scope.jobs.map(job => {
       const item = el('li'); item.dataset.job = job.id; item.dataset.state = job.state;
       const started = when(job.created_at);
@@ -70,7 +71,7 @@ export function mountIntegrations(document, {api = request} = {}) {
     }));
     note.textContent = scope.scope !== 'listed' ? 'Import jobs are kept for the workspace owner in the Default environment. Switch to your own workspace and Default to see them.'
       : scope.jobs.length ? (scope.truncated ? 'Showing the first jobs read; more exist. ' : '') + 'Newest first. Imports run from the Agents view or the local importers.'
-      : 'No import job is on record for this workspace.' + (scope.job_control_available || scope.server_pull_available ? '' : ' Hosted import jobs are not enabled on this server; file and API imports run on your machine and appear above as traces.');
+      : 'None yet.';
   }
   async function refresh() {
     const mine = ++version; status.textContent = 'Loading integrations…'; section.setAttribute('aria-busy', 'true');
@@ -80,7 +81,7 @@ export function mountIntegrations(document, {api = request} = {}) {
   }
   function reset() { version++; loaded = false; status.textContent = ''; $('integrations-scan').textContent = ''; sources.replaceChildren(); jobs.replaceChildren(); $('integrations-jobs-note').textContent = ''; }
   // Loads when the view is opened by a signed-in account, and again on request. Signing out clears it.
-  const signedIn = () => document.body.classList.contains('signed-in'), open = () => (location.hash || '').replace('#', '').split(/[/?]/)[0] === 'integrations';
+  const signedIn = () => document.body.classList.contains('signed-in'), open = () => (location.hash || '').replace('#', '').split(/[/?]/)[0] === 'agents';
   const sync = () => { if (!signedIn()) { if (loaded || status.textContent) reset(); return; } if (open() && !loaded) void refresh(); };
   $('integrations-refresh').addEventListener('click', () => { if (signedIn()) void refresh(); });
   addEventListener('hashchange', () => { if (signedIn() && open()) void refresh(); });

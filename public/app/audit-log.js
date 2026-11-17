@@ -1,3 +1,4 @@
+import {entitlements} from './entitlements.js';
 // Audit log view. Owner only: the server refuses everyone else, and the rail entry is hidden for them.
 // Every value is written with textContent. Export downloads come from the API, which records the export itself.
 const CATEGORIES = [['', 'All actions'], ['auth', 'Sign-in'], ['key', 'Keys'], ['token', 'Access tokens'], ['member', 'Members'], ['org', 'Organizations'], ['sso', 'Single sign-on'], ['scim', 'SCIM provisioning'], ['workspace', 'Workspace'], ['environment', 'Environments'], ['settings', 'Security settings'], ['billing', 'Billing'], ['export', 'Exports'], ['audit', 'Audit log']];
@@ -25,17 +26,29 @@ export function installAuditView(document) {
   const settings = document.querySelector('#rail a[data-nav="settings"]'), view = document.getElementById('view-settings');
   if (!settings || !view || document.getElementById('view-audit')) return;
   settings.insertAdjacentHTML('beforebegin', '<a href="#audit" data-nav="audit" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.5h7l3 3v10H3zm6.5 1V5H12zM5 7.5h6v1.2H5zm0 2.4h6v1.2H5zm0 2.4h4v1.2H5z"/></svg><span>Audit log</span></a>');
-  view.insertAdjacentHTML('beforebegin', '<section id="view-audit" data-view="audit" hidden><h1>Audit log</h1><p class="muted">Who did what in this workspace: sign-ins, keys, tokens, members, environments, security settings, billing and exports. Only the workspace owner can read it.</p></section>');
+  view.insertAdjacentHTML('beforebegin', '<section id="view-audit" data-view="audit" hidden><h1>Audit log</h1><p class="muted">Who did what in this workspace. Only the owner can read it.</p></section>');
 }
 if (typeof document !== 'undefined') installAuditView(document);
 export function mountAuditLog({document, request, workspace, ownWorkspace, role, fetcher = (...args) => fetch(...args)}) {
   const link = document.querySelector('#rail [data-nav="audit"]'), view = document.getElementById('view-audit');
   if (!link || !view) return null;
-  if (role !== 'owner') { link.hidden = true; if (location.hash === '#audit') location.hash = '#home'; return null; }
-  link.hidden = false;
+  const isAuditRoute = () => location.hash.replace('#', '').split(/[\/?]/)[0] === 'audit';
+  if (role !== 'owner') { document.documentElement.dataset.auditAvailable = 'false'; link.hidden = true; if (isAuditRoute()) location.hash = '#home'; return null; }
+  let allowed = false;
   const card = document.createElement('article'); card.className = 'card'; card.id = 'audit-controls';
   card.innerHTML = '<form id="audit-filters"><label>Action<select name="action"></select></label><label>Account ID<input name="actor" maxlength="128" autocomplete="off" placeholder="Any account"></label><label>From<input name="from" type="date"></label><label>To<input name="to" type="date"></label><button type="submit">Apply filters</button></form><p id="audit-status" role="status" aria-live="polite"></p><div class="grid-wrap"><table id="audit-table" class="grid"><thead><tr><th scope="col">Time</th><th scope="col">Account</th><th scope="col">Action</th><th scope="col">Target</th><th scope="col">Details</th><th scope="col">Network address</th></tr></thead><tbody id="audit-rows"></tbody></table></div><div class="bar"><button id="audit-more" type="button" class="quiet" hidden>Load older events</button><button id="audit-export-json" type="button" class="quiet">Export JSON</button><button id="audit-export-csv" type="button" class="quiet">Export CSV</button><button id="audit-export-next" type="button" class="quiet" hidden>Export next part</button></div><p class="hint" id="audit-note"></p>';
-  view.append(card);
+  card.hidden = true; view.append(card);
+  const planStatus = document.createElement('p'); planStatus.id = 'audit-plan-status'; planStatus.setAttribute('role', 'status');
+  const retryPlan = document.createElement('button'); retryPlan.id = 'audit-plan-retry'; retryPlan.type = 'button'; retryPlan.textContent = 'Retry'; retryPlan.hidden = true;
+  view.append(planStatus, retryPlan);
+  async function checkPlan() {
+    retryPlan.disabled = true; planStatus.textContent = 'Checking audit access…';
+    const value = await entitlements?.load();
+    retryPlan.disabled = false;
+    if (value) sync(value);
+    else { planStatus.textContent = 'Audit access could not be checked. Try again.'; retryPlan.hidden = false; }
+  }
+  retryPlan.onclick = () => void checkPlan();
   const $ = id => card.querySelector('#' + id), form = $('audit-filters'), status = $('audit-status'), rows = $('audit-rows');
   for (const [value, text] of CATEGORIES) { const option = document.createElement('option'); option.value = value; option.textContent = text; form.elements.action.append(option); }
   const scope = () => workspace !== ownWorkspace ? '&workspace=' + encodeURIComponent(workspace) : '';
@@ -50,6 +63,7 @@ export function mountAuditLog({document, request, workspace, ownWorkspace, role,
     }
   }
   async function load(more = false) {
+    if (!allowed) return;
     const mine = ++version, query = current(); if (more && next) query.set('after', next);
     status.textContent = 'Loading…';
     try {
@@ -90,7 +104,23 @@ export function mountAuditLog({document, request, workspace, ownWorkspace, role,
   $('audit-export-json').onclick = () => void download('json');
   $('audit-export-csv').onclick = () => void download('csv');
   $('audit-export-next').onclick = () => { if (pending) void download(pending.format, pending); };
-  const visible = () => { if (location.hash.replace('#', '').split(/[\/?]/)[0] === 'audit') void load(); };
-  addEventListener('hashchange', visible); visible();
+  const visible = () => { if (allowed && isAuditRoute()) void load(); };
+  const sync = value => {
+    if (!value?.features) return;
+    planStatus.textContent = ''; retryPlan.hidden = true;
+    const wasAllowed = allowed; allowed = value.features.audit_log?.enabled === true;
+    document.documentElement.dataset.auditAvailable = String(allowed);
+    link.hidden = !allowed; card.hidden = !allowed;
+    const exports = value.features.audit_log_export?.enabled === true;
+    for (const id of ['audit-export-json', 'audit-export-csv']) $(id).hidden = !exports;
+    let note = document.getElementById('audit-export-plan');
+    if (allowed && !exports && !note) { note = document.createElement('p'); note.id = 'audit-export-plan'; note.textContent = 'Export is on the Enterprise plan.'; $('audit-export-json').before(note); }
+    if (exports || !allowed) note?.remove();
+    if (!allowed) { ++version; status.textContent = ''; if (isAuditRoute()) location.hash = '#home'; }
+    else if (!wasAllowed) visible();
+  };
+  document.addEventListener('supatrace:entitlements', event => sync(event.detail));
+  addEventListener('hashchange', visible);
+  if (entitlements?.current()) sync(entitlements.current()); else void checkPlan();
   return {load, loaded: () => loaded};
 }
