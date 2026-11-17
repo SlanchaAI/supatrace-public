@@ -14,11 +14,12 @@ test('owner creates a second organization, switches from the rail, and each orga
     await owner.p.goto(live.origin + '/app/#members'); await owner.p.locator('#shell:not([hidden])').waitFor();
     // The personal organization is listed without any setup.
     assert.deepEqual(await owner.p.locator('#org-select option').allInnerTexts(), ['Personal workspace']);
-    assert.match(await owner.p.locator('#org-list').innerText(), new RegExp('Personal workspace · owner · ' + owner.tenant + ' · current'));
+    assert.equal(await owner.p.locator('#org-list').innerText(), 'Personal workspace · owner · current');
     assert.equal(await owner.p.locator('#org-transfer').isVisible(), false); assert.equal(await owner.p.locator('#org-leave').isVisible(), false);
     await owner.p.locator('#org-create input').fill('Acme Inc'); await owner.p.locator('#org-create button').click();
     await owner.p.waitForURL(u => /^org-[a-f0-9]{32}$/.test(u.searchParams.get('workspace') ?? '')); await owner.p.locator('#shell:not([hidden])').waitFor();
     const org = new URL(owner.p.url()).searchParams.get('workspace');
+    assert.deepEqual(await owner.p.locator('#org-list li').allInnerTexts(), ['Personal workspace · owner', 'Acme Inc · owner · current']);
     assert.deepEqual(await owner.p.locator('#org-select option').allInnerTexts(), ['Personal workspace', 'Acme Inc']); assert.equal(await owner.p.locator('#org-select').inputValue(), org);
     assert.equal(await owner.p.locator('#members-title').innerText(), 'Acme Inc'); assert.match(await owner.p.locator('#member-list').innerText(), new RegExp(owner.tenant + ' · Owner'));
     await shot(owner.p, 'org-created-members');

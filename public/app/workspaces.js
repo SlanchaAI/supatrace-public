@@ -39,7 +39,8 @@ export async function mountWorkspaces({request,me,projects,selected,environment,
  $('workspace-select').onchange=()=>navigate($('workspace-select').value,'default');
  const current=selected.workspace_id??me.tenant_id,personal=current===me.tenant_id,orgName=p=>(p.workspace_name??'Personal workspace');
  const orgSelect=$('org-select');if(orgSelect){orgSelect.replaceChildren();for(const p of organizations){const o=document.createElement('option');o.value=p.workspace_id??me.tenant_id;o.textContent=orgName(p)+(p.mfa_required===true?' (needs two-factor authentication)':p.sso_required===true?' (needs SSO sign-in)':'');orgSelect.append(o);}orgSelect.value=current;orgSelect.onchange=()=>{const next=orgSelect.value;orgSelect.value=current;navigate(next,'default');};}
- for(const p of organizations){const li=document.createElement('li'),id=p.workspace_id??me.tenant_id;li.dataset.org=id;li.textContent=`${orgName(p)} · ${p.role??'owner'} · ${id}`+(id===current?' · current':'');$('org-list').append(li);}
+ const personalLabel=[me.email,me.name].find(value=>typeof value==='string'&&value.trim());
+ for(const p of organizations){const li=document.createElement('li'),id=p.workspace_id??me.tenant_id,label=id===me.tenant_id&&personalLabel?personalLabel:orgName(p);li.dataset.org=id;li.textContent=`${label} · ${p.role??'owner'}`+(id===current?' · current':'');$('org-list').append(li);}
  // A member limited to some environments is moved to the first one they may open.
  if(Array.isArray(selected.environments)&&selected.environments.length&&!selected.environments.includes(environment)){navigate(selected.workspace_id??me.tenant_id,selected.environments[0]);return new Promise(()=>{});}
  const environments=await request('environments');

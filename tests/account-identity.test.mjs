@@ -44,7 +44,7 @@ test('existing MFA flag semantics remain unchanged and provider display does not
 });
 const source=readFileSync(new URL('../public/app/app.js',import.meta.url),'utf8'),html=readFileSync(new URL('../public/app/index.html',import.meta.url),'utf8');
 function ui(){
- const nodes=new Map(['copy-account-id','copy-project-id','provider-line','who','account-line','project-name','project-line','account-reload','download-account','discard-account','workspace-export-reviewed','status','billing-portal'].map(id=>[id,{textContent:''}]));
+ const nodes=new Map(['copy-account-id','copy-project-id','provider-line','account-sign-in-note','who','account-line','project-name','project-line','account-reload','download-account','discard-account','workspace-export-reviewed','status','billing-portal'].map(id=>[id,{textContent:''}]));
  const start=source.indexOf('function renderAccountIdentity('),end=source.indexOf('function dash(',start);assert.ok(start>=0&&end>start);
  let langsmithInvalidations=0,braintrustInvalidations=0,consentInvalidations=0,keyAttemptClears=0,billingCancels=0,usageStops=0;
  const context={cancelBillingRedirect(){billingCancels++;},stopUsage(){usageStops++;},importConsent:{invalidate(){consentInvalidations++;}},workspaceExportScope:{project:'pinned-project'},syncExportControls(){},braintrustImport:{invalidate(){braintrustInvalidations++;}},langsmithImport:{invalidate(){langsmithInvalidations++;}},setCheckoutAccount(){},clearKeyAttempt(){keyAttemptClears++;},cancelCommercialCheckout(){},paintCommercialControls(){},checkoutRecoveryKey:null,activeEnvironment:'default',activeProject:'pinned-project',accountDownloadDraft:{synthetic:true},$:id=>{assert.ok(nodes.has(id));return nodes.get(id);}};
@@ -62,28 +62,31 @@ test('actual identity renderer shows explicit provider, account and workspace wi
 test('unknown and prototype-looking providers stay unknown rather than guessing from an account id',()=>{
  const f=ui();for(const provider of [undefined,null,'constructor','__proto__','<script>','unknown',{}]){
   f.renderAccountIdentity({auth_provider:provider,tenant_id:'google-synthetic'},{id:'project',name:'Default project'});
+  assert.equal(f.text('account-sign-in-note'),'This account signs in with SSO or another method. Use the same sign-in method and account. Ask your sign-in provider to restore access if needed.');
   assert.match(f.text('provider-line'),/Sign-in provider: not shown/);assert.doesNotMatch(f.text('provider-line'),/Sign-in provider: Google|constructor|script/);
  }
 });
 test('provider/account changes replace old identity and confirmed logout clears all rendered identity fields',()=>{
  const f=ui();f.renderAccountIdentity({auth_provider:'google',tenant_id:'old-account'},{id:'old-project',name:'Old'});
  f.renderAccountIdentity({auth_provider:'github',tenant_id:'new-account'},{id:'new-project',name:'New'});
- for(const id of ['provider-line','who','account-line','project-name','project-line'])assert.doesNotMatch(f.text(id),/old-account|old-project|Old|Google/);
- f.clearAccountIdentity();assert.equal(f.billingCancels(),1);assert.equal(f.hidden('billing-portal'),true);assert.equal(f.context.billingReady,false);assert.equal(f.consentInvalidations(),1);assert.equal(f.context.workspaceExportScope,null);assert.equal(f.langsmithInvalidations(),1);assert.equal(f.braintrustInvalidations(),1);for(const id of ['provider-line','who','account-line','project-name','project-line'])assert.equal(f.text(id),'');
+ for(const id of ['provider-line','account-sign-in-note','who','account-line','project-name','project-line'])assert.doesNotMatch(f.text(id),/old-account|old-project|Old|Google/);
+ f.clearAccountIdentity();assert.equal(f.billingCancels(),1);assert.equal(f.hidden('billing-portal'),true);assert.equal(f.context.billingReady,false);assert.equal(f.consentInvalidations(),1);assert.equal(f.context.workspaceExportScope,null);assert.equal(f.langsmithInvalidations(),1);assert.equal(f.braintrustInvalidations(),1);for(const id of ['provider-line','account-sign-in-note','who','account-line','project-name','project-line'])assert.equal(f.text(id),'');
  assert.match(source,/await api\('auth\/logout',\{\}\);activeProject=null;resetKeyState\(\);clearAccountIdentity\(\);location.replace/);
  assert.match(source,/renderAccountIdentity\(me,chosen\)/);
 });
-test('recovery copy stays inside authenticated Settings and states the linking rules without sign-in links',()=>{
+test('one account recovery block stays inside authenticated Settings without direct sign-in links',()=>{
  const settings=html.slice(html.indexOf('<section id="view-settings"'));assert.match(settings,/<p id="provider-line" role="status"><\/p>/);
- assert.match(settings,/same email/);assert.match(settings,/original provider/);
- assert.match(settings,/Traces are never merged/);assert.match(settings,/stay separate until you link them under Sign-in methods/);assert.match(settings,/A provider that is not linked opens a different account/);
- assert.doesNotMatch(settings,/href="\/api\/auth\/(google|login|chatgpt|sso)|onclick=|account\/link/);
+ assert.equal(settings.split('id="account-recovery"').length-1,1);assert.match(settings,/id="account-sign-in-note"/);
+ assert.match(settings,/original email and sign-in method, or a method already linked to it/);
+ assert.match(settings,/A different email or an unlinked provider opens a different account\. Data is never merged/);
+ assert.match(settings,/two-factor recovery codes are the only way back in/);assert.match(settings,/Two-factor authentication cannot be reset by email/);
+ assert.doesNotMatch(settings,/Find an existing workspace|href="\/api\/auth\/(google|login|chatgpt|sso)|onclick=|account\/link/);
 });
 
 test('page suspension and session/project mismatch invalidate identity without switching the pinned project',()=>{
  const f=ui();f.renderAccountIdentity({auth_provider:'google',tenant_id:'old-account'},{id:'old-project',name:'Old'});f.invalidateAccountIdentity();
  assert.equal(f.billingCancels(),1);assert.equal(f.usageStops(),1);assert.equal(f.consentInvalidations(),1);assert.equal(f.langsmithInvalidations(),1);assert.equal(f.braintrustInvalidations(),1);assert.equal(f.keyAttemptClears(),1);assert.match(f.text('provider-line'),/needs rechecking/);assert.equal(f.text('who'),'Account needs rechecking');assert.equal(f.hidden('account-reload'),false);
- for(const id of ['account-line','project-name','project-line'])assert.equal(f.text(id),'');assert.equal(f.context.activeProject,'pinned-project');assert.equal(f.context.accountDownloadDraft,null);assert.equal(f.hidden('download-account'),true);assert.equal(f.hidden('discard-account'),true);
+ for(const id of ['account-sign-in-note','account-line','project-name','project-line'])assert.equal(f.text(id),'');assert.equal(f.context.activeProject,'pinned-project');assert.equal(f.context.accountDownloadDraft,null);assert.equal(f.hidden('download-account'),true);assert.equal(f.hidden('discard-account'),true);
  assert.match(source,/addEventListener\?\.\('pagehide',\(\)=>\{invalidateAccountIdentity\(\)/);
  assert.match(source,/error.message==='sign_in_required'\|\|error.message==='project_unavailable'\|\|path.startsWith\('billing\/'\)&&\['workspace_owner_required','billing_scope_changed'\].includes\(error.message\)\)\)invalidateAccountIdentity\(\)/);
  assert.match(source,/\$\('account-reload'\)\.onclick=\(\)=>location.reload\(\)/);

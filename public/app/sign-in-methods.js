@@ -10,7 +10,7 @@ const messages = {
   sign_in_required: 'Please sign in to continue.'
 };
 const NAMES = {github: 'GitHub', google: 'Google'};
-const PANEL = '<div><h2>Sign-in methods</h2><p class="muted">To return to an existing workspace, use the sign-in method you previously used for that account. The first time you sign in with GitHub or Google, it opens your existing account if both providers verify the same email address. Accounts that already exist are linked only by your choice here, and a method you unlinked or kept separate stays separate. An account takes one linked method. A provider that has not verified the address is never linked. Trace data is never merged between accounts. The Sign-in provider shown under Account is the method this account was created with, also when you came in through a linked one.</p></div><div><p id="identities-status" role="status" aria-live="polite"></p><ul id="identities-list" class="token-list" aria-label="Sign-in methods for this account"></ul><div id="identities-choice" hidden><p id="identities-choice-text"></p><p id="identities-choice-effect" class="hint"></p><button id="identities-link" type="button" class="quiet"></button> <button id="identities-separate" type="button" class="quiet">Keep the accounts separate</button></div></div>';
+const PANEL = '<div><h2>Sign-in methods</h2><p id="identities-description" class="muted" hidden>GitHub and Google can open the same account when both verify the same email. This happens the first time the second provider is used. If both accounts already exist, choose whether to link them here. You can have one linked method. A method kept separate or unlinked stays separate. The provider under Account is the one this account was created with.</p></div><div><p id="identities-status" role="status" aria-live="polite"></p><ul id="identities-list" class="token-list" aria-label="Sign-in methods for this account"></ul><div id="identities-choice" hidden><p id="identities-choice-text"></p><p id="identities-choice-effect" class="hint"></p><button id="identities-link" type="button" class="quiet"></button> <button id="identities-separate" type="button" class="quiet">Keep the accounts separate</button></div></div>';
 const hex = bytes => Array.from(new Uint8Array(bytes), value => value.toString(16).padStart(2, '0')).join('');
 async function request(path, body) {
   const raw = body === undefined ? undefined : JSON.stringify(body), headers = {};
@@ -34,9 +34,10 @@ export function mountSignInMethods({document, api = request, signedOut = () => {
   const fail = error => { status.textContent = messages[error?.message] || 'Sign-in methods could not be loaded. Nothing below is current; try again.'; };
   function render(data) {
     const own = NAMES[data.account.provider], items = [];
+    $('identities-description').hidden = !own;
     const first = document.createElement('li');
-    first.textContent = own ? `${own} · this account's own sign-in${data.account.verified_email ? ' · verified email ' + data.account.verified_email : ' · no verified email reported yet; sign in again to check'}` : 'This account signs in with email, SSO or another method. Linking is available for GitHub and Google accounts.';
-    items.push(first);
+    first.textContent = own ? `${own} · this account's own sign-in${data.account.verified_email ? ' · verified email ' + data.account.verified_email : ' · no verified email reported yet; sign in again to check'}` : '';
+    if (own) items.push(first);
     for (const item of data.linked) {
       const row = document.createElement('li'), text = document.createElement('span'), remove = document.createElement('button');
       text.textContent = `${NAMES[item.provider]} · verified email ${item.verified_email} · linked ${new Date(item.linked_at).toLocaleDateString()} ${item.linked_by === 'sign_in' ? 'at sign-in' : 'in Settings'} `;
@@ -54,7 +55,7 @@ export function mountSignInMethods({document, api = request, signedOut = () => {
   }
   async function refresh() {
     const mine = ++version;
-    try { const data = validateIdentities(await api('auth/identities')); if (mine !== version) return; section.hidden = false; render(data); }
+    try { const data = validateIdentities(await api('auth/identities')); if (mine !== version) return; section.hidden = data.account.provider === null; render(data); }
     catch (error) { if (mine !== version) return; if (error?.status === 404) { section.hidden = true; return; } section.hidden = false; fail(error); }
   }
   async function act(button, path, body, done) {
@@ -72,7 +73,7 @@ export function mountSignInMethods({document, api = request, signedOut = () => {
     if (!armed(button, 'Confirm: unlink and sign out everywhere')) { status.textContent = 'Unlinking signs out every session of this account. That sign-in method will then open its own separate account, and it cannot be linked to this account again here. Personal access tokens and write keys of this account are not revoked; revoke them separately if needed.'; return; }
     void act(button, 'auth/identities/unlink', {id: button.dataset.identity}, async () => { status.textContent = 'Unlinked. Signing out…'; signedOut(); });
   });
-  return {refresh, reset() { version++; status.textContent = ''; list.replaceChildren(); choice.hidden = true; }};
+  return {refresh, reset() { version++; status.textContent = ''; list.replaceChildren(); choice.hidden = true; $('identities-description').hidden = true; }};
 }
 /** Adds the panel above the Session block in Settings and keeps it in step with sign-in state. */
 export function installSignInMethods(document) {

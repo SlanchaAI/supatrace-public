@@ -84,6 +84,14 @@ function renderAccountIdentity(me,project){
  const provider=typeof me.auth_provider==='string'&&Object.hasOwn(labels,me.auth_provider)?labels[me.auth_provider]:null;
  $('account-reload').hidden=true;
  $('provider-line').textContent=provider?'Sign-in provider: '+provider:'Sign-in provider: not shown';
+ const signInNotes={
+  email:'This account signs in with your email address. Request a sign-in link from the sign-in page; it works once and expires in 15 minutes.',
+  github:'This account signs in with GitHub. On the sign-in page, choose GitHub and use the same GitHub account. Recover access to GitHub through GitHub.',
+  google:'This account signs in with Google. On the sign-in page, choose Google and use the same Google account. Recover access to Google through Google.',
+  sso:'This account signs in with SSO. On the sign-in page, choose SSO and enter your work email. Ask your organization to restore access if needed.',
+  chatgpt:'This account signs in with ChatGPT (experimental). Use the same ChatGPT account. Recover access through ChatGPT.'
+ };
+ $('account-sign-in-note').textContent=provider?signInNotes[me.auth_provider]:'This account signs in with SSO or another method. Use the same sign-in method and account. Ask your sign-in provider to restore access if needed.';
  const label=typeof me.name==='string'&&me.name.trim()?me.name:typeof me.email==='string'&&me.email.trim()?me.email:null;
  $('who').textContent=label?'Signed in as '+label:provider?'Signed in with '+provider:'Signed in';
  $('account-line').textContent=label?'Account: '+label:'Account';
@@ -94,7 +102,7 @@ function renderAccountIdentity(me,project){
   const button=$(id);button.disabled=false;button.onclick=async()=>{try{await navigator.clipboard.writeText(value);button.textContent='Copied';}catch{button.textContent='Copy unavailable';}};
  }
 }
-function clearAccountIdentity(){for(const id of ['copy-account-id','copy-project-id']){$(id).disabled=true;$(id).onclick=null;}cancelBillingRedirect();billingReady=false;$('billing-portal').hidden=true;$('billing-portal').disabled=true;importConsent?.invalidate('Account or session needs rechecking. Stored consent is not revoked by leaving this page.');workspaceExportScope=null;syncExportControls();langsmithImport?.invalidate('Workspace needs rechecking. Reload and review the scope again.');braintrustImport?.invalidate('Workspace needs rechecking. Reload and review the scope again.');cancelCommercialCheckout();checkoutRecoveryKey=null;paintCommercialControls();for(const id of ['provider-line','who','account-line','project-name','project-line']){$(id).textContent='';$(id).title='';}$('account-reload').hidden=true;}
+function clearAccountIdentity(){for(const id of ['copy-account-id','copy-project-id']){$(id).disabled=true;$(id).onclick=null;}cancelBillingRedirect();billingReady=false;$('billing-portal').hidden=true;$('billing-portal').disabled=true;importConsent?.invalidate('Account or session needs rechecking. Stored consent is not revoked by leaving this page.');workspaceExportScope=null;syncExportControls();langsmithImport?.invalidate('Workspace needs rechecking. Reload and review the scope again.');braintrustImport?.invalidate('Workspace needs rechecking. Reload and review the scope again.');cancelCommercialCheckout();checkoutRecoveryKey=null;paintCommercialControls();for(const id of ['provider-line','account-sign-in-note','who','account-line','project-name','project-line']){$(id).textContent='';$(id).title='';}$('account-reload').hidden=true;}
 function invalidateAccountIdentity(){clearAccountDownload();clearKeyAttempt();if(!activeProject)return;clearAccountIdentity();stopUsage('Account identity or workspace permission changed. Reload the page before checking usage and billing.');$('who').textContent='Account needs rechecking';$('provider-line').textContent='Account identity needs rechecking. Reload this page to confirm the current provider and workspace.';$('account-reload').hidden=false;}
 function dash(value){return value==null||value===''?'—':String(value);}
 function duration(ms){if(ms==null)return '—';if(ms<1000)return ms+'ms';return (ms/1000).toFixed(1)+'s';}

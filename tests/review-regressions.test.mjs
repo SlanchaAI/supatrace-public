@@ -56,7 +56,7 @@ test('the first-trace example is bounded synthetic intake, not automatic custome
 test('public entry points explain supported capture and link the published policies',()=>{
  const landing=readFileSync(new URL('../public/index.html',import.meta.url),'utf8');for(const fact of ['Explicit JSON batches and reviewed Claude Code snapshots','50k spans a month','/privacy.html','/docs/quickstart/','/app/'])assert.ok(landing.includes(fact),fact);assert.doesNotMatch(landing,/<script(?![^>]*src=)(?!\s+type="application\/ld\+json">)|\son\w+=/i);
  assert.doesNotMatch(landing,/provider-note|use the sign-in method you previously used|stay separate unless you link/);
- const settings=readFileSync(new URL('../public/app/sign-in-methods.js',import.meta.url),'utf8');assert.ok(settings.includes('use the sign-in method you previously used for that account'));
+ const settings=readFileSync(new URL('../public/app/sign-in-methods.js',import.meta.url),'utf8');assert.ok(settings.includes('GitHub and Google can open the same account when both verify the same email.'));
  for(const path of ['terms.html','privacy.html'])assert.match(readFileSync(new URL('../public/'+path,import.meta.url),'utf8'),/Slancha, Inc\./);
 });
 

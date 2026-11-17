@@ -154,15 +154,30 @@ A browser callback failure redirects to a clean workspace sign-in with an allowl
 
 ## Identify the current workspace
 
-Settings identifies the provider, account ID and workspace from the authenticated
-page-load check. To return to an existing workspace, sign out and start a fresh
-sign-in with its original provider and provider account, or with a sign-in method
-linked to it (see Linked sign-in methods below). Do not reupload traces
-merely because a different workspace looks empty, or replay an old OAuth callback.
-Linking is not an account-recovery service: a provider that is not linked opens a
-different account. See
-Account and workspace recovery requires the
-local implementation and remaining rendered/hosted acceptance boundaries.
+Settings names the account's original sign-in provider, account and workspace.
+The **Account recovery** block explains how to get back in:
+
+- **Email (link or password account):** request a new sign-in link from the sign-in
+  page. It works once and expires in 15 minutes.
+- **GitHub or Google:** choose the same provider and use the same provider account.
+  Recover a lost provider account through GitHub or Google.
+- **SSO:** choose SSO and enter your work email. Ask your organization to restore
+  access if needed.
+
+To return to another account, sign out and use its original email and sign-in
+method, or a method already linked to it. A different email or an unlinked provider
+opens a different account. GitHub and Google can also link at first sign-in under
+the verified-email rules below. Data is never merged. An empty workspace does not
+mean traces were deleted; check the account and workspace before uploading again.
+
+If you lose your authenticator, two-factor recovery codes are the only way back
+in. Two-factor authentication cannot be reset by email.
+
+**Sign-in methods** shows linking controls and guidance only for GitHub and Google
+accounts. Email, SSO and other accounts do not show GitHub/Google linking copy.
+Members lists a personal organization by account email or readable name when
+available, with a readable workspace label as fallback. Organization labels do
+not display raw tenant IDs.
 
 ## Linked sign-in methods
 
