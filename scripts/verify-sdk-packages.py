@@ -60,7 +60,7 @@ with zipfile.ZipFile(DIST / "supatrace-0.1.0-py3-none-any.whl") as wheel:
     assert meta["Author"] == "Slancha, Inc."
     assert set(meta.get_all("Project-URL")) == {
         "Homepage, https://supatrace.dev", "Documentation, https://supatrace.dev/docs/",
-        "Bug Tracker, mailto:support@supatrace.dev",
+        "Issues, https://github.com/SlanchaAI/supatrace-public/issues",
     }
     requirements = [Requirement(req) for req in meta.get_all("Requires-Dist", [])]
     assert all(req.marker and not req.marker.evaluate({"extra": ""})
