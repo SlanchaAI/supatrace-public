@@ -1,3 +1,4 @@
+import {hasPendingLink,loadProviders} from '../signin.js';
 import {loadStartupIdentity,probeReachable,STARTUP_TIMEOUT_MS} from './startup-data.js';
 
 // This controller owns the signed-out gate only. After identity is confirmed,
@@ -38,6 +39,12 @@ export function mountWorkspaceStartup({request,onReady,mountSignIn}){
   actions.hidden=false;retry.hidden=true;cancel.hidden=false;
   if(focus)cancel.focus();
   const current=()=>attempt===version&&!controller.signal.aborted;
+  // Explicit email-link intent takes precedence over any existing session.
+  if(hasPendingLink()||new URLSearchParams(location.search).get('auth_error')==='link_invalid'){
+   mountSignIn(get('signin'),{github:true});
+   finish();get('signed-out').hidden=false;get('signin').hidden=false;status.textContent='';
+   return;
+  }
   // The probe runs beside the account reads and never stops them. Its verdict words the outcome (unreachable or slow),
   // says so on screen while the reads are still waiting, and its answer doubles as the provider list for a signed-out page.
   let reach='pending';
@@ -53,9 +60,7 @@ export function mountWorkspaceStartup({request,onReady,mountSignIn}){
   }catch(error){
    if(!current())return;
    if(error.message==='sign_in_required'){
-    // Provider discovery is the probe's own answer: the response and then its body, each bounded by the probe deadline.
-    // Without a usable list, the existing fallback stands.
-    const providers=await (await probe.catch(()=>null))?.providers;
+    const providers=await (await probe.catch(()=>null))?.providers || await loadProviders({attempts:1});
     if(!current())return;
     mountSignIn(get('signin'),providers||{github:true});
     finish();get('signed-out').hidden=false;get('signin').hidden=false;status.textContent='';

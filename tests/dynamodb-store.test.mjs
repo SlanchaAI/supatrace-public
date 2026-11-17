@@ -306,6 +306,27 @@ test('run/event pagination consistently scopes exact tenant and rejects foreign 
   await assert.rejects(h.store.listAcceptedBatchIndexes('github-2', 'run1', { cursor: first.next }), code('invalid_cursor'));
   await assert.rejects(h.store.listAcceptedBatchIndexes('github-1', 'run2', { cursor: first.next }), code('invalid_cursor')); h.done();
 });
+test('cooldown reservations are atomic and a stale release cannot delete a newer reservation', async () => {
+  let now = NOW;
+  const {store} = samlStore(() => now);
+  const input = {scope: 'linkresend', identity: digest('synthetic@example.com'), limit: 1, windowSeconds: 60, cooldown: true};
+  const attempts = await Promise.all([store.consumeRate(input), store.consumeRate(input)]);
+  assert.equal(attempts.filter(rate => rate.allowed).length, 1);
+  const first = attempts.find(rate => rate.allowed);
+  assert.equal(attempts.find(rate => !rate.allowed).pending, true);
+  await first.complete();
+  const duplicate = await store.consumeRate(input);
+  assert.equal(duplicate.duplicate, true); assert.equal(duplicate.pending, false);
+  await first.release();
+  const second = await store.consumeRate(input); assert.equal(second.allowed, true);
+  await assert.rejects(first.complete());
+  assert.equal((await store.consumeRate(input)).pending, true);
+  await first.release(); assert.equal((await store.consumeRate(input)).allowed, false);
+  now += 59; assert.equal((await store.consumeRate(input)).allowed, false);
+  now++; assert.equal((await store.consumeRate(input)).allowed, true);
+  await second.release(); assert.equal((await store.consumeRate(input)).allowed, false);
+});
+
 test('rate cardinality is bounded, hit increments conditional and live hash collisions fail closed', async () => {
   let rateKey;
   const h = harness([['PutCommand', input => {

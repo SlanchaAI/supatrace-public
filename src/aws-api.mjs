@@ -178,6 +178,8 @@ export async function handle(request,baseEnv){
  store.planBillingMode=env.planBilling?.mode ?? 'test';
  for(const p of ['workspace','environment','project'])if(url.searchParams.getAll(p).length>1)throw new HttpError(400,'invalid_query');
  if(request.method==='GET'&&path==='/api/auth/email/link')return await emailLinkOpen(request,env);
+ // Discovery is public configuration: it must not spend the shared request budget.
+ if(request.method==='GET'&&path==='/api/auth/providers')return json(await providerFlags(request,env));
  // Scope reloads make several dashboard reads. Allow normal setup and shared NAT use; sensitive routes keep tighter budgets.
  const rate=await store.consumeRate({scope:'request',identity:env.sourceIp||'unknown',limit:300,windowSeconds:60});if(!rate.allowed)return rateLimited(rate);
  // OTLP/HTTP receiver. /api/otlp/v1/traces is the same receiver under the /api/ prefix; /api/public/otel/v1/traces is where Langfuse SDKs send OTLP with Basic auth.
@@ -198,7 +200,6 @@ export async function handle(request,baseEnv){
  if(path.startsWith('/api/mcp/'))return await mcpBridgeApi(request,env,{runView});
  // Stripe events. With plan billing configured they move plans (src/plan-billing.mjs); otherwise the older sandbox capture answers.
  if(request.method==='POST'&&path==='/api/billing/webhook')return planBillingAvailable(env)&&env.planBilling.webhookSecret?await planWebhook(request,env):await billingWebhook(request,env);
- if(request.method==='GET'&&path==='/api/auth/providers')return json(await providerFlags(request,env));
  if(request.method==='GET'&&path==='/api/auth/login')return await login(request,env);
  if(request.method==='GET'&&path==='/api/auth/google')return await googleLogin(request,env);
  if(request.method==='GET'&&path==='/api/auth/chatgpt')return await chatgptLogin(request,env);

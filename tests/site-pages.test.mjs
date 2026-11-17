@@ -306,3 +306,19 @@ test('all public generator outputs match checked-in files', () => {
   const result = spawnSync(process.execPath, ['scripts/site-pages.mjs', '--check'], {cwd: new URL('..', import.meta.url), encoding: 'utf8'});
   assert.equal(result.status, 0, result.stdout + result.stderr);
 });
+
+
+test('default favicon is a published multi-size ICO and declared icon targets resolve', () => {
+  const icon = readFileSync(pageUrl('favicon.ico'));
+  assert.deepEqual([...icon.subarray(0, 4)], [0, 0, 1, 0]);
+  assert.equal(icon.readUInt16LE(4), 3);
+  assert.deepEqual([...readFileSync(pageUrl('apple-touch-icon.png')).subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+  for (const path of ['robots.txt', 'sitemap.xml']) assert.ok(read(path).length > 0);
+  assert.deepEqual([0, 1, 2].map(i => [icon[6 + i * 16], icon[7 + i * 16]]), [[16, 16], [32, 32], [48, 48]]);
+  for (const page of [...PAGES.map(page => page.file), 'app/index.html']) {
+    for (const match of read(page).matchAll(/<link\b[^>]*rel="(?:icon|apple-touch-icon)"[^>]*href="([^"]+)"/g)) assert.ok(resolves(match[1]), page + ' icon target exists');
+  }
+  const deploy = readFileSync(new URL('../.github/workflows/deploy.yml', import.meta.url), 'utf8');
+  assert.ok(deploy.includes('aws s3 cp public/'));
+  assert.ok(deploy.includes('aws s3 cp public/favicon.ico "s3://${STATIC_BUCKET}/favicon.ico" --content-type "image/x-icon"'));
+});

@@ -19,6 +19,7 @@
   "tests/braintrust-handoff-browser.test.mjs",
   "tests/langsmith-handoff-browser.test.mjs",
   "tests/startup-browser.test.mjs",
+  "tests/email-link-browser.test.mjs",
   "tests/workspace-export-browser.test.mjs",
   "tests/account-export-browser.test.mjs",
   "tests/ui.test.mjs",

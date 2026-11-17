@@ -106,7 +106,7 @@ test('static files are revalidated on every request and the dashboard recovers f
   const deploy = readFileSync(repo + '.github/workflows/deploy.yml', 'utf8');
   // Publish and the smoke-failure restore both set the header; nothing reaches the static bucket without it.
   const writes = deploy.split('\n').filter(line => /aws s3 (sync|cp) [^|]*"s3:\/\/\$\{STATIC_BUCKET\}\//.test(line) && !/aws s3 sync "s3:/.test(line));
-  assert.equal(writes.length, 4);
+  assert.equal(writes.length, 5); // Includes the favicon upload with an explicit content type.
   for (const line of writes) assert.match(line, /--cache-control "no-cache"/, line.trim());
   // Publish force-writes every object: a sync would skip a file it considers unchanged and leave its old metadata.
   const publish = deploy.slice(deploy.indexOf('- name: Publish static files after the stack update'), deploy.indexOf('- name: Smoke check'));

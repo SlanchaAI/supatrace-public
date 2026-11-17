@@ -62,16 +62,140 @@ test('email links store only a hash, normalize addresses, and send the same sing
   assert.equal(await accountCount(w), 0);
 });
 
-test('scanner GET validates shape only, never reads or writes the store, and has safe headers', async () => {
-  const w = world(), token = await issue(w); w.calls.length = 0;
-  for (const value of [token, 'Z'.repeat(43)]) {
-    const response = await call(w, sendPath + '?token=' + value);
-    assert.equal(response.status, 302); assert.equal(response.headers.get('location'), w.env.APP_ORIGIN + '/?link=' + value);
-    assert.equal(response.headers.get('referrer-policy'), 'no-referrer'); assert.equal(response.headers.get('cache-control'), 'no-store');
-    assert.deepEqual(response.headers.getSetCookie(), []);
-  }
-  assert.deepEqual(w.calls, []); assert.equal(await accountCount(w), 0);
+test('scanner GET peeks without consuming and redirects only valid links to the app with safe headers', async () => {
+  const w = world(), token = await issue(w);
+  const open = () => call(w, sendPath + '?token=' + token);
+  const response = await open();
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.get('location'), w.env.APP_ORIGIN + '/app/?link=' + token);
+  assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.deepEqual(response.headers.getSetCookie(), []);
   assert.ok(await w.store.peekAuthChallenge('LINK', digest(token)));
+  assert.equal(await accountCount(w), 0);
+  assert.equal((await confirm(w, token)).status, 200);
+  assert.equal((await open()).headers.get('location'), w.env.APP_ORIGIN + '/app/?auth_error=link_invalid');
+});
+
+test('unknown, expired, used, missing and malformed links have identical clean redirects', async () => {
+  const w = world(), expired = await issue(w);
+  w.advance(900); w.advanceRates(60);
+  const used = await issue(w); assert.equal((await confirm(w, used)).status, 200);
+  const outcomes = [];
+  for (const token of [expired, used, 'Z'.repeat(43), '', 'short', '/'.repeat(43), 'a'.repeat(44), 'a'.repeat(43) + '\n', null]) {
+    const response = await call(w, sendPath + (token === null ? '' : '?token=' + encodeURIComponent(token)));
+    outcomes.push({status: response.status, headers: [...response.headers], body: await response.text()});
+    assert.equal(response.status, 302);
+    assert.equal(response.headers.get('location'), w.env.APP_ORIGIN + '/app/?auth_error=link_invalid');
+    assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+  }
+  for (const outcome of outcomes) assert.deepEqual(outcome, outcomes[0]);
+});
+
+test('duplicate normalized requests suppress mail with identical responses for new and existing accounts', async () => {
+  const outcomes = [];
+  for (const existing of [false, true]) {
+    const w = world(); if (existing) await w.store.createVerifiedEmailAccount(address, hashPassword(password));
+    const first = await post(w, sendPath, {email: address});
+    const token = rawToken(w.mailbox[0]);
+    w.advanceRates(1);
+    const repeated = await Promise.all(Array.from({length: 3}, () => post(w, sendPath, {email: ' ADA@Example.COM '})));
+    for (const response of [first, ...repeated]) {
+      assert.equal(response.status, 200); assert.deepEqual(await response.json(), sent);
+    }
+    assert.equal(w.mailbox.length, 1);
+    assert.ok(await w.store.peekAuthChallenge('LINK', digest(token)));
+    await issue(w, 'other@example.com'); assert.equal(w.mailbox.length, 2);
+    // Advance the rate store clock into the next minute; older links remain valid.
+    w.advanceRates(60);
+    const newer = await issue(w); assert.equal(w.mailbox.length, 3); assert.notEqual(newer, token);
+    assert.equal((await confirm(w, token)).status, 200);
+    assert.equal((await confirm(w, newer)).status, 200);
+    outcomes.push(w.mailbox.length);
+  }
+  assert.deepEqual(outcomes, [3, 3]);
+});
+
+test('resend cooldown spans calendar-minute boundaries with the production limiter', async () => {
+  let now = 1800000059;
+  const w = world({now: () => now});
+  w.store.consumeRate = DynamoMetadataStore.prototype.consumeRate.bind(w.store);
+  const older = await issue(w);
+  now++;
+  await post(w, sendPath, {email: address}); assert.equal(w.mailbox.length, 1);
+  now += 58;
+  await post(w, sendPath, {email: address}); assert.equal(w.mailbox.length, 1);
+  now++;
+  const newer = await issue(w); assert.equal(w.mailbox.length, 2);
+  assert.ok(await w.store.peekAuthChallenge('LINK', digest(older)));
+  assert.ok(await w.store.peekAuthChallenge('LINK', digest(newer)));
+});
+
+for (const failure of ['transport', 'budget']) test(`failed ${failure} reservation permits a truthful immediate retry with the production limiter`, async () => {
+  const w = world({now: () => 1800000000});
+  const consume = DynamoMetadataStore.prototype.consumeRate.bind(w.store);
+  let failBudget = failure === 'budget';
+  w.store.consumeRate = input => {
+    if (input.scope === 'linknet' && failBudget) { failBudget = false; return {allowed: false, retry_after: 60}; }
+    return consume(input);
+  };
+  if (failure === 'transport') w.env.sendEmail = async () => { throw Error('synthetic transport failure'); };
+  await invalid(await post(w, sendPath, {email: address}), failure === 'transport' ? 503 : 429, failure === 'transport' ? 'email_unavailable' : 'rate_limit');
+  assert.equal(w.mailbox.length, 0);
+  w.env.sendEmail = async mail => { w.mailbox.push(mail); };
+  const token = await issue(w); assert.equal(w.mailbox.length, 1);
+  assert.ok(await w.store.peekAuthChallenge('LINK', digest(token)));
+});
+
+test('a cooldown hash-slot collision returns a truthful rate limit instead of a delivery claim', async () => {
+  const w = world({now: () => 1800000000});
+  w.store.consumeRate = DynamoMetadataStore.prototype.consumeRate.bind(w.store);
+  const slots = new Map(); let pair;
+  for (let i = 0; !pair; i++) {
+    const email = `collision${i}@example.com`;
+    const bucket = digest(JSON.stringify(['linkresend', digest(email), 60, 'cooldown']));
+    const slot = Number(BigInt('0x' + bucket) % BigInt(w.store.limits.rateSlots));
+    if (slots.has(slot)) pair = [slots.get(slot), email];
+    else slots.set(slot, email);
+  }
+  await issue(w, pair[0]);
+  const response = await post(w, sendPath, {email: pair[1]});
+  await invalid(response, 429, 'rate_limit');
+  assert.equal(response.headers.get('retry-after'), '60');
+  assert.equal(w.mailbox.length, 1);
+  assert.equal(w.mailbox[0].to, pair[0]);
+});
+
+for (const fails of [false, true]) test(`concurrent duplicate waits for accepted mail when the original ${fails ? 'fails' : 'succeeds'}`, async () => {
+  const w = world({now: () => 1800000000});
+  const consume = DynamoMetadataStore.prototype.consumeRate.bind(w.store);
+  let observePending, enter, finish;
+  const pending = new Promise(resolve => { observePending = resolve; });
+  const entered = new Promise(resolve => { enter = resolve; });
+  const completed = new Promise(resolve => { finish = resolve; });
+  w.store.consumeRate = async input => {
+    const rate = await consume(input);
+    if (rate.pending) observePending();
+    return rate;
+  };
+  let sends = 0;
+  w.env.sendEmail = async mail => {
+    if (++sends === 1) { enter(); await completed; if (fails) throw Error('synthetic transport failure'); }
+    w.mailbox.push(mail);
+  };
+  const first = post(w, sendPath, {email: address});
+  await entered;
+  let duplicateReturned = false;
+  const second = post(w, sendPath, {email: address}).then(response => { duplicateReturned = true; return response; });
+  await Promise.race([pending, second]);
+  try { assert.equal(duplicateReturned, false); } finally { finish(); }
+  const original = await first, duplicate = await second;
+  if (fails) await invalid(original, 503, 'email_unavailable');
+  else { assert.equal(original.status, 200); assert.deepEqual(await original.json(), sent); }
+  assert.equal(duplicate.status, 200); assert.deepEqual(await duplicate.json(), sent);
+  assert.equal(w.mailbox.length, 1);
+  assert.ok(await w.store.peekAuthChallenge('LINK', digest(rawToken(w.mailbox[0]))));
 });
 
 test('confirmation creates a verified passwordless account, signs it in, and cannot be reused', async () => {
@@ -95,7 +219,7 @@ test('links expire at exactly 15 minutes, not a second sooner', async () => {
 test('malformed tokens fail on both routes without any session or account', async () => {
   for (const value of ['', 'short', 'a'.repeat(44), 'a'.repeat(42), '/'.repeat(43), 'a'.repeat(43) + '\n', null, 123, ['a'.repeat(43)]]) {
     const w = world(); await invalid(await confirm(w, value));
-    if (!Array.isArray(value)) await invalid(await call(w, sendPath + '?token=' + encodeURIComponent(value ?? '')));
+    if (!Array.isArray(value)) assert.equal((await call(w, sendPath + '?token=' + encodeURIComponent(value ?? ''))).headers.get('location'), w.env.APP_ORIGIN + '/app/?auth_error=link_invalid');
     assert.equal(await accountCount(w), 0); assert.equal(sessions(w).length, 0);
   }
 });
@@ -127,6 +251,14 @@ for (const kind of ['email', 'ip', 'network', 'domain', 'global']) test('email l
     const email = kind === 'email' ? address : kind === 'domain' ? `u${i}@shared.test` : `u${i}@d${i}.test`;
     // Hourly network cap must be independent of its 5-minute cap.
     if (kind === 'network' && i > 0 && i % 5 === 0) w.advanceRates(300);
+    if (kind === 'email') {
+      if (i < cap) await w.store.consumeRate({scope: 'link', identity: 'email:' + digest(email), limit: 5, windowSeconds: 300});
+      else {
+        const response = await post(w, sendPath, {email});
+        assert.equal(response.status, 429); assert.equal(w.mailbox.length, 0); return;
+      }
+      continue;
+    }
     const response = await post(w, sendPath, {email});
     if (i < cap) assert.equal(response.status, 200, String(i));
     else {
@@ -168,7 +300,8 @@ test('concurrent confirms of one token consume it once', async () => {
 });
 
 test('concurrent distinct links create exactly one email account and both resolve to its tenant', async () => {
-  const w = world(), tokens = [await issue(w), await issue(w)];
+  const w = world(), older = await issue(w); w.advanceRates(60);
+  const tokens = [older, await issue(w)];
   const responses = await Promise.all(tokens.map(token => confirm(w, token)));
   assert.deepEqual(responses.map(r => r.status), [200, 200]);
   const values = await Promise.all(responses.map(r => r.json())); assert.deepEqual(values.map(v => v.new_account).sort(), [false, true]);
@@ -189,6 +322,7 @@ test('passwordless account fails closed for passwords and signup; reset lets the
   const signedIn = await post(w, '/api/auth/email/sign-in', {email: address, password});
   assert.equal(signedIn.status, 204, await signedIn.text());
   assert.equal((await w.store.getTenant(tenantId(address))).session_epoch, 1);
+  w.advanceRates(60);
   assert.deepEqual(await (await confirm(w, await issue(w))).json(), {ok: true, new_account: false});
 });
 

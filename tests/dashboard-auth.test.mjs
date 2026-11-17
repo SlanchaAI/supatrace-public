@@ -97,6 +97,30 @@ test('providers stay off until each one is configured', async () => {
   assert.equal(new URL(github.headers.get('location')).origin, 'https://github.com');
 });
 
+test('public provider discovery ignores request budgets and malformed or stale MFA cookies', async () => {
+  const {env, store} = world({MFA_ENABLED: true});
+  let budgets = 0, peeks = 0;
+  store.consumeRate = async () => { budgets++; return {allowed: false, retry_after: 60}; };
+  const peek = store.peekAuthChallenge.bind(store);
+  store.peekAuthChallenge = async (...args) => { peeks++; return peek(...args); };
+  const cookies = ['', '__Host-supatrace-mfa=%ZZ', '__Host-supatrace-mfa=' + 'A'.repeat(43) + '; __Host-supatrace-mfa=' + 'B'.repeat(43), '__Host-supatrace-mfa=' + 'Z'.repeat(43)];
+  for (const cookieHeader of cookies) {
+    const response = await call(env, '/api/auth/providers', {cookieHeader});
+    assert.equal(response.status, 200); assert.equal((await response.json()).mfa, false);
+  }
+  for (let i = 0; i < 30; i++) assert.equal((await call(env, '/api/auth/providers')).status, 200);
+  assert.equal(budgets, 0); assert.equal(peeks, 1);
+});
+
+test('provider discovery keeps configured methods when optional store reads fail', async () => {
+  const {env, store} = world({MFA_ENABLED: true, EMAIL_FROM: 'member@example.com', sendEmail: async () => {}});
+  store._get = async () => { throw Error('synthetic store outage'); };
+  const response = await call(env, '/api/auth/providers', {cookieHeader: '__Host-supatrace-mfa=' + 'Z'.repeat(43)});
+  assert.equal(response.status, 200);
+  const flags = await response.json();
+  assert.equal(flags.email, true); assert.equal(flags.github, true); assert.equal(flags.mfa, false); assert.equal(flags.sso, false);
+});
+
 test('a confirmation link does not sign anyone in, and only the newest password is set', async () => {
   const {env, store, mailbox} = dashboardEnv();
   const signup = await post(env, '/api/auth/email/sign-up', {email, password});

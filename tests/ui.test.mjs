@@ -425,7 +425,7 @@ for (const size of Object.keys(sizes)) {
       await assertSignInPanelFits(view.page, 'email link rate limit');
       await view.page.getByRole('button', {name: 'Resend sign-in link', exact: true}).click();
       await view.page.getByRole('heading', {name: 'Check your email'}).waitFor();
-      await view.page.getByText('If that address can receive mail, we sent a sign-in link. It expires in 15 minutes and works once.', {exact: true}).waitFor();
+      await view.page.getByText('We sent a sign-in link to retry@example.com.', {exact: true}).waitFor();
       assert.equal(attempts, 2);
       assert.equal(mailbox.length, 1);
       await view.clean();
@@ -448,9 +448,11 @@ for (const size of Object.keys(sizes)) {
       await view.page.fill('#link-email', 'first@example.com');
       await view.page.getByRole('button', {name: 'Email me a sign-in link'}).click();
       await view.page.getByRole('heading', {name: 'Check your email'}).waitFor();
-      await view.page.getByText('If that address can receive mail, we sent a sign-in link. It expires in 15 minutes and works once.', {exact: true}).waitFor();
+      await view.page.getByText('We sent a sign-in link to first@example.com.', {exact: true}).waitFor();
       assert.equal(mailbox.length, 1);
       await assertSignInPanelFits(view.page, 'email link sent');
+      await view.page.clock.install();
+      await view.page.clock.fastForward(60001);
       let retries = 0;
       await view.page.route('**/api/auth/email/link', async route => {
         if (++retries === 1) return route.fulfill({status: 429, headers: {'content-type': 'application/json', 'retry-after': '2'}, body: '{"error":"rate_limit"}'});
@@ -460,6 +462,7 @@ for (const size of Object.keys(sizes)) {
       await view.page.getByRole('button', {name: /Resend in/}).waitFor();
       assert.equal(await view.page.getByRole('button', {name: /Resend in/}).isDisabled(), true);
       assert.equal(retries, 1);
+      await view.page.clock.fastForward(2001);
       await view.page.getByRole('button', {name: 'Resend sign-in link', exact: true}).waitFor();
       await Promise.all([view.page.waitForResponse(response => response.url().endsWith('/api/auth/email/link') && response.status() === 200), view.page.getByRole('button', {name: 'Resend sign-in link', exact: true}).click()]);
       assert.equal(mailbox.length, 2);
@@ -475,7 +478,8 @@ for (const size of Object.keys(sizes)) {
       await view.page.goto(live.origin + new URL(redirect.headers().location).pathname + new URL(redirect.headers().location).search, {waitUntil: 'networkidle'});
       await view.page.getByRole('heading', {name: 'Continue to SupaTrace'}).waitFor();
       assert.equal(new URL(view.page.url()).searchParams.has('link'), false);
-      assert.equal(await view.page.evaluate(() => window.__linkAtProviders), '');
+      assert.equal(await view.page.evaluate(() => window.__linkAtProviders), undefined);
+      assert.equal(view.requests.filter(request => request.url().includes('/api/auth/providers') && request.url().includes(token)).length, 0);
       assert.equal(await live.store.getEmailAccount('new@example.com'), null);
       assert.equal(view.requests.filter(request => new URL(request.url()).pathname.endsWith('/link/confirm')).length, 0);
       await assertSignInPanelFits(view.page, 'email link confirmation');

@@ -6,6 +6,8 @@ For email + password, choose Sign up, enter your email and a password, then open
 
 The legal line is the two links `/terms.html` and `/privacy.html`. It does not ask anyone to agree to email updates. Supatrace collects no email addresses on that line. The sign-in and sign-up line says "By continuing you agree to the Terms of Service and Privacy Policy" with links to the published documents, effective November 16, 2026. The footer also links Acceptable Use and Subprocessors.
 
+Requesting a link twice within a minute sends one email.
+
 ## Workspace startup recovery
 
 The session and project GET sequence has a shared 15-second deadline, including response-body parsing. A stalled read, unavailable service or unverified project leaves a visible Retry sign-in check control. Cancel and page interruption cancel the pending check; late responses cannot reveal the workspace or replace a newer attempt. Retry is deliberate and only repeats the identity reads. A 429 response keeps Retry disabled for the server's numeric Retry-After interval (60 seconds when absent); the end of that interval does not send a request.

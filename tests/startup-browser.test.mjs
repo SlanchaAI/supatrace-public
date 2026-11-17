@@ -71,12 +71,12 @@ test('normal startup and signed-out provider discovery preserve their existing p
  }finally{await f.close();}
 });
 test('stalled provider discovery is bounded and retains the existing sign-in fallback',{timeout:30000},async()=>{
- const f=await fixture();let route;await f.context.clearCookies();await f.page.clock.install();await f.page.route('**/api/auth/providers',r=>{route=r;});
+ const f=await fixture();const routes=[];await f.context.clearCookies();await f.page.clock.install();await f.page.route('**/api/auth/providers',r=>{routes.push(r);});
  try{
-  await f.page.goto(f.live.origin+'/app/',{waitUntil:'domcontentloaded'});await until(()=>route);
-  // Provider discovery is the reachability probe's answer, so the fallback appears at the probe deadline.
-  await f.page.clock.fastForward(6001);await f.page.getByRole('link',{name:'Continue with GitHub',exact:true}).waitFor();assert.equal(await f.page.locator('#startup-actions').isVisible(),false);assert.deepEqual(f.posts,[]);assert.deepEqual(f.errors,[]);
- }finally{try{await route?.abort();}catch{}await f.close();}
+  await f.page.goto(f.live.origin+'/app/',{waitUntil:'domcontentloaded'});await until(()=>routes.length===1);
+  // The probe deadline is followed by one bounded discovery retry.
+  await f.page.clock.fastForward(6001);await f.page.clock.fastForward(201);await until(()=>routes.length===2);await f.page.clock.fastForward(6001);await f.page.getByRole('link',{name:'Continue with GitHub',exact:true}).waitFor();assert.equal(await f.page.locator('#startup-actions').isVisible(),false);assert.deepEqual(f.posts,[]);assert.deepEqual(f.errors,[]);
+ }finally{for(const route of routes){try{await route.abort();}catch{}}await f.close();}
 });
 // Version skew: the browser pairs this release's script with a cached page from an older release.
 const stalePage=async()=>(await (await import('node:fs/promises')).readFile(new URL('../public/app/index.html',import.meta.url),'utf8')).replace('id="api-key-form"','id="api-key-form-from-an-older-release"');

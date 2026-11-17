@@ -1,14 +1,17 @@
 import {rememberSetupCode,setupReturnUrl} from './app/setup-code.js';
+import {startupRead} from './app/startup-data.js';
 // API requests from this page are retried when the service is momentarily busy (see app/request-queue.js).
 import './app/request-queue.js';
 // Remove the bearer link before provider discovery or any user interaction.
 const linkLocation = globalThis.location ? new URL(location.href) : null;
-const incomingLink = linkLocation?.searchParams.get('link') ?? null;
+let incomingLink = linkLocation?.searchParams.get('link') ?? null;
 if (linkLocation?.searchParams.has('link')) {
   linkLocation.searchParams.delete('link');
   history.replaceState(history.state, '', linkLocation.pathname + linkLocation.search + linkLocation.hash);
 }
+const linkInvalidMessage = 'This sign-in link was already used or has expired. Request a new one below.';
 const messages = {
+  link_invalid: linkInvalidMessage,
   invalid_credentials: 'Invalid email or password.',
   session_unavailable: 'Sign-in is busy. Please try again shortly.',
   session_changed: 'Your account changed during sign-in. Please sign in again.',
@@ -19,6 +22,7 @@ const messages = {
   invalid_code: 'That code is not valid.',
   sso_domain_unknown: 'No SSO provider assigned for this domain.',
   sso_request_busy: 'Single sign-on is busy. Please try again.',
+  email_sign_in_unavailable: 'Email sign-in is not available right now.',
   email_unavailable: 'Email could not be sent. Try again later.',
   rate_limit: 'Too many attempts. Wait and try again.',
   mfa_locked: 'Two-factor authentication is locked. Wait for the lock to end, then try the current code or a recovery code.',
@@ -90,10 +94,22 @@ function legal() {
 }
 function choice(id, href, text) { return el('a', {class: 'button choice' + (id.endsWith('github') ? ' provider-primary' : ' secondary'), id, href}, text); }
 
-export async function loadProviders() {
-  const response = await fetch('/api/auth/providers', {credentials: 'same-origin', cache: 'no-store'});
-  if (!response.ok) return {github: true};
-  return response.json();
+export function hasPendingLink() { return incomingLink !== null; }
+export async function loadProviders({attempts = 2} = {}) {
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    if (attempt || attempts === 1) await new Promise(resolve => setTimeout(resolve, 200));
+    try {
+      const providers = await startupRead(async signal => {
+        const response = await fetch('/api/auth/providers', {credentials: 'same-origin', cache: 'no-store', signal});
+        if (!response.ok) throw Error('providers_unavailable');
+        const value = await response.json();
+        if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error('providers_unavailable');
+        return value;
+      }, {timeoutMs: 6000});
+      return providers;
+    } catch { /* Retry discovery once; all sign-in endpoints enforce configuration themselves. */ }
+  }
+  return {github: true};
 }
 
 function openApp(){
@@ -103,6 +119,8 @@ function openApp(){
 }
 export function mountSignIn(root, providers) {
   rememberSetupCode();
+  // A link proves email sign-in intent even when provider discovery is unavailable.
+  if (hasPendingLink() || new URLSearchParams(location.search).get('auth_error') === 'link_invalid') providers = {...providers, email: true};
   root.classList.add('auth');
   const status = el('p', {id: 'auth-status', role: 'status'});
   const views = {};
@@ -113,28 +131,32 @@ export function mountSignIn(root, providers) {
     openApp();
   }
 
-  let sentEmail = '', resendAt = 0;
+  let sentEmail = '', resendAt = 0, sendingLink = false;
   function retryDeadline(value) {
     const seconds = Number(value);
     return Number.isFinite(seconds) && seconds > 0 ? Date.now() + seconds * 1000 : Date.parse(value) || Date.now() + 60000;
   }
   function paintResend() {
     const seconds = Math.max(0, Math.ceil((resendAt - Date.now()) / 1000));
-    resend.disabled = seconds > 0;
+    resend.disabled = sendingLink || seconds > 0;
     resend.textContent = seconds ? `Resend in ${seconds}s` : 'Resend sign-in link';
     if (seconds) setTimeout(paintResend, Math.min(1000, resendAt - Date.now()));
   }
   async function sendLink(email, submit) {
-    if (Date.now() < resendAt) { show('linkSent'); paintResend(); return; }
+    if (sendingLink) return;
+    if (email.trim().toLowerCase() === sentEmail.trim().toLowerCase() && Date.now() < resendAt) { show('linkSent'); paintResend(); return; }
+    sendingLink = true;
     submit.disabled = true;
+    resendAt = 0;
     sentEmail = email;
     try {
       await post('/api/auth/email/link', {email});
+      resendAt = Date.now() + 60000;
       showLinkResult(true);
     } catch (error) {
       if (error.status === 429) { resendAt = retryDeadline(error.retryAfter); showLinkResult(false); }
       fail(error);
-    } finally { submit.disabled = false; paintResend(); }
+    } finally { sendingLink = false; submit.disabled = false; paintResend(); }
   }
   function linkForm(id) {
     const email = el('input', {id, type: 'email', autocomplete: 'email', required: true, placeholder: 'you@example.com'});
@@ -148,16 +170,33 @@ export function mountSignIn(root, providers) {
   const linkSentMessage = el('p', {class: 'sub'});
   function showLinkResult(delivered) {
     linkSentHeading.textContent = delivered ? 'Check your email' : 'Try again later';
-    linkSentMessage.textContent = delivered ? 'If that address can receive mail, we sent a sign-in link. It expires in 15 minutes and works once.' : messages.rate_limit;
+    linkSentMessage.textContent = delivered ? `We sent a sign-in link to ${sentEmail}.` : messages.rate_limit;
     show('linkSent');
   }
   const linkSent = el('div', {'data-view': 'linkSent', hidden: true},
-    linkSentHeading, linkSentMessage,
+    linkSentHeading, linkSentMessage, el('p', {class: 'sub'}, 'It expires in 15 minutes and works once.'),
     button('quiet', 'Use a different email', () => show('main')), resend);
+  function focusSignIn(target) {
+    requestAnimationFrame(() => { root.scrollIntoView({block: 'nearest'}); target?.focus({preventScroll: true}); });
+  }
+  function invalidLink() {
+    incomingLink = null;
+    show('main');
+    status.textContent = linkInvalidMessage;
+    focusSignIn(root.querySelector('#link-email'));
+  }
   const linkContinue = button('primary', 'Continue to SupaTrace', async () => {
+    if (linkContinue.disabled) return;
     linkContinue.disabled = true;
-    try { await finish(await post('/api/auth/email/link/confirm', {token: incomingLink})); }
-    catch (error) { fail(error); }
+    try {
+      const result = await post('/api/auth/email/link/confirm', {token: incomingLink});
+      incomingLink = null;
+      await finish(result);
+    }
+    catch (error) {
+      if (['invalid_code', 'expired', 'used'].includes(error.message)) invalidLink();
+      else status.textContent = error.status ? explain(error) : 'Could not reach SupaTrace. Try again.';
+    }
     finally { linkContinue.disabled = false; }
   });
   const linkConfirm = el('div', {'data-view': 'linkConfirm', hidden: true},
@@ -339,11 +378,17 @@ export function mountSignIn(root, providers) {
   }
   root.replaceChildren(status, main, sso, signup, forgot, codeView, reset, check, confirm, linkSent, linkConfirm, mfa, recovery);
   const confirming = !!providers.email && /^[A-Za-z0-9_-]{43}$/.test(pendingToken) && pendingEmail.length > 0 && pendingEmail !== 'confirmed';
-  const linking = !!providers.email && incomingLink !== null;
+  const linking = hasPendingLink();
   show(linking ? 'linkConfirm' : providers.mfa ? 'mfa' : confirming ? 'confirm' : requestedView === 'signup' ? 'signup' : 'main');
+  if (linking) focusSignIn(linkContinue);
   if (confirming) { root.scrollIntoView({block: 'start'}); confirmPassword.input.focus({preventScroll: true}); }
   if (!confirming && pendingEmail === 'confirmed') status.textContent = 'Email confirmed. Sign in with your password.';
   const authError=pending.get('auth_error');
+  if (authError === 'link_invalid') {
+    invalidLink();
+    const clean = new URL(location.href); clean.searchParams.delete('auth_error');
+    history.replaceState(history.state, '', clean.pathname + clean.search + clean.hash);
+  }
   if (['provider_unavailable','restart_required','not_verified','unavailable'].includes(authError)) {
     const provider=pending.get('provider')==='google'?'Google':'GitHub';
     status.textContent=authError==='restart_required'
@@ -356,5 +401,6 @@ export function mountSignIn(root, providers) {
 
 if (document.body?.dataset?.page === 'landing') {
   const root = document.getElementById('signin');
-  loadProviders().then(providers => mountSignIn(root, providers)).catch(() => mountSignIn(root, {github: true}));
+  if (hasPendingLink() || new URLSearchParams(location.search).get('auth_error') === 'link_invalid') mountSignIn(root, {github: true});
+  else loadProviders().then(providers => mountSignIn(root, providers));
 }

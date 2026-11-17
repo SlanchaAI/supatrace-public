@@ -106,10 +106,12 @@ export function ssoConfigured(env){
 }
 export function mfaEnabled(env){return env.MFA_ENABLED===true||env.MFA_ENABLED==='true';}
 export async function providerFlags(request,env){
- const flags={github:!!(env.GITHUB_CLIENT_ID&&env.GITHUB_CLIENT_SECRET),chatgpt:chatgptConfigured(env),sso:ssoConfigured(env)||await orgSsoAvailable(env.store),email:emailConfigured(env),google:!!(env.GOOGLE_CLIENT_ID&&env.GOOGLE_CLIENT_SECRET),mfa:false,mfa_enabled:mfaEnabled(env)};
+ const flags={github:!!(env.GITHUB_CLIENT_ID&&env.GITHUB_CLIENT_SECRET),chatgpt:chatgptConfigured(env),sso:ssoConfigured(env),email:emailConfigured(env),google:!!(env.GOOGLE_CLIENT_ID&&env.GOOGLE_CLIENT_SECRET),mfa:false,mfa_enabled:mfaEnabled(env)};
+ // Optional discovery reads must not hide configured sign-in methods during a store outage.
+ if(!flags.sso){try{flags.sso=await orgSsoAvailable(env.store);}catch{}}
  const pending=cookie(request,'__Host-supatrace-mfa');
  if(flags.mfa_enabled&&pending&&/^[A-Za-z0-9_-]{43}$/.test(pending)&&typeof env.store.peekAuthChallenge==='function'){
-  flags.mfa=!!await env.store.peekAuthChallenge('MFA',digest(pending));
+  try{flags.mfa=!!await env.store.peekAuthChallenge('MFA',digest(pending));}catch{}
  }
  return flags;
 }
@@ -287,6 +289,19 @@ export async function emailLink(request,env){
  sameOrigin(request,env);
  const body=JSON.parse(await boundedText(request,4096));
  const email=normalizeEmail(body?.email);
+ // Apply to every well-formed address, before any account-independent send budgets.
+ const reservation={scope:'linkresend',identity:digest(email),limit:1,windowSeconds:60,cooldown:true};
+ let resend;
+ for(let attempt=0;attempt<=50;attempt++){
+  resend=await env.store.consumeRate(reservation);
+  if(resend.allowed)break;
+  if(resend.duplicate)return json({ok:true,message:'Check your email'});
+  if(!resend.pending){const error=new HttpError(429,'rate_limit');error.retryAfter=resend.retry_after;throw error;}
+  // A concurrent request must observe accepted mail before claiming delivery.
+  if(attempt===50)throw new HttpError(503,'email_unavailable');
+  await new Promise(resolve=>setTimeout(resolve,100));
+ }
+ try{
  await limited(env,'link',5,email);
  await charge(env,'linknet',networkIdentity(env.sourceIp),20,3600);
  await charge(env,'linkdomain',email.split('@')[1],30,3600);
@@ -297,13 +312,17 @@ export async function emailLink(request,env){
  try{
   await send(env,{to:email,subject:'Your SupaTrace sign-in link',text:`Open this link to create your email account or sign in to it. It works once and expires in 15 minutes.\n${env.APP_ORIGIN}/api/auth/email/link?token=${token}\nIf you did not ask for this, ignore this email\n`});
  }catch(error){await env.store.consumeAuthChallenge('LINK',id);throw error;}
+ }catch(error){await resend.release?.();throw error;}
+ // Keep the reservation if recording delivery fails: the mail was already accepted.
+ await resend.complete?.();
  return json({ok:true,message:'Check your email'});
 }
 export async function emailLinkOpen(request,env){
  if(!emailConfigured(env))throw new HttpError(404,'email_sign_in_unavailable');
  const token=new URL(request.url).searchParams.get('token');
- if(typeof token!=='string'||token.length!==43||!/^[A-Za-z0-9_-]{43}$/.test(token))throw new HttpError(400,'invalid_code');
- return new Response(null,{status:302,headers:securityHeaders({Location:new URL('/?link='+token,env.APP_ORIGIN).href})});
+ const valid=typeof token==='string'&&/^[A-Za-z0-9_-]{43}$/.test(token)&&await env.store.peekAuthChallenge('LINK',digest(token));
+ const target=valid?'/app/?link='+encodeURIComponent(token):'/app/?auth_error=link_invalid';
+ return new Response(null,{status:302,headers:securityHeaders({Location:new URL(target,env.APP_ORIGIN).href})});
 }
 export async function emailLinkConfirm(request,env){
  if(!emailConfigured(env))throw new HttpError(404,'email_sign_in_unavailable');

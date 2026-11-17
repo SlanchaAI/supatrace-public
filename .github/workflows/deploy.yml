@@ -157,6 +157,7 @@ jobs:
           # from one release must never be paired with a script from another. A recursive copy, not a sync:
           # sync skips a file it considers unchanged, and a skipped object would keep its old metadata.
           aws s3 cp public/ "s3://${STATIC_BUCKET}/" --recursive --exclude "_headers" --exclude "*/_headers" --sse AES256 --cache-control "no-cache" --only-show-errors
+          aws s3 cp public/favicon.ico "s3://${STATIC_BUCKET}/favicon.ico" --content-type "image/x-icon" --sse AES256 --cache-control "no-cache" --only-show-errors
           aws s3 cp agent/ "s3://${STATIC_BUCKET}/agent/" --recursive --exclude "*" --include "*.py" --sse AES256 --cache-control "no-cache" --only-show-errors
           aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths "/*" >/dev/null
       - name: Smoke check, then restore the previous artifact and static files if it fails

@@ -1249,17 +1249,31 @@ export class DynamoMetadataStore {
   }
 
   /** Conservative fixed-slot limiter. Cardinality cannot exceed rateSlots, even with attacker-chosen identities. */
-  async consumeRate({ scope, identity, limit = 60, windowSeconds = 60 }) {
+  async consumeRate({ scope, identity, limit = 60, windowSeconds = 60, cooldown = false }) {
     if (typeof scope !== 'string' || !/^[a-z][a-z0-9_-]{0,31}$/.test(scope) || typeof identity !== 'string' || !identity || identity.length > 512) fail(400, 'invalid_rate_scope');
     positive(limit, 100000); positive(windowSeconds, 86400);
-    const now = this.now(), window = Math.floor(now / windowSeconds), expiresAt = (window + 1) * windowSeconds;
-    const bucket = digest(JSON.stringify([scope, identity, windowSeconds, window]));
+    if (cooldown && limit !== 1) fail(400, 'invalid_rate_scope');
+    const now = this.now(), window = Math.floor(now / windowSeconds), expiresAt = cooldown ? now + windowSeconds : (window + 1) * windowSeconds;
+    const bucket = digest(JSON.stringify([scope, identity, windowSeconds, cooldown ? 'cooldown' : window]));
     const slot = Number(BigInt(`0x${bucket}`) % BigInt(this.limits.rateSlots));
     const Key = { pk: `RATE#${slot}`, sk: 'COUNTER' };
-    try { await this._send('PutCommand', { Item: { ...Key, bucket, hits: 1, expires_at: expiresAt, ttl: expiresAt },
+    const lease = cooldown ? random() : null;
+    try { await this._send('PutCommand', { Item: { ...Key, bucket, hits: 1, expires_at: expiresAt, ttl: expiresAt, ...(lease ? {lease} : {}) },
       ConditionExpression: 'attribute_not_exists(pk) OR expires_at <= :now', ExpressionAttributeValues: { ':now': now } });
-      return { allowed: true, hits: 1, retry_after: expiresAt - now };
+      return { allowed: true, hits: 1, retry_after: expiresAt - now, ...(lease ? {complete: async () => {
+        await this._send('UpdateCommand', {Key, UpdateExpression: 'SET #completed = :yes', ConditionExpression: '#lease = :lease',
+          ExpressionAttributeNames: {'#lease': 'lease', '#completed': 'completed'}, ExpressionAttributeValues: {':yes': true, ':lease': lease}});
+      }, release: async () => {
+        // A failed send may release only its own reservation, never a newer sender's.
+        try { await this._send('DeleteCommand', {Key, ConditionExpression: '#lease = :lease', ExpressionAttributeNames: {'#lease': 'lease'}, ExpressionAttributeValues: {':lease': lease}}); }
+        catch (error) { if (!conditional(error)) throw error; }
+      }} : {}) };
     } catch (error) { if (!conditional(error)) throw error; }
+    if (cooldown) {
+      const row = await this._get(Key);
+      const same = row?.bucket === bucket && row.expires_at > now;
+      return {allowed: false, duplicate: same && row.completed === true, pending: same && row.completed !== true, retry_after: windowSeconds};
+    }
     try {
       const response = await this._send('UpdateCommand', { Key, UpdateExpression: 'ADD hits :one',
         ConditionExpression: '#bucket = :bucket AND expires_at > :now AND hits < :limit', ExpressionAttributeNames: { '#bucket': 'bucket' },
