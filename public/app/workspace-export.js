@@ -69,7 +69,8 @@ export async function saveWorkspaceArchive({workspaceId,projectId,environmentIds
  }catch(error){
   active=false;if(committing)fail('export_file_unconfirmed');
   if(writable){try{await abort(writable);}catch{fail('export_file_unconfirmed');}}
-  if(signal?.aborted||error?.message==='export_file_cancelled')fail('export_file_cancelled');
+  if(signal?.aborted)fail('export_file_cancelled');
+  if(error?.message==='export_file_cancelled')throw error;
   if(['account_export_changed','account_export_incomplete','account_export_too_large','account_export_rate_limited','account_export_read_deadline','account_export_read_failed'].includes(error?.message))throw error;
   if(error?.message==='export_picker_unavailable')throw error;
   fail('export_file_unconfirmed');

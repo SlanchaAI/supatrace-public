@@ -53,7 +53,8 @@ export async function saveAccountArchive({projectId,environmentId='default',sign
   await write('],"completed_at":'+JSON.stringify(now())+',"run_count":'+runs.length+',"event_count":'+total+',"complete":true}');check(signal);
   onCommit();check(signal);committing=true;await fileStep(()=>writable.close(),{timeoutMs:fileTimeoutMs});return {runs:runs.length,events:total,consistency:'observed_stable_before_after_not_a_snapshot'};
  }catch(error){if(committing)fail('export_file_unconfirmed');if(writable){try{await abortFile(writable);}catch{fail('export_file_unconfirmed');}}
-  if(signal?.aborted||error?.message==='export_file_cancelled')fail('export_file_cancelled');
+  if(signal?.aborted)fail('export_file_cancelled');
+  if(error?.message==='export_file_cancelled')throw error;
   if(['account_export_changed','account_export_incomplete','account_export_too_large','account_export_rate_limited','account_export_read_deadline','account_export_read_failed'].includes(error?.message)||error?.message==='export_picker_unavailable')throw error;fail('export_file_unconfirmed');
  }
 }

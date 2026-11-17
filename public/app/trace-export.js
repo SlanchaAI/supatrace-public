@@ -85,9 +85,8 @@ export async function saveTraceFile({runId, projectId, environmentId='default', 
     if (writable) {
       try { await abortFile(writable); } catch { fail('export_file_unconfirmed'); }
     }
-    if (signal.aborted || error?.message === 'export_file_cancelled') {
-      fail('export_file_cancelled');
-    }
+    if (signal.aborted) fail('export_file_cancelled');
+    if (error?.message === 'export_file_cancelled') throw error;
     if (error?.message === 'export_picker_unavailable') throw error;
     fail('export_file_unconfirmed');
   } finally {

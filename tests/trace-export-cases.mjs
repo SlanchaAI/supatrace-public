@@ -94,7 +94,7 @@ test('trace close timeout is uncertain even after cancellation and late success 
 test('trace picker denial and pre-abort cannot open a stream or read events',async()=>{
   for(const denied of [false,true]){
     const f=fixture(),controller=new AbortController();if(!denied)controller.abort();
-    await assert.rejects(saveTraceFile({...f.options,signal:controller.signal,pick:()=>{f.state.picks++;throw Object.assign(Error('private picker denial'),{name:'AbortError'});}}),{message:'export_file_cancelled'});
+    await assert.rejects(saveTraceFile({...f.options,signal:controller.signal,pick:()=>{f.state.picks++;throw Object.assign(Error('private picker denial'),{name:'AbortError'});}}),{message:denied?'export_picker_unavailable':'export_file_cancelled'});
     assert.equal(f.state.picks,denied?1:0);assert.equal(f.state.reads,0);assert.equal(f.state.closes,0);
   }
 });

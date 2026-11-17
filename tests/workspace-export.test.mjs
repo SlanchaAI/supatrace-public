@@ -77,8 +77,8 @@ test('cancel and write failures abort; uncertain close is never called rolled ba
   })})}),/export_file_unconfirmed/);assert.equal(aborted,phase==='write'?1:0);
  }
 });
-test('picker denial is not a reason for fallback or discovery, and late selection is never opened',async()=>{
- const f=fixture();await assert.rejects(saveWorkspaceArchive({...f.options,pick:()=>{throw Object.assign(Error(),{name:'AbortError'});}}),/export_file_cancelled/);
+test('fast picker denial allows fallback without discovery, and late selection is never opened',async()=>{
+ const f=fixture();await assert.rejects(saveWorkspaceArchive({...f.options,pick:()=>{throw Object.assign(Error(),{name:'AbortError'});}}),/export_picker_unavailable/);
  assert.deepEqual(f.reads,[]);
  let release,opened=0;const controller=new AbortController(),g=fixture(),work=saveWorkspaceArchive({...g.options,signal:controller.signal,pick:()=>new Promise(resolve=>release=resolve)});
  controller.abort();await assert.rejects(work,/export_file_cancelled/);release({createWritable:async()=>{opened++;}});await new Promise(r=>setImmediate(r));assert.equal(opened,0);assert.deepEqual(g.reads,[]);

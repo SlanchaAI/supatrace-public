@@ -337,7 +337,7 @@ for (const size of Object.keys(sizes)) {
           const state={outcome,chunks:[],picked:0,closed:0,aborted:0,activation:false,options:null,writableOptions:null};window.__saveFixture=state;
           Object.defineProperty(window,'showSaveFilePicker',{configurable:true,value:async options=>{
             state.picked++;state.options=options;state.activation=navigator.userActivation.isActive;
-            if(outcome==='cancel')throw new DOMException('Synthetic picker cancellation','AbortError');
+            if(outcome==='cancel'){await new Promise(resolve=>setTimeout(resolve,800));throw new DOMException('Synthetic picker cancellation','AbortError');}
             return {createWritable:async options=>{state.writableOptions=options;return {
               write:async chunk=>{if(outcome==='write-failure')throw new Error('Synthetic disk failure');state.chunks.push(chunk);},
               close:async()=>{if(outcome==='close-failure')throw new Error('Synthetic close failure');state.closed++;},

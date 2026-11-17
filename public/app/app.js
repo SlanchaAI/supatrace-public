@@ -713,11 +713,11 @@ function closeDetail({restoreFocus=false}={}){
 $('events-more').onclick=loadNextEvents;
 $('events-cancel').onclick=()=>cancelDetailLoad();
 $('close-detail').onclick=()=>closeDetail({restoreFocus:true});
-$('export').onclick=async()=>{
+$('export').onclick=async function exportTrace({downloadInstead=false}={}){
  if(!selected||exportJob||redactionJob)return;
  closeRedaction();const id=selected,project=activeProject,environment=activeEnvironment,workspace=activeWorkspace,job=new AbortController();exportJob=job;syncExportControls();$('cancel-export').hidden=false;reportExport('trace',id);
  try{
-  if(typeof window.showSaveFilePicker==='function')try{const count=await saveRunFile(id,job.signal,window.showSaveFilePicker.bind(window),project,environment,workspace);$('status').textContent=`Export saved: ${count} events.`;toast('Export complete.');return;}catch(error){if(error.message!=='export_picker_unavailable')throw error;}
+  if(!downloadInstead&&typeof window.showSaveFilePicker==='function')try{const count=await saveRunFile(id,job.signal,window.showSaveFilePicker.bind(window),project,environment,workspace);$('status').textContent=`Export saved: ${count} events.`;toast('Export complete.');return;}catch(error){if(error.message!=='export_picker_unavailable')throw error;}
   const events=await allEvents(id,job.signal,null,project,{environmentId:environment,workspaceId:workspace});requireExport(job.signal);
   const blob=new Blob([JSON.stringify({version:1,run_id:id,...(environment!=='default'?{project_id:project,environment_id:environment}:{}),events})],{type:'application/json'}),href=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=href;a.download='supatrace-run.json';a.click();setTimeout(()=>URL.revokeObjectURL(href),1000);$('status').textContent='Export download started. Check your browser downloads to confirm the file was saved.';toast('Download started.');
@@ -725,6 +725,7 @@ $('export').onclick=async()=>{
   if(selected===id){
    const known=e.message==='Export too large for this browser'||e.message?.startsWith('export_')||e.message==='invalid_export_page';
    report(e.message?.startsWith('export_file_')?e:job.signal.aborted?new Error('export_cancelled'):known?e:new Error('trace_download_failed'));
+   offerExportDownload(e,job,()=>selected===id&&project===activeProject&&environment===activeEnvironment&&workspace===activeWorkspace,()=>exportTrace({downloadInstead:true}));
   }
  }
  finally{exportJob=null;syncExportControls();$('cancel-export').disabled=false;$('cancel-export').hidden=true;}
@@ -732,10 +733,17 @@ $('export').onclick=async()=>{
 $('cancel-export').onclick=()=>exportJob?.abort();
 // Exports are assembled in this browser from ordinary reads, so the browser tells the audit log one has started. The report never blocks or fails the export.
 function reportExport(kind,runId){void api('audit/events',{action:'export.started',kind,...(runId?{run_id:runId}:{})}).catch(()=>{});}
+// A dismissed picker keeps cancellation explicit; retry only the reviewed scope.
+function offerExportDownload(error,job,isCurrent,retry){
+ if(!error.pickerCancelled||job.signal.aborted||!isCurrent())return;
+ const button=document.createElement('button');button.type='button';button.textContent='Download instead';
+ button.onclick=()=>{if(exportJob||redactionJob||keySigningOut||keySuspended||job.signal.aborted||!isCurrent()||location.hash!=='#traces')return;button.disabled=true;return retry();};
+ $('status').append(' ',button);
+}
 function clearAccountDownload(){$('workspace-export-reviewed').checked=false;if(accountDownloadDraft&&/^(Account|Workspace) archive ready:/.test($('status').textContent))$('status').textContent='';accountDownloadDraft=null;$('download-account').hidden=true;$('discard-account').hidden=true;syncExportControls();}
-$('export-account').onclick=async()=>{
+$('export-account').onclick=async function exportAccount({downloadInstead=false}={}){
  if(!activeProject||exportJob||redactionJob||keySigningOut||keySuspended)return;
- clearAccountDownload();closeRedaction();const project=activeProject,environment=activeEnvironment,workspace=activeWorkspace,job=new AbortController();let streaming=typeof window.showSaveFilePicker==='function';exportJob=job;syncExportControls();$('cancel-account-export').hidden=false;reportExport('account');
+ clearAccountDownload();closeRedaction();const project=activeProject,environment=activeEnvironment,workspace=activeWorkspace,job=new AbortController();let streaming=!downloadInstead&&typeof window.showSaveFilePicker==='function';exportJob=job;syncExportControls();$('cancel-account-export').hidden=false;reportExport('account');
  try{
   const options={projectId:project,environmentId:environment,signal:job.signal,loadCatalog:signal=>loadAccountRuns((path,sig)=>api(path,undefined,sig,project,environment,workspace),{projectId:project,signal}),writeRun:(id,signal,sink)=>allEvents(id,signal,sink,project,{environmentId:environment,workspaceId:workspace}),onProgress:p=>{$('status').textContent=`Exporting account: ${p.runs_completed}/${p.runs_total} traces, ${p.events} events. Pause uploads until preparation finishes.`;},onCommit:()=>{$('cancel-account-export').disabled=true;$('status').textContent=streaming?'Saving completed account archive…':'Preparing completed account download…';}};
   if(streaming)try{const result=await saveAccountArchive({...options,pick:window.showSaveFilePicker.bind(window)});$('status').textContent=`Account archive saved: ${result.runs} traces, ${result.events} events. Observed read, not a point-in-time snapshot.`;toast('Account archive saved.');}catch(error){if(error.message!=='export_picker_unavailable')throw error;streaming=false;}
@@ -743,13 +751,14 @@ $('export-account').onclick=async()=>{
    const result=await prepareAccountArchive(options);requireExport(job.signal);if(project!==activeProject||keySigningOut||keySuspended||location.hash!=='#traces')throw new Error('export_cancelled');
    accountDownloadDraft={...result,project,workspace,environment};$('download-account').hidden=false;$('discard-account').hidden=false;$('status').textContent=`Account archive ready: ${result.runs} traces, ${result.events} events, ${result.bytes.toLocaleString('en-US')} bytes. Choose Download prepared archive. Observed read, not a point-in-time snapshot.`;
   }
- }catch(error){report(error);}finally{exportJob=null;syncExportControls();$('cancel-account-export').disabled=false;$('cancel-account-export').hidden=true;if(accountDownloadDraft)$('download-account').focus();}
+ }catch(error){report(error);offerExportDownload(error,job,()=>project===activeProject&&environment===activeEnvironment&&workspace===activeWorkspace,()=>exportAccount({downloadInstead:true}));}finally{exportJob=null;syncExportControls();$('cancel-account-export').disabled=false;$('cancel-account-export').hidden=true;if(accountDownloadDraft)$('download-account').focus();}
+ if(downloadInstead&&accountDownloadDraft)$('download-account').onclick();
 };
 $('workspace-export-reviewed').onchange=syncExportControls;
-$('export-workspace').onclick=async()=>{
+$('export-workspace').onclick=async function exportWorkspace({downloadInstead=false}={}){
  const scope=workspaceExportScope;
- if(!scope||!$('workspace-export-reviewed').checked||scope.project!==activeProject||scope.workspace!==activeWorkspace||exportJob||redactionJob||keySigningOut||keySuspended)return;
- const project=scope.project,workspace=scope.workspace,environmentIds=[...scope.environmentIds],job=new AbortController();let streaming=typeof window.showSaveFilePicker==='function';
+ if(!scope||!downloadInstead&&!$('workspace-export-reviewed').checked||scope.project!==activeProject||scope.workspace!==activeWorkspace||exportJob||redactionJob||keySigningOut||keySuspended)return;
+ const project=scope.project,workspace=scope.workspace,environmentIds=[...scope.environmentIds],job=new AbortController();let streaming=!downloadInstead&&typeof window.showSaveFilePicker==='function';
  clearAccountDownload();closeRedaction();exportJob=job;syncExportControls();$('cancel-account-export').hidden=false;reportExport('workspace');
  try{
   const options={workspaceId:workspace,projectId:project,environmentIds,signal:job.signal,
@@ -761,7 +770,8 @@ $('export-workspace').onclick=async()=>{
   if(streaming)try{const result=await saveWorkspaceArchive({...options,pick:window.showSaveFilePicker.bind(window)});$('status').textContent=`Workspace archive saved: ${result.environments} environments, ${result.runs} traces, ${result.events} events. Observed read, not a point-in-time snapshot.`;toast('Workspace archive saved.');}catch(error){if(error.message!=='export_picker_unavailable')throw error;streaming=false;}
   if(!streaming){const result=await prepareWorkspaceArchive(options);requireExport(job.signal);if(project!==activeProject||workspace!==activeWorkspace||keySigningOut||keySuspended||location.hash!=='#traces')throw Error('export_cancelled');
    accountDownloadDraft={...result,project,workspace,kind:'workspace'};$('download-account').hidden=false;$('discard-account').hidden=false;$('status').textContent=`Workspace archive ready: ${result.environments} environments, ${result.runs} traces, ${result.events} events, ${result.bytes.toLocaleString('en-US')} bytes. Choose Download prepared archive. Observed read, not a point-in-time snapshot.`;}
- }catch(error){report(error);}finally{exportJob=null;syncExportControls();$('cancel-account-export').disabled=false;$('cancel-account-export').hidden=true;if(accountDownloadDraft)$('download-account').focus();}
+ }catch(error){report(error);offerExportDownload(error,job,()=>workspaceExportScope===scope&&project===activeProject&&workspace===activeWorkspace,()=>exportWorkspace({downloadInstead:true}));}finally{exportJob=null;syncExportControls();$('cancel-account-export').disabled=false;$('cancel-account-export').hidden=true;if(accountDownloadDraft)$('download-account').focus();}
+ if(downloadInstead&&accountDownloadDraft)$('download-account').onclick();
 };
 $('cancel-account-export').onclick=()=>exportJob?.abort();
 $('discard-account').onclick=()=>{clearAccountDownload();$('status').textContent='Prepared account archive discarded. No download was started.';$('export-account').focus();};
