@@ -1,6 +1,13 @@
 import {rememberSetupCode,setupReturnUrl} from './app/setup-code.js';
 // API requests from this page are retried when the service is momentarily busy (see app/request-queue.js).
 import './app/request-queue.js';
+// Remove the bearer link before provider discovery or any user interaction.
+const linkLocation = globalThis.location ? new URL(location.href) : null;
+const incomingLink = linkLocation?.searchParams.get('link') ?? null;
+if (linkLocation?.searchParams.has('link')) {
+  linkLocation.searchParams.delete('link');
+  history.replaceState(history.state, '', linkLocation.pathname + linkLocation.search + linkLocation.hash);
+}
 const messages = {
   invalid_credentials: 'Invalid email or password.',
   session_unavailable: 'Sign-in is busy. Please try again shortly.',
@@ -39,7 +46,7 @@ export async function post(path, body) {
   const response = await fetch(path, {method: 'POST', headers: {'content-type': 'application/json', 'x-amz-content-sha256': hash}, credentials: 'same-origin', body: raw});
   if (response.status === 204) return {};
   const value = await response.json().catch(() => ({}));
-  if (!response.ok) throw Object.assign(new Error(value.error || 'request_failed'), {status: response.status});
+  if (!response.ok) throw Object.assign(new Error(value.error || 'request_failed'), {status: response.status, retryAfter: response.headers.get('Retry-After')});
   return value;
 }
 function explain(error) { return messages[error.message] || 'Sign-in could not be completed.'; }
@@ -106,6 +113,56 @@ export function mountSignIn(root, providers) {
     openApp();
   }
 
+  let sentEmail = '', resendAt = 0;
+  function retryDeadline(value) {
+    const seconds = Number(value);
+    return Number.isFinite(seconds) && seconds > 0 ? Date.now() + seconds * 1000 : Date.parse(value) || Date.now() + 60000;
+  }
+  function paintResend() {
+    const seconds = Math.max(0, Math.ceil((resendAt - Date.now()) / 1000));
+    resend.disabled = seconds > 0;
+    resend.textContent = seconds ? `Resend in ${seconds}s` : 'Resend sign-in link';
+    if (seconds) setTimeout(paintResend, Math.min(1000, resendAt - Date.now()));
+  }
+  async function sendLink(email, submit) {
+    if (Date.now() < resendAt) { show('linkSent'); paintResend(); return; }
+    submit.disabled = true;
+    sentEmail = email;
+    try {
+      await post('/api/auth/email/link', {email});
+      showLinkResult(true);
+    } catch (error) {
+      if (error.status === 429) { resendAt = retryDeadline(error.retryAfter); showLinkResult(false); }
+      fail(error);
+    } finally { submit.disabled = false; paintResend(); }
+  }
+  function linkForm(id) {
+    const email = el('input', {id, type: 'email', autocomplete: 'email', required: true, placeholder: 'you@example.com'});
+    const submit = el('button', {type: 'submit', class: 'button choice secondary'}, 'Email me a sign-in link');
+    const form = el('form', {}, el('label', {for: id}, 'Email'), email, submit);
+    form.addEventListener('submit', event => { event.preventDefault(); sendLink(email.value, submit); });
+    return form;
+  }
+  const resend = button('button choice secondary', 'Resend sign-in link', () => sendLink(sentEmail, resend));
+  const linkSentHeading = el('h2');
+  const linkSentMessage = el('p', {class: 'sub'});
+  function showLinkResult(delivered) {
+    linkSentHeading.textContent = delivered ? 'Check your email' : 'Try again later';
+    linkSentMessage.textContent = delivered ? 'If that address can receive mail, we sent a sign-in link. It expires in 15 minutes and works once.' : messages.rate_limit;
+    show('linkSent');
+  }
+  const linkSent = el('div', {'data-view': 'linkSent', hidden: true},
+    linkSentHeading, linkSentMessage,
+    button('quiet', 'Use a different email', () => show('main')), resend);
+  const linkContinue = button('primary', 'Continue to SupaTrace', async () => {
+    linkContinue.disabled = true;
+    try { await finish(await post('/api/auth/email/link/confirm', {token: incomingLink})); }
+    catch (error) { fail(error); }
+    finally { linkContinue.disabled = false; }
+  });
+  const linkConfirm = el('div', {'data-view': 'linkConfirm', hidden: true},
+    el('h2', {}, 'Continue to SupaTrace'), linkContinue, legal());
+
   const main = el('div', {'data-view': 'main'}, el('h2', {}, 'Sign in'));
   if (providers.github !== false) main.append(choice('github', '/api/auth/login', 'Continue with GitHub'));
   if (providers.google) main.append(choice('google', '/api/auth/google', 'Continue with Google'));
@@ -127,7 +184,8 @@ export function mountSignIn(root, providers) {
   });
   if (providers.email) {
     if (main.querySelector('.choice')) main.append(el('div', {class: 'or'}, 'or'));
-    main.append(form, el('p', {class: 'switch'}, 'New here? ', button('quiet', 'Create a free account', () => show('signup'))));
+    form.hidden = true;
+    main.append(linkForm('link-email'), button('quiet', 'Use a password instead', () => { form.hidden = false; emailInput.focus(); }), form, el('p', {class: 'switch'}, 'New here? ', button('quiet', 'Create a free account', () => show('signup'))));
   }
   main.append(legal());
 
@@ -169,7 +227,8 @@ export function mountSignIn(root, providers) {
   if (providers.sso) signup.append(button('button choice secondary', 'Continue with SSO', () => show('sso')));
   if (providers.email) {
     if (signup.childNodes.length > 2) signup.append(el('div', {class: 'or'}, 'or'));
-    signup.append(signUpForm);
+    signUpForm.hidden = true;
+    signup.append(linkForm('signup-link-email'), button('quiet', 'Use a password instead', () => { signUpForm.hidden = false; signUpEmail.focus(); }), signUpForm);
   }
   signup.append(el('p', {class: 'switch'}, 'Have an account? ', button('quiet', 'Sign in', () => show('main'))), legal());
 
@@ -275,12 +334,13 @@ export function mountSignIn(root, providers) {
   const recovery = el('div', {'data-view': 'recovery', hidden: true},
     el('h2', {}, 'Recovery code'), recoveryForm, button('quiet', 'Back to sign in', () => show('mfa')));
 
-  for (const [name, node] of Object.entries({main, sso, signup, forgot, code: codeView, reset, check, confirm, mfa, recovery})) {
+  for (const [name, node] of Object.entries({main, sso, signup, forgot, code: codeView, reset, check, confirm, linkSent, linkConfirm, mfa, recovery})) {
     views[name] = node;
   }
-  root.replaceChildren(status, main, sso, signup, forgot, codeView, reset, check, confirm, mfa, recovery);
+  root.replaceChildren(status, main, sso, signup, forgot, codeView, reset, check, confirm, linkSent, linkConfirm, mfa, recovery);
   const confirming = !!providers.email && /^[A-Za-z0-9_-]{43}$/.test(pendingToken) && pendingEmail.length > 0 && pendingEmail !== 'confirmed';
-  show(providers.mfa ? 'mfa' : confirming ? 'confirm' : requestedView === 'signup' ? 'signup' : 'main');
+  const linking = !!providers.email && incomingLink !== null;
+  show(linking ? 'linkConfirm' : providers.mfa ? 'mfa' : confirming ? 'confirm' : requestedView === 'signup' ? 'signup' : 'main');
   if (confirming) { root.scrollIntoView({block: 'start'}); confirmPassword.input.focus({preventScroll: true}); }
   if (!confirming && pendingEmail === 'confirmed') status.textContent = 'Email confirmed. Sign in with your password.';
   const authError=pending.get('auth_error');

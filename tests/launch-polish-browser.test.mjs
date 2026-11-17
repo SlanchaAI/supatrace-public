@@ -44,6 +44,7 @@ for (const viewport of [{width: 1440, height: 900}, {width: 390, height: 844}]) 
         await page.goto(live.origin + path, {waitUntil: 'networkidle'});
         await page.locator('#google').waitFor();
         assert.equal(await page.locator('[data-view=main] h2').innerText(), 'Sign in');
+        await page.getByRole('button', {name: 'Use a password instead'}).click();
         const emailColors = await page.locator('#email').evaluate(node => [getComputedStyle(node, '::placeholder').color, getComputedStyle(node).backgroundColor]);
         const levels = emailColors.map(luminance).sort((a, b) => b - a);
         assert.ok((levels[0] + 0.05) / (levels[1] + 0.05) >= 4.5, 'email placeholder meets text contrast');
@@ -63,6 +64,7 @@ for (const viewport of [{width: 1440, height: 900}, {width: 390, height: 844}]) 
         await fits(page);
         await page.getByRole('button', {name: 'Create a free account', exact: true}).click();
         assert.equal(await page.locator('[data-view=signup] h2').innerText(), 'Create a free account');
+        await page.getByRole('button', {name: 'Use a password instead'}).click();
         await passwordFits(page, 'signup-password');
         await fits(page);
         await page.locator('[data-view=signup] .switch button').click();
@@ -126,3 +128,23 @@ for (const viewport of [{width: 1440, height: 900}, {width: 390, height: 844}]) 
     } finally { await context.close(); }
   });
 }
+
+for(const width of [1440,390])test(`authenticated chrome hides IDs and updates page titles at ${width}`,async()=>{
+ const context=await browser.newContext({viewport:{width,height:900},permissions:['clipboard-read','clipboard-write']}),page=await context.newPage();
+ try{
+  const tenant=await live.signIn(context);
+  await page.goto(live.origin+'/app/#settings',{waitUntil:'networkidle'});
+  assert.equal(await page.locator('#provider-line').textContent(),'Sign-in provider: GitHub');
+  assert.equal(await page.locator('#who').textContent(),'Signed in with GitHub');
+  assert.doesNotMatch(await page.locator('.top').innerText(),/github-|proj_/);
+  await page.locator('#copy-account-id').click();assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),tenant);
+  const project=await page.evaluate(()=>document.documentElement.dataset.project);
+  await page.locator('#copy-project-id').click();assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),project);
+  for(const [route,title] of Object.entries({home:'Home',traces:'Traces',agents:'Agents',keys:'API keys',usage:'Usage',billing:'Billing',members:'Members',audit:'Audit log',integrations:'Integrations',logs:'Logs',settings:'Settings'})){
+   await page.evaluate(route=>location.hash=route,route);await page.waitForFunction(title=>document.title===title+' · SupaTrace',title);await fits(page);
+  }
+  const toggle=page.locator('#menu-toggle');if(await toggle.isVisible())await toggle.click();
+  const org=await page.locator('#org-select').evaluate(select=>{const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d'),style=getComputedStyle(select);ctx.font=style.font;return {text:select.selectedOptions[0].textContent,width:select.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight)-20,textWidth:ctx.measureText(select.selectedOptions[0].textContent).width};});
+  assert.equal(org.text,'Personal workspace');assert.ok(org.width>=org.textWidth,JSON.stringify(org));
+ }finally{await context.close();}
+});

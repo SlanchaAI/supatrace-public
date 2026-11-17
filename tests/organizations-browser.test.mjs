@@ -13,13 +13,13 @@ test('owner creates a second organization, switches from the rail, and each orga
     const [run] = await live.seedRuns(owner.tenant, 1), shot = async (page, name) => { const dir = process.env.SUPATRACE_ORG_SCREENSHOT_DIR; if (dir) { mkdirSync(dir, {recursive: true}); await page.screenshot({path: `${dir}/${name}.png`, fullPage: true}); } };
     await owner.p.goto(live.origin + '/app/#members'); await owner.p.locator('#shell:not([hidden])').waitFor();
     // The personal organization is listed without any setup.
-    assert.deepEqual(await owner.p.locator('#org-select option').allInnerTexts(), ['Personal workspace (personal)']);
-    assert.match(await owner.p.locator('#org-list').innerText(), new RegExp('Personal workspace \\(personal\\) · owner · ' + owner.tenant + ' · current'));
+    assert.deepEqual(await owner.p.locator('#org-select option').allInnerTexts(), ['Personal workspace']);
+    assert.match(await owner.p.locator('#org-list').innerText(), new RegExp('Personal workspace · owner · ' + owner.tenant + ' · current'));
     assert.equal(await owner.p.locator('#org-transfer').isVisible(), false); assert.equal(await owner.p.locator('#org-leave').isVisible(), false);
     await owner.p.locator('#org-create input').fill('Acme Inc'); await owner.p.locator('#org-create button').click();
     await owner.p.waitForURL(u => /^org-[a-f0-9]{32}$/.test(u.searchParams.get('workspace') ?? '')); await owner.p.locator('#shell:not([hidden])').waitFor();
     const org = new URL(owner.p.url()).searchParams.get('workspace');
-    assert.deepEqual(await owner.p.locator('#org-select option').allInnerTexts(), ['Personal workspace (personal)', 'Acme Inc']); assert.equal(await owner.p.locator('#org-select').inputValue(), org);
+    assert.deepEqual(await owner.p.locator('#org-select option').allInnerTexts(), ['Personal workspace', 'Acme Inc']); assert.equal(await owner.p.locator('#org-select').inputValue(), org);
     assert.equal(await owner.p.locator('#members-title').innerText(), 'Acme Inc'); assert.match(await owner.p.locator('#member-list').innerText(), new RegExp(owner.tenant + ' · Owner'));
     await shot(owner.p, 'org-created-members');
     // The new organization has no traces; the personal one still has its own.
@@ -40,7 +40,7 @@ test('owner creates a second organization, switches from the rail, and each orga
     await member.p.reload(); await member.p.locator('#team-members:not([hidden])').waitFor(); assert.match(await member.p.locator('#members-role').innerText(), /owner/); assert.match(await member.p.locator('#member-list').innerText(), new RegExp(owner.tenant + ' · Admin')); await shot(member.p, 'org-transferred');
     // The previous owner leaves and lands on their personal organization.
     await owner.p.locator('#org-leave button').click(); await owner.p.waitForURL(u => u.search === ''); await owner.p.locator('#shell:not([hidden])').waitFor();
-    assert.deepEqual(await owner.p.locator('#org-select option').allInnerTexts(), ['Personal workspace (personal)']);
+    assert.deepEqual(await owner.p.locator('#org-select option').allInnerTexts(), ['Personal workspace']);
     assert.equal(await owner.p.evaluate(async id => (await fetch('/api/runs?workspace=' + id)).status, org), 403);
     assert.deepEqual(errors, []);
   } finally { for (const c of contexts) await c.close(); await browser.close(); await live.close(); }

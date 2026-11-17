@@ -38,5 +38,6 @@
   "tests/support-browser.test.mjs",
   "tests/plan-billing-uncertain-message-browser.test.mjs",
   "tests/audit-export-retry-browser.test.mjs",
-  "tests/launch-polish-browser.test.mjs"
+  "tests/launch-polish-browser.test.mjs",
+  "tests/public-review-browser.test.mjs"
 ]

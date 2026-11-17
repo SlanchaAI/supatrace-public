@@ -90,8 +90,8 @@ for (const size of Object.keys(sizes)) {
       assert.equal(await landing.page.getByText(/periodic emails/i).count(), 0);
       await assertNoHorizontalOverflow(landing.page,'landing');
       await landing.page.getByRole('heading',{name:/Agent traces.*Kept simple/s}).waitFor();
-      assert.ok((await landing.page.getByRole('link',{name:'Get started'}).boundingBox()).y<sizes[size].height,'first action is above the fold');
-      await landing.page.getByText('Explicit JSON batches and reviewed Claude Code snapshots. Opt-in Claude hooks are a beta; no silent scanning.',{exact:true}).waitFor();
+      assert.ok((await landing.page.locator('.hero a[href="#signin"]').boundingBox()).y<sizes[size].height,'first action is above the fold');
+      await landing.page.getByText('See every step your agent took.',{exact:true}).waitFor();
       assert.equal(await landing.page.getByText('Synthetic example',{exact:true}).count(),0,'illustrative mock removed from landing');
       await assertSignInPanelFits(landing.page,'landing sign-in');
       const github = landing.page.getByRole('link', {name: 'Continue with GitHub'});
@@ -100,6 +100,7 @@ for (const size of Object.keys(sizes)) {
       assert.equal(await landing.page.getByText('Continue with ChatGPT').count(), 0);
       assert.equal(await landing.page.getByText('Continue with SSO').count(), 0);
       assert.equal(await landing.page.locator('#email').count(), 0);
+      assert.equal(await landing.page.getByRole('button', {name: 'Email me a sign-in link'}).count(), 0);
       assert.match((await landing.page.request.get(live.origin + '/')).headers()['content-security-policy'], /script-src 'self'/);
       for (const path of ['/agent-setup.html', '/agent/connect.py', '/agent/upload.py', '/agent/claude_snapshot.py'])
         assert.equal((await landing.page.request.get(live.origin + path)).status(), 200, path);
@@ -232,11 +233,11 @@ for (const size of Object.keys(sizes)) {
       await nav(s.page, 'settings');
       assert.equal(await s.page.locator('#mfa-section').isVisible(), false);
       assert.equal(await s.page.locator('#mfa-enroll').isVisible(), false);
-      assert.match(await s.page.locator('#account-line').textContent(), /Account ID: github-4242/);
+      assert.equal(await s.page.locator('#account-line').textContent(), 'Account');
       assert.equal(await s.page.locator('#provider-line').textContent(), 'Sign-in provider: GitHub');
-      const project = (await s.page.locator('#project-name').textContent()).split(' · ')[1];
+      const project = await s.page.evaluate(()=>document.documentElement.dataset.project);
       assert.match(project, /^proj_[a-f0-9]{32}$/);
-      assert.match(await s.page.locator('#who').textContent(), /GitHub account · github-4242/);
+      assert.match(await s.page.locator('#who').textContent(), /Signed in with GitHub/);
       await nav(s.page, 'usage');
       assert.match(await s.page.locator('#usage-page').textContent(), /bytes reserved/);
       assert.match(await s.page.locator('#plan-page').textContent(), /^Free plan\. Plans and upgrade are at the top of Billing\.$/);
@@ -372,9 +373,12 @@ for (const size of Object.keys(sizes)) {
     try {
       const landing = await open(live, size, '/');
       await landing.page.waitForSelector('#google');
-      const choices = ['Continue with GitHub', 'Continue with Google', 'Continue with ChatGPT', 'Continue with SSO'];
+      const choices = ['Continue with GitHub', 'Continue with Google', 'Continue with ChatGPT', 'Continue with SSO', 'Email me a sign-in link'];
       assert.deepEqual(await landing.page.locator('#signin [data-view="main"] .choice').allTextContents(), choices);
       assert.equal(await landing.page.locator('#google').getAttribute('href'), '/api/auth/google');
+      assert.equal(await landing.page.locator('#link-email').isVisible(), true);
+      assert.equal(await landing.page.getByRole('button', {name: 'Email me a sign-in link'}).isVisible(), true);
+      await landing.page.getByRole('button', {name: 'Use a password instead'}).click();
       assert.equal(await landing.page.locator('#email').isVisible(), true);
       assert.equal(await landing.page.getByRole('button', {name: 'Sign in'}).isVisible(), true);
       assert.equal(await landing.page.getByRole('button', {name: 'Forgot password?'}).isVisible(), true);
@@ -384,6 +388,8 @@ for (const size of Object.keys(sizes)) {
       await landing.page.waitForSelector('#signup-google');
       assert.deepEqual(await landing.page.locator('#signin [data-view="signup"] .choice').allTextContents(), choices);
       assert.equal(await landing.page.locator('#signup-google').getAttribute('href'), '/api/auth/google');
+      assert.equal(await landing.page.locator('#signup-link-email').isVisible(), true);
+      assert.equal(await landing.page.getByRole('button', {name: 'Email me a sign-in link'}).isVisible(), true);
       await assertSignInPanelFits(landing.page, 'sign up');
       await landing.page.getByRole('button', {name: 'Continue with SSO'}).click();
       await landing.page.getByText('Sign in to your enterprise account').waitFor();
@@ -397,6 +403,115 @@ for (const size of Object.keys(sizes)) {
     } finally { await live.close(); }
   });
 }
+
+for (const size of Object.keys(sizes)) {
+  test(`initial email link rate limit makes no delivery claim (${size})`, {timeout: 60000}, async () => {
+    const mailbox = [];
+    const live = await start({configureEnvironment: env => Object.assign(env, {EMAIL_FROM: 'member@example.com', sendEmail: async mail => { mailbox.push(mail); }})});
+    try {
+      const view = await open(live, size, '/');
+      let attempts = 0;
+      await view.page.route('**/api/auth/email/link', route => {
+        if (++attempts === 1) return route.fulfill({status: 429, headers: {'content-type': 'application/json', 'retry-after': '2'}, body: '{"error":"rate_limit"}'});
+        return route.continue();
+      });
+      await view.page.fill('#link-email', 'retry@example.com');
+      await view.page.getByRole('button', {name: 'Email me a sign-in link'}).click();
+      await view.page.getByRole('heading', {name: 'Try again later'}).waitFor();
+      assert.equal(await view.page.getByRole('heading', {name: 'Check your email'}).count(), 0);
+      assert.equal(await view.page.getByText(/we sent a sign-in link/).count(), 0);
+      assert.equal(mailbox.length, 0);
+      assert.equal(await view.page.getByRole('button', {name: /Resend in/}).isDisabled(), true);
+      await assertSignInPanelFits(view.page, 'email link rate limit');
+      await view.page.getByRole('button', {name: 'Resend sign-in link', exact: true}).click();
+      await view.page.getByRole('heading', {name: 'Check your email'}).waitFor();
+      await view.page.getByText('If that address can receive mail, we sent a sign-in link. It expires in 15 minutes and works once.', {exact: true}).waitFor();
+      assert.equal(attempts, 2);
+      assert.equal(mailbox.length, 1);
+      await view.clean();
+    } finally { await live.close(); }
+  });
+
+  test(`email links send from both views, strip the token, and reach first-run Home (${size})`, {timeout: 60000}, async () => {
+    const mailbox = [];
+    const live = await start({configureEnvironment: env => Object.assign(env, {EMAIL_FROM: 'member@example.com', sendEmail: async mail => { mailbox.push(mail); }})});
+    try {
+      const view = await open(live, size, '/', async context => {
+        await context.addInitScript(() => {
+          const original = window.fetch;
+          window.fetch = function(input, options) {
+            if (input === '/api/auth/providers') window.__linkAtProviders = location.search;
+            return original.call(this, input, options);
+          };
+        });
+      });
+      await view.page.fill('#link-email', 'first@example.com');
+      await view.page.getByRole('button', {name: 'Email me a sign-in link'}).click();
+      await view.page.getByRole('heading', {name: 'Check your email'}).waitFor();
+      await view.page.getByText('If that address can receive mail, we sent a sign-in link. It expires in 15 minutes and works once.', {exact: true}).waitFor();
+      assert.equal(mailbox.length, 1);
+      await assertSignInPanelFits(view.page, 'email link sent');
+      let retries = 0;
+      await view.page.route('**/api/auth/email/link', async route => {
+        if (++retries === 1) return route.fulfill({status: 429, headers: {'content-type': 'application/json', 'retry-after': '2'}, body: '{"error":"rate_limit"}'});
+        return route.continue();
+      });
+      await view.page.getByRole('button', {name: 'Resend sign-in link', exact: true}).click();
+      await view.page.getByRole('button', {name: /Resend in/}).waitFor();
+      assert.equal(await view.page.getByRole('button', {name: /Resend in/}).isDisabled(), true);
+      assert.equal(retries, 1);
+      await view.page.getByRole('button', {name: 'Resend sign-in link', exact: true}).waitFor();
+      await Promise.all([view.page.waitForResponse(response => response.url().endsWith('/api/auth/email/link') && response.status() === 200), view.page.getByRole('button', {name: 'Resend sign-in link', exact: true}).click()]);
+      assert.equal(mailbox.length, 2);
+      await view.page.getByRole('button', {name: 'Use a different email'}).click();
+      await view.page.getByRole('button', {name: 'Create a free account'}).click();
+      assert.equal(await view.page.locator('#signup-github').isVisible(), true);
+      await view.page.fill('#signup-link-email', 'new@example.com');
+      await view.page.getByRole('button', {name: 'Email me a sign-in link'}).click();
+      await view.page.getByRole('heading', {name: 'Check your email'}).waitFor();
+      const token = new URL(mailbox.at(-1).text.match(/https:\/\/\S+/)[0]).searchParams.get('token');
+      const redirect = await view.page.request.get(live.origin + '/api/auth/email/link?token=' + token, {maxRedirects: 0});
+      assert.equal(redirect.status(), 302);
+      await view.page.goto(live.origin + new URL(redirect.headers().location).pathname + new URL(redirect.headers().location).search, {waitUntil: 'networkidle'});
+      await view.page.getByRole('heading', {name: 'Continue to SupaTrace'}).waitFor();
+      assert.equal(new URL(view.page.url()).searchParams.has('link'), false);
+      assert.equal(await view.page.evaluate(() => window.__linkAtProviders), '');
+      assert.equal(await live.store.getEmailAccount('new@example.com'), null);
+      assert.equal(view.requests.filter(request => new URL(request.url()).pathname.endsWith('/link/confirm')).length, 0);
+      await assertSignInPanelFits(view.page, 'email link confirmation');
+      await view.page.getByRole('button', {name: 'Continue to SupaTrace'}).click();
+      await view.page.waitForURL('**/app/');
+      await view.page.locator('#view-home:not([hidden])').waitFor();
+      await view.page.getByRole('heading', {name: 'Send your first trace', exact: true}).waitFor();
+      assert.equal((await live.store.getEmailAccount('new@example.com')).verified, true);
+      await view.clean();
+    } finally { await live.close(); }
+  });
+}
+
+test('email link confirmation keeps enrolled accounts in the MFA view until verification', {timeout: 60000}, async () => {
+  const mailbox = [], email = 'link-mfa@example.com', secret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
+  const live = await start({mfa: true, configureEnvironment: env => Object.assign(env, {EMAIL_FROM: 'member@example.com', sendEmail: async mail => { mailbox.push(mail); }})});
+  try {
+    const account = await live.store.createVerifiedEmailAccount(email, hashPassword('Synthetic!123'));
+    await live.store.setTenantFields(account.tenant_id, 'SET mfa_secret = :secret', {':secret': secret});
+    const view = await open(live, 'mobile', '/');
+    await view.page.fill('#link-email', email);
+    await view.page.getByRole('button', {name: 'Email me a sign-in link'}).click();
+    await view.page.getByRole('heading', {name: 'Check your email'}).waitFor();
+    const token = new URL(mailbox[0].text.match(/https:\/\/\S+/)[0]).searchParams.get('token');
+    await view.page.goto(live.origin + '/?link=' + token, {waitUntil: 'networkidle'});
+    await view.page.getByRole('button', {name: 'Continue to SupaTrace'}).click();
+    await view.page.locator('#mfa-code').waitFor({state: 'visible'});
+    assert.equal((await view.context.cookies()).some(cookie => cookie.name === '__Host-supatrace'), false);
+    await view.page.fill('#mfa-code', totp(secret));
+    await view.page.getByRole('button', {name: 'Verify', exact: true}).click();
+    await view.page.waitForURL('**/app/');
+    await view.page.locator('#shell:not([hidden])').waitFor();
+    assert.equal((await view.context.cookies()).some(cookie => cookie.name === '__Host-supatrace'), true);
+    await view.clean();
+  } finally { await live.close(); }
+});
 
 test('two-factor controls fit when the switch is on', {timeout: 60000}, async () => {
   const live = await start({mfa: true});
@@ -419,7 +534,7 @@ test('a failed OAuth attempt offers a clean fresh sign-in without retaining call
 test('the guide downloads and approved synthetic first-trace journey agree',async()=>{
  const live=await start();
  try{const s=await signedIn(live,'desktop',0);await settle(s.page);assert.equal(await s.page.locator('#first-trace').isVisible(),true);await nav(s.page,'agents');
-  const project=(await s.page.locator('#project-name').textContent()).split(' · ')[1];assert.match(await s.page.locator('#connect-command').textContent(),new RegExp('--project '+project));
+  const project=await s.page.evaluate(()=>document.documentElement.dataset.project);assert.match(await s.page.locator('#connect-command').textContent(),new RegExp('--project '+project));
   const guide=await open(live,'mobile','/agent-setup.html');for(const name of ['connect.py','upload.py','claude_snapshot.py','claude_hook.py']){const link=guide.page.locator(`a[download][href="/agent/${name}"]`);assert.equal(await link.count(),1);assert.equal((await guide.page.request.get(live.origin+'/agent/'+name)).status(),200);}await assertNoHorizontalOverflow(guide.page,'setup guide');await guide.clean();
   const key='w'.repeat(43),setup=await live.startSetup(key);await s.page.fill('#code',setup.user_code);await s.page.click('#approve button');await s.page.waitForFunction(()=>/^Approved/.test(document.getElementById('approval').textContent));
   const example=JSON.parse(readFileSync(new URL('../public/examples/first-trace.json',import.meta.url),'utf8'));await live.upload(key,example);await nav(s.page,'traces');await s.page.click('#refresh');await s.page.getByRole('button',{name:'Open trace first-trace-example'}).waitFor();
@@ -501,7 +616,7 @@ test('an IdP form post sends the SSO cookie without the test planting it', {time
       page.getByRole('button', {name: 'Continue'}).click()
     ]);
     await page.waitForSelector('#workspace:not([hidden])');
-    assert.match(await page.locator('#who').textContent(), /SSO account · sso-/);
+    assert.equal(await page.locator('#who').textContent(), 'Signed in with SSO');
     assert.deepEqual(errors, []);
   } finally {
     await context.close();
@@ -545,6 +660,7 @@ test('session capacity failure gives a recoverable sign-in message without a coo
     live.store.createSession = async () => { attempts++; throw Object.assign(new Error('session_slot_collision'), {code: 'session_slot_collision', status: 409, sessionEpoch: 0}); };
     const view = await open(live, 'mobile', '/app/');
     try {
+      await view.page.getByRole('button', {name: 'Use a password instead'}).click();
       await view.page.fill('#email', 'session@example.com'); await view.page.fill('#password', 'Synthetic!123');
       const submit = view.page.getByRole('button', {name: 'Sign in', exact: true});
       await submit.click();
@@ -569,6 +685,7 @@ test('password reset rejects pending MFA and the browser can start a fresh sign-
     // This test deliberately produces session_changed (409); other browser tests retain their error filter.
     const view = await open(live, 'mobile', '/app/', undefined, /^Failed to load resource: the server responded with a status of (401|409)\b/);
     try {
+      await view.page.getByRole('button', {name: 'Use a password instead'}).click();
       await view.page.fill('#email', email); await view.page.fill('#password', 'Old!12345');
       await view.page.getByRole('button', {name: 'Sign in', exact: true}).click();
       await view.page.locator('#mfa-code').waitFor({state: 'visible'});

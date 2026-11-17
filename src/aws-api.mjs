@@ -24,7 +24,7 @@ import {MANAGEMENT_OPENAPI} from './management-openapi.mjs';
 import {json,boundedText,requireOrigin,HttpError,securityHeaders} from './http.mjs';
 import {keyScopeLabel,storedKeyType,NO_EXPIRY,parseKeyToken} from './key-model.mjs';
 import {sessionRow,writer,writeBinding,keyBinding,writeToken,login,googleLogin,callback,devSession,cookie,digest,setCookie} from './aws-auth.mjs';
-import {providerFlags,chatgptLogin,chatgptCallback,ssoStart,ssoCallback,emailSignUp,emailVerify,emailConfirm,emailSignIn,emailReset,emailResetConfirm,emailResetPassword,mfaVerify,mfaRecovery,mfaEnroll,mfaConfirm,mfaDisable} from './dashboard-auth.mjs';
+import {providerFlags,chatgptLogin,chatgptCallback,ssoStart,ssoCallback,emailLink,emailLinkOpen,emailLinkConfirm,emailSignUp,emailVerify,emailConfirm,emailSignIn,emailReset,emailResetConfirm,emailResetPassword,mfaVerify,mfaRecovery,mfaEnroll,mfaConfirm,mfaDisable} from './dashboard-auth.mjs';
 import {accountPlanConfiguration} from './plans.mjs';
 import {recordUsageAlert} from './usage-alerts.mjs';
 import {notifyProjectPaused} from './project-pause.mjs';
@@ -177,6 +177,7 @@ export async function handle(request,baseEnv){
  let url=new URL(request.url),path=url.pathname,store=env.store;
  store.planBillingMode=env.planBilling?.mode ?? 'test';
  for(const p of ['workspace','environment','project'])if(url.searchParams.getAll(p).length>1)throw new HttpError(400,'invalid_query');
+ if(request.method==='GET'&&path==='/api/auth/email/link')return await emailLinkOpen(request,env);
  // Scope reloads make several dashboard reads. Allow normal setup and shared NAT use; sensitive routes keep tighter budgets.
  const rate=await store.consumeRate({scope:'request',identity:env.sourceIp||'unknown',limit:300,windowSeconds:60});if(!rate.allowed)return rateLimited(rate);
  // OTLP/HTTP receiver. /api/otlp/v1/traces is the same receiver under the /api/ prefix; /api/public/otel/v1/traces is where Langfuse SDKs send OTLP with Basic auth.
@@ -207,6 +208,8 @@ export async function handle(request,baseEnv){
  if(request.method==='GET'&&path==='/api/auth/dev/session'){if(!devOn(env))return json({error:'not_found'},404);return await devSession(request,env);}
  if(request.method==='GET'&&path==='/api/auth/sso')return await ssoStart(request,env);
  if(request.method==='POST'&&path==='/api/auth/sso/callback')return await ssoCallback(request,env);
+ if(request.method==='POST'&&path==='/api/auth/email/link')return await emailLink(request,env);
+ if(request.method==='POST'&&path==='/api/auth/email/link/confirm')return await emailLinkConfirm(request,env);
  if(request.method==='POST'&&path==='/api/auth/email/sign-up')return await emailSignUp(request,env);
  if(request.method==='GET'&&path==='/api/auth/email/verify')return await emailVerify(request,env);
  if(request.method==='POST'&&path==='/api/auth/email/verify')return await emailConfirm(request,env);

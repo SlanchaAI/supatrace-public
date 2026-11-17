@@ -24,7 +24,7 @@ test('owner invites a developer limited to one environment, then requires two-fa
     // The developer lands in the one environment they may open, with keys but no environment or member management.
     await member.p.goto(live.origin + '/app/#members'); await member.p.locator('.pending-invite button').click();
     await member.p.waitForURL(u => u.searchParams.get('workspace') === owner.tenant && u.searchParams.get('environment') === 'dev'); await member.p.locator('#shell:not([hidden])').waitFor();
-    assert.match(await member.p.locator('#scope-summary').innerText(), /Developer access/); assert.deepEqual(await member.p.locator('#environment-select option').allInnerTexts(), ['Development']);
+    assert.match(await member.p.locator('#scope-summary').innerText(), /Developer · environments share/); assert.deepEqual(await member.p.locator('#environment-select option').allInnerTexts(), ['Development']);
     assert.equal(await member.p.locator('#rail [data-nav="keys"]').isVisible(), true); assert.equal(await member.p.locator('#team-members').isVisible(), false);
     await member.p.locator('#rail a[data-nav="settings"]').click(); assert.equal(await member.p.locator('#create-environment').isVisible(), false);
     assert.equal((await api(member.p, 'runs?workspace=' + owner.tenant)).body.error, 'environment_unavailable'); assert.equal((await api(member.p, 'runs?workspace=' + owner.tenant + '&environment=dev')).status, 200);

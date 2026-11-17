@@ -69,9 +69,9 @@ const conditional = error => error?.name === 'ConditionalCheckFailedException' |
 const isTransactionCancellation = error => conditional(error) || error?.name === 'TransactionCanceledException';
 const leaseKey = (value, slot) => ({ pk: tpk(value), sk: `SLOT#${String(slot).padStart(3, '0')}` });
 const keyLookup = value => ({ pk: `WRITE#${hash(value)}`, sk: 'KEY' });
-// Physical ephemeral cardinality is fixed, not dependent on asynchronous TTL deletion.
+// Older ephemeral kinds use fixed slots. LINK keys use the full digest; mail rate limits bound their creation.
 const ephemeralSlots = 1000;
-const tempKey = (kind, value, sk) => ({ pk: `${kind}#${Number(BigInt(`0x${hash(value)}`) % BigInt(ephemeralSlots))}`, sk });
+const tempKey = (kind, value, sk) => ({ pk: `${kind}#${kind === 'LINK' ? hash(value) : Number(BigInt(`0x${hash(value)}`) % BigInt(ephemeralSlots))}`, sk });
 const setupKey = value => tempKey('SETUP', value, 'REQUEST');
 const codeKey = value => tempKey('CODE', digest(value), 'REQUEST');
 const batchKey = (value, batchId) => ({ pk: tpk(value), sk: `BATCH#${id(batchId)}` });
@@ -219,6 +219,25 @@ export class DynamoMetadataStore {
     return { tenant_id: tenantId, email, verified: true };
   }
 
+  /** A verified link may create an email account without setting a password. */
+  async createPasswordlessEmailAccount(email) {
+    if (typeof email !== 'string' || !/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(email) || email.length > 254) fail(400, 'invalid_email');
+    const existing = await this.getEmailAccount(email);
+    if (existing) return { ...existing, new_account: false };
+    const tenantId = `email-${digest(email)}`;
+    await this._provisionTenant(tenantId, { provider: 'email', email });
+    const account = { ...this.emailKey(email), email, tenant_id: tenantId, verified: true };
+    try {
+      await this._send('PutCommand', { Item: account, ConditionExpression: absent });
+    } catch (error) {
+      if (!conditional(error)) throw error;
+      const winner = await this.getEmailAccount(email);
+      if (!winner) throw error;
+      return { ...winner, new_account: false };
+    }
+    return { ...account, new_account: true };
+  }
+
   async updateEmailAccount(email, expression, values) {
     await this._send('UpdateCommand', { Key: this.emailKey(email), UpdateExpression: expression,
       ConditionExpression: 'email = :email', ExpressionAttributeValues: { ...values, ':email': email } });
@@ -246,7 +265,7 @@ export class DynamoMetadataStore {
       ExpressionAttributeValues: expectedEpoch === undefined ? values : { ...values, ':epoch': expectedEpoch } });
   }
 
-  _challengeKind(kind) { return kind === 'MFA' || kind === 'SIGNUP' || kind === 'RESET' ? kind : fail(400, 'invalid_challenge'); }
+  _challengeKind(kind) { return kind === 'MFA' || kind === 'SIGNUP' || kind === 'RESET' || kind === 'LINK' ? kind : fail(400, 'invalid_challenge'); }
 
   async replaceAuthChallenge(kind, idHash, fields, maxAge) {
     this._challengeKind(kind); hash(idHash);
@@ -265,7 +284,7 @@ export class DynamoMetadataStore {
   }
 
   async peekAuthChallenge(kind, idHash) {
-    if (kind !== 'MFA' && kind !== 'SIGNUP' && kind !== 'RESET') return null;
+    if (kind !== 'MFA' && kind !== 'SIGNUP' && kind !== 'RESET' && kind !== 'LINK') return null;
     try { hash(idHash); } catch { return null; }
     const row = await this._get(tempKey(kind, idHash, 'CHALLENGE'));
     return row && row.id_hash === idHash && row.expires_at > this.now() ? row : null;

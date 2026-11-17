@@ -65,6 +65,7 @@ for(const provider of ['email','GitHub','Google','SSO'])test(`setup code survive
   await page.locator('#signin:not([hidden])').waitFor();
   if(provider==='email'){
    await page.route('**/api/auth/email/sign-in',async route=>{await live.signIn(context);await route.fulfill({status:204});});
+   await page.getByRole('button',{name:'Use a password instead'}).click();
    await page.fill('#email','synthetic@example.com');await page.fill('#password','Synthetic-only-1!');await page.locator('#sign-in-form button[type=submit]').click();
   }else if(provider==='SSO'){
    await page.route('**/api/auth/sso?*',route=>route.fulfill({json:{url:live.origin+'/fixture-provider'}}));

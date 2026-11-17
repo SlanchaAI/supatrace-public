@@ -56,7 +56,7 @@ for (const size of Object.keys(sizes)) {
   await snap('keys', size, signedIn(1), async page => { await ready(page); await nav(page, 'keys'); await page.waitForSelector('#keys .key'); });
   await snap('usage', size, signedIn(1), async page => { await ready(page); await nav(page, 'usage'); await page.waitForFunction(() => !/Checking/.test(document.getElementById('usage-page').textContent)); });
   await snap('billing', size, signedIn(1), async page => { await ready(page); await nav(page, 'billing'); await page.waitForFunction(() => !/Checking/.test(document.getElementById('plan-page').textContent)); });
-  await snap('settings', size, signedIn(1), async page => { await ready(page); await nav(page, 'settings'); await page.waitForFunction(() => /Account ID:/.test(document.getElementById('account-line').textContent)); });
+  await snap('settings', size, signedIn(1), async page => { await ready(page); await nav(page, 'settings'); await page.waitForFunction(() => /Sign-in provider:/.test(document.getElementById('provider-line').textContent)); });
 }
 await browser.close();
 writeFileSync(`${out}/manifest.json`,JSON.stringify({commit:process.env.GITHUB_SHA||null,source:'Candidate assets with the real API handler and in-memory stores; no live OAuth or customer data',captures},null,2));

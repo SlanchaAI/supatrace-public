@@ -146,7 +146,7 @@ for (const viewport of [{width:1280,height:900},{width:390,height:844},{width:32
       assert.equal(await page.getByRole('link', {name:'SupaTrace home',exact:true}).count(), 1);
       await capture(page, 'classic-s-landing', viewport);
       assert.deepEqual(await page.evaluate(() => window.__logoCsp), [], 'landing assets obey CSP before navigation');
-      await page.getByRole('link', {name:'Get started',exact:true}).click();
+      await page.locator('.hero a[href="#signin"]').click();
       assert.equal(new URL(page.url()).hash, '#signin');
       await page.getByRole('link', {name:'SupaTrace home',exact:true}).click();
       assert.equal(new URL(page.url()).hash, '');

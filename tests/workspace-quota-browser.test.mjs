@@ -57,8 +57,8 @@ for (const width of [1280, 320]) test(`workspace quota and billing guidance rema
         await page.waitForURL(url => url.searchParams.get('workspace') === 'github-' + id);
         await page.waitForLoadState('networkidle');
         assert.match(await page.locator('#usage').innerText(), /^0 of /);
-        assert.match(await page.locator('#project-name').innerText(), new RegExp(alphaProject('github-' + id).id));
-        assert.doesNotMatch(await page.locator('#project-name').innerText(), new RegExp(alphaProject('github-4242').id));
+        assert.match(await page.evaluate(()=>document.documentElement.dataset.project), new RegExp(alphaProject('github-' + id).id));
+        assert.doesNotMatch(await page.evaluate(()=>document.documentElement.dataset.project), new RegExp(alphaProject('github-4242').id));
       }
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       assert.deepEqual(posts, [], 'quota guidance/switching must not create keys, grants, payments or mutations');

@@ -241,3 +241,11 @@
 .app .pause-banner button{margin-left:8px}
 .app #cost-control{margin-top:16px;max-width:760px}
 .app #cost-control button{min-height:44px;margin-top:8px}
+
+/* Keep identity and organization labels readable without exposing raw references. */
+.app .top{height:auto;min-height:76px;padding-top:12px;padding-bottom:12px;box-sizing:border-box}
+.app .crumbs{flex-wrap:wrap;overflow-wrap:anywhere}
+.app .crumbs #who{max-width:none;overflow:visible;white-space:normal}
+.app #org-switcher{padding-right:0;padding-left:0}
+.app #org-select{font-size:12px;min-width:0;padding-left:6px;padding-right:16px}
+@media(max-width:800px){.app .top{flex-wrap:wrap}.app .top .crumbs{order:2;flex-basis:100%}.app .top>.spacer{display:none}.app .top>a{margin-left:auto}}

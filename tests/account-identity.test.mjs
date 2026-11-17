@@ -44,7 +44,7 @@ test('existing MFA flag semantics remain unchanged and provider display does not
 });
 const source=readFileSync(new URL('../public/app/app.js',import.meta.url),'utf8'),html=readFileSync(new URL('../public/app/index.html',import.meta.url),'utf8');
 function ui(){
- const nodes=new Map(['provider-line','who','account-line','project-name','project-line','account-reload','download-account','discard-account','workspace-export-reviewed','status','billing-portal'].map(id=>[id,{textContent:''}]));
+ const nodes=new Map(['copy-account-id','copy-project-id','provider-line','who','account-line','project-name','project-line','account-reload','download-account','discard-account','workspace-export-reviewed','status','billing-portal'].map(id=>[id,{textContent:''}]));
  const start=source.indexOf('function renderAccountIdentity('),end=source.indexOf('function dash(',start);assert.ok(start>=0&&end>start);
  let langsmithInvalidations=0,braintrustInvalidations=0,consentInvalidations=0,keyAttemptClears=0,billingCancels=0,usageStops=0;
  const context={cancelBillingRedirect(){billingCancels++;},stopUsage(){usageStops++;},importConsent:{invalidate(){consentInvalidations++;}},workspaceExportScope:{project:'pinned-project'},syncExportControls(){},braintrustImport:{invalidate(){braintrustInvalidations++;}},langsmithImport:{invalidate(){langsmithInvalidations++;}},setCheckoutAccount(){},clearKeyAttempt(){keyAttemptClears++;},cancelCommercialCheckout(){},paintCommercialControls(){},checkoutRecoveryKey:null,activeEnvironment:'default',activeProject:'pinned-project',accountDownloadDraft:{synthetic:true},$:id=>{assert.ok(nodes.has(id));return nodes.get(id);}};
@@ -55,14 +55,14 @@ function ui(){
 test('actual identity renderer shows explicit provider, account and workspace without interpreting markup',()=>{
  const f=ui(),project={id:'proj_'+'a'.repeat(32),name:'<img src=x onerror=alert(1)>'};
  f.renderAccountIdentity({auth_provider:'google',tenant_id:'google-synthetic'},project);
- assert.equal(f.text('provider-line'),'Sign-in provider: Google');assert.equal(f.text('account-line'),'Account ID: google-synthetic');
- assert.equal(f.text('project-line'),'Workspace: '+project.name+' · '+project.id);assert.equal(f.text('who'),'Google account · google-synthetic');
+ assert.equal(f.text('provider-line'),'Sign-in provider: Google');assert.equal(f.text('account-line'),'Account');
+ assert.equal(f.text('project-line'),'Workspace: '+project.name);assert.equal(f.text('who'),'Signed in with Google');
  assert.doesNotMatch(source.slice(source.indexOf('function renderAccountIdentity('),source.indexOf('function dash(')),/innerHTML|insertAdjacentHTML|fetch|localStorage|sessionStorage/);
 });
 test('unknown and prototype-looking providers stay unknown rather than guessing from an account id',()=>{
  const f=ui();for(const provider of [undefined,null,'constructor','__proto__','<script>','unknown',{}]){
   f.renderAccountIdentity({auth_provider:provider,tenant_id:'google-synthetic'},{id:'project',name:'Default project'});
-  assert.match(f.text('provider-line'),/unavailable/);assert.doesNotMatch(f.text('provider-line'),/Sign-in provider: Google|constructor|script/);
+  assert.match(f.text('provider-line'),/Sign-in provider: not shown/);assert.doesNotMatch(f.text('provider-line'),/Sign-in provider: Google|constructor|script/);
  }
 });
 test('provider/account changes replace old identity and confirmed logout clears all rendered identity fields',()=>{
@@ -94,5 +94,5 @@ test('only a signed-in email account receives its own address',async()=>{
  const f=await fixture('email'),value=await(await f.read()).json();assert.equal(value.email,'own@example.com');assert.equal(value.auth_provider,'email');
  const foreign=await(await f.read('/api/me',other)).json();assert.equal(foreign.email,undefined);
  assert.equal((await f.read('/api/me?project='+alphaProject(f.foreign.tenant_id).id)).status,403);
- const view=ui();view.renderAccountIdentity(value,{id:value.project_id,name:'Default'});assert.equal(view.text('who'),'Email and password account · own@example.com');assert.equal(view.text('account-line'),'Account: own@example.com');
+ const view=ui();view.renderAccountIdentity(value,{id:value.project_id,name:'Default'});assert.equal(view.text('who'),'Signed in as own@example.com');assert.equal(view.text('account-line'),'Account: own@example.com');
 });

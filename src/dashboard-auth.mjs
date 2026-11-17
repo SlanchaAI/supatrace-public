@@ -282,6 +282,53 @@ export async function ssoCallback(request,env){
  return establishSession(env,tenantRow.tenant_id,'redirect',[ssoCookie('',0)],false,undefined,org?{org:org.org,idp_version:org.idp_version}:null);
 }
 
+export async function emailLink(request,env){
+ if(!emailConfigured(env))throw new HttpError(404,'email_sign_in_unavailable');
+ sameOrigin(request,env);
+ const body=JSON.parse(await boundedText(request,4096));
+ const email=normalizeEmail(body?.email);
+ await limited(env,'link',5,email);
+ await charge(env,'linknet',networkIdentity(env.sourceIp),20,3600);
+ await charge(env,'linkdomain',email.split('@')[1],30,3600);
+ await charge(env,'linkhour','all',200,3600);
+ const token=random(),id=digest(token);
+ // No account lookup: new and returning addresses take the same path.
+ await env.store.createAuthChallenge('LINK',id,{email},900);
+ try{
+  await send(env,{to:email,subject:'Your SupaTrace sign-in link',text:`Open this link to create your email account or sign in to it. It works once and expires in 15 minutes.\n${env.APP_ORIGIN}/api/auth/email/link?token=${token}\nIf you did not ask for this, ignore this email\n`});
+ }catch(error){await env.store.consumeAuthChallenge('LINK',id);throw error;}
+ return json({ok:true,message:'Check your email'});
+}
+export async function emailLinkOpen(request,env){
+ if(!emailConfigured(env))throw new HttpError(404,'email_sign_in_unavailable');
+ const token=new URL(request.url).searchParams.get('token');
+ if(typeof token!=='string'||token.length!==43||!/^[A-Za-z0-9_-]{43}$/.test(token))throw new HttpError(400,'invalid_code');
+ return new Response(null,{status:302,headers:securityHeaders({Location:new URL('/?link='+token,env.APP_ORIGIN).href})});
+}
+export async function emailLinkConfirm(request,env){
+ if(!emailConfigured(env))throw new HttpError(404,'email_sign_in_unavailable');
+ sameOrigin(request,env);
+ const body=JSON.parse(await boundedText(request,4096)),token=body?.token;
+ if(typeof token!=='string'||token.length!==43||!/^[A-Za-z0-9_-]{43}$/.test(token))throw new HttpError(400,'invalid_code');
+ await limited(env,'linkconfirm',10);
+ const row=await env.store.consumeAuthChallenge('LINK',digest(token));
+ if(!row)throw new HttpError(400,'invalid_code');
+ const email=normalizeEmail(row.email),tenantId='email-'+digest(email);
+ // Capture revocation before reading the account, as with password sign-in.
+ const authTenant=await env.store.getTenant(tenantId);
+ const epoch=authTenant?sessionEpoch(authTenant):0;
+ let account=await env.store.getEmailAccount(email),newAccount=false;
+ if(!account){
+  account=await env.store.createPasswordlessEmailAccount(email);
+  newAccount=account.new_account;
+ }else if(authTenant?.tenant_id!==tenantId)throw new HttpError(401,'invalid_credentials');
+ if(!account.verified||account.tenant_id!==tenantId)throw new HttpError(401,'invalid_credentials');
+ const response=await establishSession(env,tenantId,'json',[],false,epoch);
+ if(response.status!==204)return response;
+ const headers=new Headers(response.headers);headers.set('Content-Type','application/json');
+ return new Response(JSON.stringify({ok:true,new_account:newAccount}),{status:200,headers});
+}
+
 export async function emailSignUp(request,env){
  if(!emailConfigured(env))throw new HttpError(404,'email_sign_in_unavailable');
  sameOrigin(request,env);
@@ -336,7 +383,7 @@ export async function emailSignIn(request,env){
  const tenantId='email-'+digest(email),authTenant=await env.store.getTenant(tenantId);
  const account=await env.store.getEmailAccount(email);
  const matches=checkPassword(String(body.password??''),account?.password_hash||dummyStored());
- if(!account||!matches||account.tenant_id!==tenantId||authTenant?.tenant_id!==tenantId)throw new HttpError(401,'invalid_credentials');
+ if(!account||typeof account.password_hash!=='string'||!account.password_hash||!matches||account.tenant_id!==tenantId||authTenant?.tenant_id!==tenantId)throw new HttpError(401,'invalid_credentials');
  return establishSession(env,account.tenant_id,'json',[],false,sessionEpoch(authTenant));
 }
 export async function emailReset(request,env){

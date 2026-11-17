@@ -79,12 +79,25 @@ export const INTEGRATIONS = [
   ]}
 ];
 export function integrationsList() {
-  const legend = `<dl class="legend">${Object.entries(STATUSES).map(([status, meaning]) => `<div><dt><span class="status ${status}">${status}</span></dt><dd>${esc(meaning)}</dd></div>`).join('')}</dl>`;
-  const groups = INTEGRATIONS.map(group => `<section aria-labelledby="group-${slug(group.group)}"><h2 id="group-${slug(group.group)}">${esc(group.group)}</h2>
-<ul class="tiles">
-${group.items.map(item => `<li class="tile" data-integration="${item.id}" data-status="${item.status}"><h3>${esc(item.name)}</h3><span class="status ${item.status}">${item.status}</span><p>${esc(item.summary)}</p><a href="${item.href}">Read the guide<span class="visually-hidden">: ${esc(item.name)}</span></a></li>`).join('\n')}
-</ul></section>`).join('\n');
-  return `\n${legend}\n${groups}\n`;
+  const items = Object.fromEntries(INTEGRATIONS.flatMap(group => group.items).map(item => [item.id, item]));
+  const tile = (id, name, copy) => `<li class="tile" data-integration="${id}" data-status="${items[id].status}"><h3>${name}</h3><p>${copy}</p><a href="${items[id].href}">Read guide<span class="visually-hidden">: ${name}</span></a></li>`;
+  return `
+<section aria-labelledby="integrations-live"><h2 id="integrations-live">Live</h2><ul class="tiles">
+${tile('otlp-ingest', 'OpenTelemetry (OTLP)', 'Send traces with any OTLP/HTTP exporter, protobuf or JSON. Traces only. No gRPC, metrics, or logs.')}
+${tile('claude-snapshot', 'Claude Code snapshot', 'Convert one finished transcript you choose into batches. This is not a live tail.')}
+</ul></section>
+<section aria-labelledby="integrations-beta"><h2 id="integrations-beta">Beta</h2><ul class="tiles">
+${tile('langfuse-sdk', 'Langfuse SDKs', 'Point a Langfuse SDK at SupaTrace by changing the host and keys. This only receives traces.')}
+${tile('langfuse', 'Langfuse import', 'Import one exact trace scope from the workspace with your Langfuse read keys.')}
+${tile('claude-hooks', 'Claude Code hooks', 'An opt-in hook that records prompt, tool, and completion events into a private spool. Metadata only by default.')}
+</ul></section>
+<details class="coming-soon"><summary>Coming soon</summary><p>Until these ship, use Home snippets or hosted OTLP.</p><ul class="tiles">
+<li class="tile"><h3>LangChain, LlamaIndex, Vercel AI SDK, OpenAI, Anthropic</h3><p>SDK packages are not on PyPI or npm yet. LangChain, LlamaIndex, and Vercel can send traces today with stock OpenTelemetry or AI SDK telemetry.</p><a href="/docs/frameworks/langchain/">Read guide</a></li>
+<li class="tile"><h3>OTLP JSON file, LangSmith, LangSmith API, Braintrust, Braintrust API, Weave, Opik, Datadog LLM Observability, MLflow, Helicone</h3><p>Private checkout only. LangSmith API and Braintrust API read 1 to 25 completed traces you name.</p><a href="/docs/importers/">Read guide</a></li>
+<li class="tile"><h3>MCP reader</h3><p>Not a hosted MCP endpoint.</p><a href="/docs/export/#mcp">Read guide</a></li>
+</ul></details>
+<p class="actions"><a href="/docs/">See docs</a><a href="/app/">Sign in</a></p>
+`;
 }
 const slug = text => text.toLowerCase().replace(/[^a-z]+/g, '-');
 
@@ -297,6 +310,7 @@ const BLOCKS = {
 };
 
 export const TEMPLATES = {
+  'integrations/index.html': 'integrations.html',
   'index.html': 'home.html', 'pricing/index.html': 'pricing.html',
   'terms.html': 'terms.html', 'subprocessors.html': 'subprocessors.html',
   'security/index.html': 'security.html', 'docs/index.html': 'docs.html',

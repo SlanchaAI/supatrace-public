@@ -18,13 +18,14 @@ Signed-out provider discovery has its own 15-second deadline and retains the exi
 | Continue with Google | Not on the dashboard | Built. Shown only when `GoogleClientId` and `GoogleSecretArn` are both set. `/api/auth/google`. |
 | Continue with ChatGPT | Second button | Experimental disabled scaffold, not an accepted ChatGPT integration. Official identity-token verification and approved client registration must be completed before enabling it. |
 | Continue with SSO | Third button | Built. Off until the email domains, SSO URL, issuer, and IdP certificate secret are all set. |
+| Email link sign-in | Not on the dashboard | Built. One email address creates an account or signs in. Links expire in 15 minutes and work once. Requires `EmailFrom` and mail delivery. |
 | Email and password | After "or" | Supported on the hosted service. Sign up, then confirm using the emailed link and chosen password to sign in and open the app. Self-hosted deployments require `EmailFrom` and mail delivery. |
 | Forgot password | Under the password field | Built with the email sign-in. One live code per address. Changing the password ends every existing session. |
 | Sign up | "Don't have an account? Sign up" | Built with the email sign-in. The account is created only after the confirmation page password matches the newest sign-up. |
 | Two-factor authentication | Asked when the account has it | Built, and off unless `MfaEnabled` is `true`. Settings buttons turn it on, set it up again, or turn it off. |
 | Terms of Service and Privacy Policy | Footer links | `/terms.html` and `/privacy.html`. Published documents effective November 16, 2026. |
 
-Magic links, passkeys, and phone sign-in are not on the Supabase dashboard and are not built here.
+Passkeys and phone sign-in are not built here.
 
 ## Defaults and optional providers
 
@@ -38,6 +39,20 @@ Leave these parameters empty. The deploy passes an empty value for each one the 
 `SsoIdpCertSecretArn` is a Secrets Manager ARN. The certificate PEM is the secret value. It is not a Lambda environment variable.
 
 The function role's permissions boundary is `supatrace-alpha-api-boundary`, in the hand-deployed OIDC stack. The deploy role cannot change that policy. Before Google, ChatGPT, or SSO can read a secret, pass that secret's ARN to the OIDC stack (`GoogleSecretArn`, `ChatGptSecretArn`, or `SsoCertSecretArn`) in the same hand deploy. The boundary already allows `ses:SendEmail` on `identity/*`, so turning mail on later does not require a boundary change. The function role itself only receives that permission when `EmailFrom` is set.
+
+## Email link sign-in
+
+Choose **Email me a sign-in link** on Sign in or Create a free account. Enter one email address for a new or existing account. Open the email, then press **Continue to SupaTrace**. This creates an email account when needed and signs in. An existing email and password account opens the same tenant. The app opens on Home for a new account. **Use a password instead** opens the password form.
+
+The link expires in 15 minutes and works once. The store keeps the SHA-256 hash of the token and the normalized email address. It never keeps the raw token. Opening the link does not read, consume or create a challenge, account or session. The page removes the token from the address bar. Only the confirmation POST consumes the challenge and can create an account or session. Multi-factor authentication (MFA) still applies to enrolled accounts.
+
+`POST /api/auth/email/link` accepts `{email}` and sends the link. New and existing addresses receive the same response, status and mail text, with the same store and mail work. `GET /api/auth/email/link?token=…` checks token shape and redirects to the confirmation page with no-store and no-referrer headers. `POST /api/auth/email/link/confirm` accepts `{token}` and returns `{ok:true,new_account:true|false}` or `{mfa_required:true}`. Invalid, expired and used tokens return `invalid_code`. POSTs require same-origin JSON. Routes and controls stay unavailable when email is not configured.
+
+Limits are 5 requests per 5 minutes for each email and each IP network, 20 per hour per network, 30 per hour per email domain and 200 per hour for the service. IPv6 uses its /64 prefix. Confirmation allows 10 attempts per 5 minutes per network. A limit returns 429 with Retry-After. Resend waits for that interval. Mail failure returns 503 email_unavailable and removes the challenge. Account creation uses the alpha account cap; capacity failure returns 429 account_capacity.
+
+Passwordless accounts have no password hash. Password sign-in fails until the owner uses Forgot password to set a password. Password sign-up, sign-in, confirmation and reset keep their existing paths.
+
+Signing in by email creates a separate account from GitHub or Google sign-in. Account merging is not available.
 
 ## Email and password
 

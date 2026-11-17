@@ -100,7 +100,7 @@ test('sign-in form POST hashes exact UTF-8 JSON and preserves authentication err
   const {createHash} = await import('node:crypto');
   const original = globalThis.fetch;
   try {
-    for (const path of ['sign-up', 'sign-in', 'confirm', 'forgot', 'reset', 'mfa']) {
+    for (const path of ['sign-up', 'sign-in', 'confirm', 'forgot', 'reset', 'mfa', 'link', 'link/confirm']) {
       const body = {email: 'synthetic@example.invalid', password: 'Synthetic!9雪', code: '123456'};
       globalThis.fetch = async (url, init) => {
         assert.equal(url, '/api/auth/email/' + path);

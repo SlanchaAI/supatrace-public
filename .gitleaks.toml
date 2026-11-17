@@ -33,6 +33,13 @@ regexTarget = "secret"
 paths = ['''(?:^|/)tests/ui\.test\.mjs$''']
 regexes = ['''^GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ$''']
 
+[[rules.allowlists]]
+description = "Public synthetic two-factor test fixture"
+condition = "AND"
+regexTarget = "secret"
+paths = ['''(?:^|/)tests/email\-link\.test\.mjs$''']
+regexes = ['''^GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ$''']
+
 [[rules]]
 id = "curl-auth-header"
 

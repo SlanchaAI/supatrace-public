@@ -37,7 +37,7 @@ export async function mountWorkspaces({request,me,projects,selected,environment,
  for(const p of organizations){const o=document.createElement('option');o.value=p.workspace_id??me.tenant_id;o.textContent=(p.workspace_name??'Personal workspace')+' · '+(p.role??'owner');$('workspace-select').append(o);}
  $('workspace-select').value=selected.workspace_id??me.tenant_id;
  $('workspace-select').onchange=()=>navigate($('workspace-select').value,'default');
- const current=selected.workspace_id??me.tenant_id,personal=current===me.tenant_id,orgName=p=>(p.workspace_name??'Personal workspace')+((p.workspace_id??me.tenant_id)===me.tenant_id?' (personal)':'');
+ const current=selected.workspace_id??me.tenant_id,personal=current===me.tenant_id,orgName=p=>(p.workspace_name??'Personal workspace');
  const orgSelect=$('org-select');if(orgSelect){orgSelect.replaceChildren();for(const p of organizations){const o=document.createElement('option');o.value=p.workspace_id??me.tenant_id;o.textContent=orgName(p)+(p.mfa_required===true?' (needs two-factor authentication)':p.sso_required===true?' (needs SSO sign-in)':'');orgSelect.append(o);}orgSelect.value=current;orgSelect.onchange=()=>{const next=orgSelect.value;orgSelect.value=current;navigate(next,'default');};}
  for(const p of organizations){const li=document.createElement('li'),id=p.workspace_id??me.tenant_id;li.dataset.org=id;li.textContent=`${orgName(p)} · ${p.role??'owner'} · ${id}`+(id===current?' · current':'');$('org-list').append(li);}
  // A member limited to some environments is moved to the first one they may open.
@@ -46,7 +46,7 @@ export async function mountWorkspaces({request,me,projects,selected,environment,
  if(!Array.isArray(environments.environments)||!environments.environments.some(e=>e.id===environment))throw Error('environment_unavailable');
  for(const e of environments.environments){const o=document.createElement('option');o.value=e.id;o.textContent=e.name;$('environment-select').append(o);}
  $('environment-select').value=environment;$('environment-select').onchange=()=>navigate(selected.workspace_id??me.tenant_id,$('environment-select').value);
- const role=selected.role??'owner';$('scope-summary').textContent=`${role[0].toUpperCase()+role.slice(1)} access · Environments share quota`;
+ const role=selected.role??'owner';$('scope-summary').textContent=`${role[0].toUpperCase()+role.slice(1)} · environments share this plan’s limits`;
  $('workspace-role').textContent=`Your role: ${role}. Environment: ${environment}. Billing belongs to the workspace owner.`;
  $('members-title').textContent=selected.shared===true?(selected.workspace_name??'Team'):'Personal workspace';$('members-role').textContent=`Your role: ${role}.`+(selected.shared===true?'':' Team sharing is off.');
  $('share-workspace').hidden=role!=='owner'||selected.shared===true;$('members-readonly').hidden=role==='owner';

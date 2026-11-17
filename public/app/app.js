@@ -80,25 +80,28 @@ function clearFailure(scope){if(statusFailure&&(!scope||statusFailure.scope===sc
 function renderAccountIdentity(me,project){
  activeWorkspaceName=project.workspace_name??project.name;
  setCheckoutAccount(me.tenant_id,project.id);
- const labels={github:'GitHub',google:'Google',email:'Email and password',sso:'SSO',chatgpt:'ChatGPT (experimental)'};
+ const labels={github:'GitHub',google:'Google',email:'Email',sso:'SSO',chatgpt:'ChatGPT (experimental)'};
  const provider=typeof me.auth_provider==='string'&&Object.hasOwn(labels,me.auth_provider)?labels[me.auth_provider]:null;
  $('account-reload').hidden=true;
- $('provider-line').textContent=provider?'Sign-in provider: '+provider:'Sign-in provider unavailable. Do not infer it from an account ID.';
- const label=me.auth_provider==='email'&&typeof me.email==='string'?me.email:me.tenant_id;
- $('who').textContent=provider?provider+' account · '+label:'Signed in as '+label;
- $('account-line').textContent=label===me.tenant_id?'Account ID: '+label:'Account: '+label;
- for(const id of ['who','account-line'])$(id).title=label===me.tenant_id?'':me.tenant_id;
- $('project-name').textContent=(project.shared?project.workspace_name:project.name)+(activeEnvironment!=='default'?' / '+activeEnvironment:'')+' · '+project.id;
- $('project-line').textContent='Workspace: '+project.name+' · '+project.id;
+ $('provider-line').textContent=provider?'Sign-in provider: '+provider:'Sign-in provider: not shown';
+ const label=typeof me.name==='string'&&me.name.trim()?me.name:typeof me.email==='string'&&me.email.trim()?me.email:null;
+ $('who').textContent=label?'Signed in as '+label:provider?'Signed in with '+provider:'Signed in';
+ $('account-line').textContent=label?'Account: '+label:'Account';
+ for(const id of ['who','account-line'])$(id).title='';
+ $('project-name').textContent=(project.shared?project.workspace_name:project.name)+(activeEnvironment!=='default'?' / '+activeEnvironment:'');
+ $('project-line').textContent='Workspace: '+project.name;
+ for(const [id,value] of [['copy-account-id',me.tenant_id],['copy-project-id',project.id]]){
+  const button=$(id);button.disabled=false;button.onclick=async()=>{try{await navigator.clipboard.writeText(value);button.textContent='Copied';}catch{button.textContent='Copy unavailable';}};
+ }
 }
-function clearAccountIdentity(){cancelBillingRedirect();billingReady=false;$('billing-portal').hidden=true;$('billing-portal').disabled=true;importConsent?.invalidate('Account or session needs rechecking. Stored consent is not revoked by leaving this page.');workspaceExportScope=null;syncExportControls();langsmithImport?.invalidate('Workspace needs rechecking. Reload and review the scope again.');braintrustImport?.invalidate('Workspace needs rechecking. Reload and review the scope again.');cancelCommercialCheckout();checkoutRecoveryKey=null;paintCommercialControls();for(const id of ['provider-line','who','account-line','project-name','project-line']){$(id).textContent='';$(id).title='';}$('account-reload').hidden=true;}
+function clearAccountIdentity(){for(const id of ['copy-account-id','copy-project-id']){$(id).disabled=true;$(id).onclick=null;}cancelBillingRedirect();billingReady=false;$('billing-portal').hidden=true;$('billing-portal').disabled=true;importConsent?.invalidate('Account or session needs rechecking. Stored consent is not revoked by leaving this page.');workspaceExportScope=null;syncExportControls();langsmithImport?.invalidate('Workspace needs rechecking. Reload and review the scope again.');braintrustImport?.invalidate('Workspace needs rechecking. Reload and review the scope again.');cancelCommercialCheckout();checkoutRecoveryKey=null;paintCommercialControls();for(const id of ['provider-line','who','account-line','project-name','project-line']){$(id).textContent='';$(id).title='';}$('account-reload').hidden=true;}
 function invalidateAccountIdentity(){clearAccountDownload();clearKeyAttempt();if(!activeProject)return;clearAccountIdentity();stopUsage('Account identity or workspace permission changed. Reload the page before checking usage and billing.');$('who').textContent='Account needs rechecking';$('provider-line').textContent='Account identity needs rechecking. Reload this page to confirm the current provider and workspace.';$('account-reload').hidden=false;}
 function dash(value){return value==null||value===''?'—':String(value);}
 function duration(ms){if(ms==null)return '—';if(ms<1000)return ms+'ms';return (ms/1000).toFixed(1)+'s';}
 function agentLabel(run){return run.agents?.[0]?run.agents[0].slice(0,10):'—';}
 function cell(className,text){const node=document.createElement('td');if(className)node.className=className;node.textContent=text;return node;}
 function focusView(view){const heading=$('view-'+view).querySelector('h1');heading.tabIndex=-1;heading.focus();}
-function showView({focus=false,forceFocus=false}={}){clearFailure();const name=(location.hash||'#home').replace('#','').split(/[\/?]/)[0];const view=views.includes(name)?name:'home',changed=view!==displayedView;displayedView=view;if(view!==keyView){keyView=view;stopKeyLoad();if(activeProject&&view==='keys')void keys();}for(const section of document.querySelectorAll('#workspace > section'))section.hidden=section.dataset.view!==view;for(const link of document.querySelectorAll('#rail a[data-nav]')){if(link.dataset.nav===view)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');}if(view!=='traces'||focus&&forceFocus)closeDetail();if(view!=='agents')cancelImportPlan();if(view!=='billing'){cancelCommercialCheckout();cancelBillingRedirect();}if(focus&&(changed||forceFocus))focusView(view);prefillSetupCode(view);}
+function showView({focus=false,forceFocus=false}={}){clearFailure();const name=(location.hash||'#home').replace('#','').split(/[\/?]/)[0];const view=views.includes(name)?name:'home',changed=view!==displayedView;displayedView=view;document.title=({home:'Home',traces:'Traces',agents:'Agents',keys:'API keys',usage:'Usage',billing:'Billing',members:'Members',audit:'Audit log',integrations:'Integrations',logs:'Logs',settings:'Settings'}[view]??'Home')+' · SupaTrace';if(view!==keyView){keyView=view;stopKeyLoad();if(activeProject&&view==='keys')void keys();}for(const section of document.querySelectorAll('#workspace > section'))section.hidden=section.dataset.view!==view;for(const link of document.querySelectorAll('#rail a[data-nav]')){if(link.dataset.nav===view)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');}if(view!=='traces'||focus&&forceFocus)closeDetail();if(view!=='agents')cancelImportPlan();if(view!=='billing'){cancelCommercialCheckout();cancelBillingRedirect();}if(focus&&(changed||forceFocus))focusView(view);prefillSetupCode(view);}
 function prefillSetupCode(view){if(view!=='agents')return;const match=/[?&]code=([A-Za-z0-9_-]{12})(?:&|$)/.exec(location.hash||'');const code=match?.[1]??pendingSetupCode()?.code;if(!code)return;const input=$('code');if(!input)return;input.value=code;input.focus();if(typeof history!=='undefined'&&history.replaceState)history.replaceState(null,'',location.pathname+location.search+'#agents');}
 const narrow=window.matchMedia('(max-width: 800px)');
 // A CSS breakpoint can blur a now-hidden button before the media change runs.

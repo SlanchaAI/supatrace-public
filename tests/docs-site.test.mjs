@@ -182,7 +182,7 @@ test('onboarding leads with public paths and keeps stock exporter examples ident
   assert.ok(quick.indexOf('id="home"') < quick.indexOf('id="otlp"'));
   assert.ok(quick.indexOf('id="otlp"') < quick.indexOf('id="today"'));
   assert.match(quick, /about 30 seconds after sign-in/);
-  assert.match(read('index.html'), /href="\/docs\/quickstart\/">Read the setup guide/);
+  assert.match(read('index.html'), /href="\/docs\/">See docs/);
   const guide = read('agent-setup.html');
   assert.ok(guide.indexOf('/docs/quickstart/#home') < guide.indexOf('/docs/quickstart/#otlp'));
   assert.ok(guide.indexOf('/docs/quickstart/#otlp') < guide.indexOf('id="reviewed-scripts"'));

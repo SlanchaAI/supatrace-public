@@ -247,7 +247,7 @@ test('auth and legacy docs redirects are generated, noindex and fixed local dest
 
 test('launch copy and shared chrome keep the public surface consistent', () => {
   const home = read('index.html');
-  assert.ok(home.includes('Send traces from any OpenTelemetry app. Inspect the steps your app records.'));
+  assert.ok(home.includes('See every step your agent took.'));
   assert.doesNotMatch(home, /test[ -]mode|provider-note/);
   // Hosted billing is live; both pages keep the approved catalog prices.
   for (const file of ['index.html', 'pricing/index.html']) {
@@ -256,7 +256,7 @@ test('launch copy and shared chrome keep the public surface consistent', () => {
     assert.ok(html.includes('Free plan with no card.'), file);
     for (const plan of PLANS.plans.filter(plan => plan.checkout)) assert.ok(html.includes(`${plan.name} is $${plan.monthly_base_usd.toFixed(2)}/month.`), file + ': catalog price for ' + plan.name);
   }
-  assert.ok(home.includes('Small alpha'));
+  assert.ok(home.includes('Free alpha'));
   for (const page of PAGES) {
     const html = read(page.file);
     assert.ok(html.includes('SupaTrace'), page.file);
