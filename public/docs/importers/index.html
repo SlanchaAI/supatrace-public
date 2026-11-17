@@ -40,23 +40,23 @@
 <p class="eyebrow">Reference</p>
 <h1>Importers</h1>
 </div>
-<p>Without a checkout, use <a href="/docs/quickstart/#home">Home snippets</a>, <a href="/docs/frameworks/opentelemetry/#otlp">hosted OTLP</a> or the <a href="/agent-setup.html">reviewed scripts</a> today.</p>
+<p>For a hosted first trace, use <a href="/docs/quickstart/#home">Home snippets</a>, <a href="/docs/frameworks/opentelemetry/#otlp">hosted OTLP</a> or the <a href="/agent-setup.html">reviewed scripts</a> today.</p>
 <p class="lede">Bring history from another tool. File and API importers stage reviewed batches on your machine first; nothing uploads until you run the uploader. The Langfuse import runs in the workspace after you review its exact scope.</p>
-<section aria-labelledby="files"><h2 id="files">Provider file imports <span class="status preview">preview</span></h2>
+<section aria-labelledby="files"><h2 id="files">Provider file imports <span class="status preview">Coming soon</span></h2>
 <p>Convert one export file you chose into SupaTrace batches. Formats: LangSmith runs, Braintrust span logs, Weave calls, Opik spans, Datadog LLM Observability JSON, MLflow traces, Helicone request logs and OTLP HTTP JSON (not protobuf or gzip).</p>
-<p>This checkout-only feature is unavailable to outside users while the repository is private. It needs Node 22, Python 3.12 and private repository access; the converters are not part of the setup guide downloads. It does not call provider APIs or capture live sessions. The <a href="/agent-setup.html#file-imports">setup guide</a> has a command builder.</p>
-<pre data-lang="sh"><code>node agent/import_traces.mjs ./reviewed-export.json langsmith source-project-name proj_REPLACE_WITH_32_HEX_CHARACTERS ./private-import</code></pre>
+<p>Not available in the hosted service yet. Local staging source is in the <a href="https://github.com/SlanchaAI/supatrace-public">public repository</a> and needs Node 22 and Python 3.12; the converters are not part of the setup guide downloads. Uploading requires deployment-specific hooks. It does not call provider APIs or capture live sessions. The <a href="/agent-setup.html#file-imports">setup guide</a> has a command builder.</p>
+<div class="scroll-shell"><pre data-lang="sh" tabindex="0" role="region" aria-label="Code example; scroll horizontally for more"><code>node agent/import_traces.mjs ./reviewed-export.json langsmith source-project-name proj_REPLACE_WITH_32_HEX_CHARACTERS ./private-import</code></pre><span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>
 <p>The default keeps metadata only: IDs, timing, span kinds, error status and token counts. Add <code>--include-content</code> to keep prompts, outputs and other source fields, after you have reviewed them for secrets. The command stages locally and reports <code>uploaded:false</code>.</p></section>
-<section aria-labelledby="api"><h2 id="api">LangSmith and Braintrust API imports <span class="status preview">preview</span></h2>
-<p>Checkout-only importers, unavailable to outside users. They read 1 to 25 completed traces you name from the LangSmith or Braintrust API, checkpoint privately and stage the same uploader manifest. Prepare the scope under <strong>Agents</strong> in the workspace, then, if you have private repository access, run the importer with your own provider key. There is no recurring sync, project discovery or live capture. These have source tests; a hosted end-to-end acceptance run is still open.</p></section>
-<section aria-labelledby="langfuse"><h2 id="langfuse">Langfuse <span class="status beta">beta</span></h2>
+<section aria-labelledby="api"><h2 id="api">LangSmith and Braintrust API imports <span class="status preview">Coming soon</span></h2>
+<p>Not available in the hosted service yet. Operator-run importers live in the <a href="https://github.com/SlanchaAI/supatrace-public">public repository</a>. They read 1 to 25 completed traces you name from the LangSmith or Braintrust API, checkpoint privately and stage the same uploader manifest. These need deployment-specific upload hooks and your own provider key; the hosted workspace does not run them. There is no recurring sync, project discovery or live capture. These have source tests; a hosted end-to-end acceptance run is still open.</p></section>
+<section aria-labelledby="langfuse"><h2 id="langfuse">Langfuse <span class="status beta">Beta</span></h2>
 <p>Under <strong>Agents</strong>, <strong>Import from Langfuse</strong> prepares an exact scope: one Langfuse project, trace, environment and UTC time window. You review that scope and consent to reading and storing it, enter your Langfuse read keys once and start. While the page stays visible it advances the import in small bounded requests and reports progress; you can pause and resume. The keys are sent only to SupaTrace and the Langfuse region you chose, are kept only during the active import and are not saved.</p>
 <p>Limits: 100 observations, 10 pages, 50 rows per page and 128 KiB of source JSON per import. There is no recurring sync or background worker.</p>
 <p>Server pull runs only where the server has it enabled. That is an operator setting; the stack template's default enables it for supatrace.dev. A verified import from a real Langfuse account on the hosted site is still open (#67), which is why this is beta.</p></section>
 <section aria-labelledby="claude"><h2 id="claude">Claude Code</h2>
 <ul class="facts">
-<li><strong>Snapshot</strong> <span class="status available">available</span>: convert one finished transcript you select with <code>claude_snapshot.py</code>. See the <a href="/agent-setup.html">setup guide</a>.</li>
-<li><strong>Hooks</strong> <span class="status beta">beta</span>: an opt-in command hook that records prompt, tool and completion events into a private spool. Metadata only by default. See the <a href="/agent-setup.html#claude-hooks">setup guide</a>.</li>
+<li><strong>Snapshot</strong> <span class="status available">Live</span>: convert one finished transcript you select with <code>claude_snapshot.py</code>. See the <a href="/agent-setup.html">setup guide</a>.</li>
+<li><strong>Hooks</strong> <span class="status beta">Beta</span>: an opt-in command hook that records prompt, tool and completion events into a private spool. Metadata only by default. See the <a href="/agent-setup.html#claude-hooks">setup guide</a>.</li>
 </ul></section>
 </main>
 </div>

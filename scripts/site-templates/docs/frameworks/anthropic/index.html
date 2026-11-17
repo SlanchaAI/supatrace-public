@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Record Anthropic Messages API calls as SupaTrace events from Python.">
+<meta name="theme-color" content="#f6f3e8">
+<title>Anthropic · SupaTrace docs</title>
+<link rel="icon" href="/favicon.svg?v=classic-s-2" type="image/svg+xml">
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/remodel.css">
+<link rel="stylesheet" href="/site.css">
+<link rel="canonical" href="https://supatrace.dev/docs/frameworks/anthropic/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="SupaTrace">
+<meta property="og:title" content="Anthropic · SupaTrace docs">
+<meta property="og:description" content="Record Anthropic Messages API calls as SupaTrace events from Python.">
+<meta property="og:url" content="https://supatrace.dev/docs/frameworks/anthropic/">
+<meta property="og:image" content="https://supatrace.dev/og-image.png">
+</head>
+<body class="landing remodel page docs" data-page="docs">
+<a class="skip" href="#content">Skip to content</a>
+<!-- site:header --><!-- /site:header -->
+<div class="docs-layout">
+<!-- docs:nav --><!-- /docs:nav -->
+<main id="content">
+<div class="page-head">
+<p class="eyebrow">Framework guide</p>
+<h1>Anthropic</h1>
+</div>
+<p class="lede">Record Anthropic Messages API calls as SupaTrace events from Python.</p>
+<p class="preview-note"><strong>Python SDK: Beta. JavaScript SDK: Coming soon.</strong> Install the alpha Python package with <code>pip install supatrace==0.1.0</code> (Python 3.10+). The JavaScript <code>supatrace</code> package is not published to npm; its examples run from the <a href="https://github.com/SlanchaAI/supatrace-public">public repository</a> root. For a first hosted trace, use the <a href="/docs/frameworks/opentelemetry/#otlp">stock OpenTelemetry exporter</a> or the Python/Node snippets on <a href="/app/#home">Home</a>.</p>
+
+<section aria-labelledby="source"><h2 id="source">Record a call in source mode <span class="status beta">Beta</span></h2><p>Source mode is the default. It makes no network request: you choose the events, the SDK checks them against the same batch rules the server applies and writes one file to a local spool for you to review. The example records the model name and token counts, not the prompt or the reply.</p>
+<pre data-lang="sh"><code>pip install supatrace==0.1.0</code></pre>
+<pre data-lang="python" data-run="py"><code>import datetime
+import supatrace
+import anthropic
+
+trace = supatrace.init(service="support-bot", spool="./spool")
+now = lambda: datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+started = now()
+reply = anthropic.Anthropic().messages.create(model="YOUR_MODEL", max_tokens=256, messages=[{"role": "user", "content": "Say hello."}])
+result = trace.batch([
+    {"id": "req-1", "time": started, "kind": "request", "name": "messages", "data": {"model": "YOUR_MODEL"}},
+    {"id": "res-1", "time": now(), "kind": "response", "name": "messages", "data": {"input_tokens": reply.usage.input_tokens, "output_tokens": reply.usage.output_tokens}},
+])
+print(result["report"]["valid"], result["report"]["path"])</code></pre>
+<p>From Node, use the same <code>trace.batch</code> pattern as the <a href="/docs/frameworks/openai/#node">OpenAI Node example</a>. The JavaScript SDK has no automatic Anthropic instrumentation.</p></section>
+<section aria-labelledby="upload"><h2 id="upload">Review, then upload</h2>
+<p>Open the spooled file and read it. Remove anything you do not intend to store. Then upload it with the script from the <a href="/agent-setup.html">setup guide</a>, using the write-only connection you approved there:</p>
+<pre data-lang="sh"><code>python3 upload.py ./spool/BATCH.json --config ./supatrace-access.json</code></pre>
+<p>The trace appears under <strong>Traces</strong> in your <a href="/app/">workspace</a>. <a href="/docs/limits/">Batch limits</a> apply: 100 events and 512 KiB per batch.</p></section>
+<section aria-labelledby="otlp"><h2 id="otlp">Automatic spans over OTLP <span class="status beta">Beta</span></h2>
+<p>With <code>mode="otlp"</code> the Python SDK registers the <code>opentelemetry-instrumentation-anthropic</code> instrumentor when it is installed and exports spans to <code>SUPATRACE_OTLP_ENDPOINT</code> + <code>/v1/traces</code>, authenticated with your write key. SupaTrace accepts traces over OTLP/HTTP on supatrace.dev. The Python SDK is an alpha package on PyPI; framework instrumentation has local tests but no hosted acceptance proof. For the first trace, use a stock exporter from the <a href="/docs/frameworks/opentelemetry/#otlp">OpenTelemetry guide</a> today. </p>
+<pre data-lang="sh"><code>pip install "opentelemetry-sdk&gt;=1.27" "opentelemetry-exporter-otlp-proto-http&gt;=1.27" opentelemetry-instrumentation-anthropic
+export SUPATRACE_OTLP_ENDPOINT="https://supatrace.dev"   # SupaTrace SDK OTLP mode (Python Beta; JavaScript source only)
+export SUPATRACE_API_KEY="YOUR_WRITE_KEY"</code></pre>
+<pre data-lang="python" data-run="py"><code>import supatrace
+
+trace = supatrace.init(service="support-bot", mode="otlp", instruments=["anthropic"])
+print(trace.capture["sending"], trace.capture["instrumented"], trace.capture["skipped"])</code></pre>
+<p>Nothing is sent unless the endpoint, the key and the OpenTelemetry packages are all present. When one is missing, <code>trace.capture["skipped"]</code> says which. Prompt and response content is not captured unless you pass <code>capture_content=True</code> or set <code>SUPATRACE_CAPTURE_CONTENT=1</code>.</p></section>
+</main>
+</div>
+<footer class="site-footer"><!-- site:footer --><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>
+<script type="module" src="/docs/docs.js"></script>
+</body>
+</html>

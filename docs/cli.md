@@ -1,8 +1,8 @@
 # `supatrace` command line
 
-Connect an app to a workspace and watch its traces from a terminal. The CLI is `packages/supatrace-js/cli.mjs`, the `supatrace` bin of the checkout-only `supatrace` package. It has no dependencies and needs Node 22 or later.
+Connect an app to a workspace and watch its traces from a terminal. The CLI is `packages/supatrace-js/cli.mjs`, the `supatrace` bin of the source-only `supatrace` JavaScript package in the public repository. It has no dependencies and needs Node 22 or later.
 
-**Coming soon.** The SupaTrace packages are not published on npm or PyPI. Until then send traces with the stock OpenTelemetry exporter (see the [OTLP quickstart](otlp-ingest.md)) or the Python/Node snippets on Home. Run the CLI from the public source checkout:
+**Coming soon.** The JavaScript `supatrace` package is not published to npm. The alpha Python SDK is on PyPI (`pip install supatrace==0.1.0`); it does not include this CLI. Until then send traces with the stock OpenTelemetry exporter (see the [OTLP quickstart](otlp-ingest.md)) or the Python/Node snippets on Home. Run the CLI from the [public source checkout](https://github.com/SlanchaAI/supatrace-public):
 
 ```sh
 node packages/supatrace-js/cli.mjs --help

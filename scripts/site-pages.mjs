@@ -41,19 +41,19 @@ export const DOC_PAGES = DOCS.flatMap(group => group.items).map(item => ({file: 
 export const STATUSES = {
   available: 'Usable today on supatrace.dev or through public downloads.',
   beta: 'Implemented with source tests; hosted or real-client acceptance is still open.',
-  preview: 'Private-checkout feature, unavailable to outside users. SDK packages are coming; not on PyPI or npm.',
+  preview: 'Coming soon: not enabled on the hosted service or not installable yet.',
   planned: 'Not usable today.'
 };
-const FILE = 'Checkout-only converter, unavailable to outside users while the repository is private. Use Home snippets or hosted OTLP today.';
+const FILE = 'Not available in the hosted service yet. Operator-run source is in the public repository. Use Home snippets or hosted OTLP today.';
 export const INTEGRATIONS = [
   {group: 'Frameworks', items: [
-    {id: 'langchain', name: 'LangChain', status: 'preview', summary: 'Record model calls as events with the Python SDK in source mode. SDK package coming. Stock OpenTelemetry exporters can send traces to supatrace.dev today.', href: '/docs/frameworks/langchain/'},
-    {id: 'llamaindex', name: 'LlamaIndex', status: 'preview', summary: 'Record model calls as events with the Python SDK in source mode. SDK package coming. Stock OpenTelemetry exporters can send traces to supatrace.dev today.', href: '/docs/frameworks/llamaindex/'},
+    {id: 'langchain', name: 'LangChain', status: 'beta', summary: 'Record model calls as events with the alpha Python package on PyPI (supatrace 0.1.0). Hosted acceptance is still open. Stock OpenTelemetry exporters can send traces to supatrace.dev today.', href: '/docs/frameworks/langchain/'},
+    {id: 'llamaindex', name: 'LlamaIndex', status: 'beta', summary: 'Record model calls as events with the alpha Python package on PyPI (supatrace 0.1.0). Hosted acceptance is still open. Stock OpenTelemetry exporters can send traces to supatrace.dev today.', href: '/docs/frameworks/llamaindex/'},
     {id: 'vercel-ai-sdk', name: 'Vercel AI SDK', status: 'preview', summary: 'Record generateText calls as events with the JavaScript SDK in source mode. SDK package coming. AI SDK telemetry can send traces to the hosted OTLP/HTTP receiver today.', href: '/docs/frameworks/vercel-ai-sdk/'}
   ]},
   {group: 'Providers', items: [
-    {id: 'openai', name: 'OpenAI', status: 'preview', summary: 'Record chat completions as events from Python or Node in source mode.', href: '/docs/frameworks/openai/'},
-    {id: 'anthropic', name: 'Anthropic', status: 'preview', summary: 'Record Messages API calls as events from Python in source mode.', href: '/docs/frameworks/anthropic/'}
+    {id: 'openai', name: 'OpenAI (Python)', status: 'beta', summary: 'Record chat completions as events with the alpha Python package on PyPI (supatrace 0.1.0). Hosted acceptance is still open. The JavaScript package is not published to npm.', href: '/docs/frameworks/openai/'},
+    {id: 'anthropic', name: 'Anthropic', status: 'beta', summary: 'Record Messages API calls as events with the alpha Python package on PyPI (supatrace 0.1.0). Hosted acceptance is still open.', href: '/docs/frameworks/anthropic/'}
   ]},
   {group: 'Standards', items: [
     {id: 'otlp-ingest', name: 'OpenTelemetry (OTLP ingest)', status: 'available', summary: 'OTLP/HTTP receiver for any OpenTelemetry exporter, protobuf or JSON. Available on supatrace.dev for traces only; no gRPC, metrics or logs.', href: '/docs/frameworks/opentelemetry/#otlp'},
@@ -63,9 +63,9 @@ export const INTEGRATIONS = [
   {group: 'Import from', items: [
     {id: 'langfuse', name: 'Langfuse', status: 'beta', summary: 'Import one exact trace scope from the workspace with your Langfuse read keys, in bounded steps. Runs only where the server has it enabled.', href: '/docs/importers/#langfuse'},
     {id: 'langsmith', name: 'LangSmith', status: 'preview', format: 'langsmith', summary: 'LangSmith run exports. ' + FILE, href: '/docs/importers/#files'},
-    {id: 'langsmith-api', name: 'LangSmith API', status: 'preview', summary: 'Private-checkout importer, unavailable to outside users. Reads 1 to 25 completed traces you name from the LangSmith API with your own key.', href: '/docs/importers/#api'},
+    {id: 'langsmith-api', name: 'LangSmith API', status: 'preview', summary: 'Not available in the hosted service yet. Operator-run source is in the public repository. Reads 1 to 25 completed traces you name from the LangSmith API with your own key.', href: '/docs/importers/#api'},
     {id: 'braintrust', name: 'Braintrust', status: 'preview', format: 'braintrust', summary: 'Braintrust span logs. ' + FILE, href: '/docs/importers/#files'},
-    {id: 'braintrust-api', name: 'Braintrust API', status: 'preview', summary: 'Private-checkout importer, unavailable to outside users. Reads 1 to 25 completed traces you name from the Braintrust API with your own key.', href: '/docs/importers/#api'},
+    {id: 'braintrust-api', name: 'Braintrust API', status: 'preview', summary: 'Not available in the hosted service yet. Operator-run source is in the public repository. Reads 1 to 25 completed traces you name from the Braintrust API with your own key.', href: '/docs/importers/#api'},
     {id: 'weave', name: 'Weave', status: 'preview', format: 'weave', summary: 'Weave call exports. ' + FILE, href: '/docs/importers/#files'},
     {id: 'opik', name: 'Opik', status: 'preview', format: 'opik', summary: 'Opik span exports. ' + FILE, href: '/docs/importers/#files'},
     {id: 'datadog', name: 'Datadog LLM Observability', status: 'preview', format: 'datadog', summary: 'Datadog LLMObs JSON exports. ' + FILE, href: '/docs/importers/#files'},
@@ -75,7 +75,7 @@ export const INTEGRATIONS = [
   {group: 'Agents and tools', items: [
     {id: 'claude-snapshot', name: 'Claude Code snapshot', status: 'available', summary: 'Convert one finished Claude Code transcript you select into reviewed batches. Not a live tailer.', href: '/docs/importers/#claude'},
     {id: 'claude-hooks', name: 'Claude Code hooks', status: 'beta', summary: 'Opt-in command hook that records prompt, tool and completion events into a private spool. Metadata only by default.', href: '/docs/importers/#claude'},
-    {id: 'mcp', name: 'MCP reader', status: 'preview', summary: 'Private-checkout MCP reader, unavailable to outside users. Lets an agent list, search, inspect and export traces within a scope you review. Not a hosted MCP endpoint.', href: '/docs/export/#mcp'}
+    {id: 'mcp', name: 'MCP reader', status: 'preview', summary: 'Not available in the hosted service yet. The reader source is in the public repository. Lets an agent list, search, inspect and export traces within a scope you review. Not a hosted MCP endpoint.', href: '/docs/export/#mcp'}
   ]}
 ];
 export function integrationsList() {
@@ -87,13 +87,17 @@ ${tile('otlp-ingest', 'OpenTelemetry (OTLP)', 'Send traces with any OTLP/HTTP ex
 ${tile('claude-snapshot', 'Claude Code snapshot', 'Convert one finished transcript you choose into batches. This is not a live tail.')}
 </ul></section>
 <section aria-labelledby="integrations-beta"><h2 id="integrations-beta">Beta</h2><ul class="tiles">
+${tile('langchain', 'LangChain', 'Use the alpha Python SDK on PyPI: supatrace 0.1.0. Hosted acceptance is still open.')}
+${tile('llamaindex', 'LlamaIndex', 'Use the alpha Python SDK on PyPI: supatrace 0.1.0. Hosted acceptance is still open.')}
+${tile('openai', 'OpenAI (Python)', 'Use the alpha Python SDK on PyPI: supatrace 0.1.0. Hosted acceptance is still open. The JavaScript package is not published to npm.')}
+${tile('anthropic', 'Anthropic', 'Use the alpha Python SDK on PyPI: supatrace 0.1.0. Hosted acceptance is still open.')}
 ${tile('langfuse-sdk', 'Langfuse SDKs', 'Point a Langfuse SDK at SupaTrace by changing the host and keys. This only receives traces.')}
 ${tile('langfuse', 'Langfuse import', 'Import one exact trace scope from the workspace with your Langfuse read keys.')}
 ${tile('claude-hooks', 'Claude Code hooks', 'An opt-in hook that records prompt, tool, and completion events into a private spool. Metadata only by default.')}
 </ul></section>
 <details class="coming-soon"><summary>Coming soon</summary><p>Until these ship, use Home snippets or hosted OTLP.</p><ul class="tiles">
-<li class="tile"><h3>LangChain, LlamaIndex, Vercel AI SDK, OpenAI, Anthropic</h3><p>SDK packages are not on PyPI or npm yet. LangChain, LlamaIndex, and Vercel can send traces today with stock OpenTelemetry or AI SDK telemetry.</p><a href="/docs/frameworks/langchain/">Read guide</a></li>
-<li class="tile"><h3>OTLP JSON file, LangSmith, LangSmith API, Braintrust, Braintrust API, Weave, Opik, Datadog LLM Observability, MLflow, Helicone</h3><p>Private checkout only. LangSmith API and Braintrust API read 1 to 25 completed traces you name.</p><a href="/docs/importers/">Read guide</a></li>
+<li class="tile"><h3>JavaScript SDK: Vercel AI SDK and OpenAI</h3><p>The JavaScript supatrace package is not published to npm. Examples run from the public repository. Use hosted OTLP for a first trace; the Python SDK is Beta on PyPI.</p><a href="/docs/frameworks/vercel-ai-sdk/">Read guide</a></li>
+<li class="tile"><h3>OTLP JSON file, LangSmith, LangSmith API, Braintrust, Braintrust API, Weave, Opik, Datadog LLM Observability, MLflow, Helicone</h3><p>Not available in the hosted service yet. Operator-run source is in the public repository. LangSmith API and Braintrust API read 1 to 25 completed traces you name.</p><a href="/docs/importers/">Read guide</a></li>
 <li class="tile"><h3>MCP reader</h3><p>Not a hosted MCP endpoint.</p><a href="/docs/export/#mcp">Read guide</a></li>
 </ul></details>
 <p class="actions"><a href="/docs/">See docs</a><a href="/app/">Sign in</a></p>
@@ -253,7 +257,7 @@ export function plansToday(limits = PLAN_LIMITS) {
 export function planOverage(catalog = PLANS) {
   const metered = catalog.plans.filter(plan => plan.overage_usd_per_million_spans !== null && plan.price_kind !== 'custom');
   const rows = metered.map(plan => `<tr><th scope="row">${esc(plan.name)}</th><td>${format.spans(plan.included_spans_per_month)} spans</td><td>${format.overage(plan.overage_usd_per_million_spans)}</td></tr>`).join('\n');
-  return `\n<div class="table-scroll" tabindex="0" role="region" aria-label="Overage rates"><table class="compare"><thead><tr><th scope="col">Plan</th><th scope="col">Included each month</th><th scope="col">Past the allowance, cap off</th></tr></thead><tbody>\n${rows}\n</tbody></table></div>\n`;
+  return `\n<div class="table-scroll" tabindex="0" role="region" aria-label="Overage rates"><table class="compare stack-table"><thead><tr><th scope="col">Plan</th><th scope="col">Included each month</th><th scope="col">Past the allowance, cap off</th></tr></thead><tbody>\n${rows}\n</tbody></table></div>\n`;
 }
 
 // SES receiving for support@ was verified on supatrace.dev on 2026-11-15.
@@ -310,6 +314,7 @@ const BLOCKS = {
 };
 
 export const TEMPLATES = {
+  ...Object.fromEntries(DOC_PAGES.map(page => [page.file, page.file])),
   'integrations/index.html': 'integrations.html',
   'index.html': 'home.html', 'pricing/index.html': 'pricing.html',
   'terms.html': 'terms.html', 'subprocessors.html': 'subprocessors.html',
@@ -319,13 +324,39 @@ export const TEMPLATES = {
 };
 const AUXILIARY_PAGES = [{file: 'agent-setup.html'}, {file: 'llms.txt'}];
 
+// Static regions work before the copy-button script runs. Templates are the input,
+// so repeated generation cannot nest wrappers or duplicate mobile labels.
+export function scrollRegions(html) {
+  const shell = content => `<div class="scroll-shell">${content}<span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>`;
+  html = html.replace(/<pre([^>]*)>([\s\S]*?)<\/pre>/g, (_, attrs, code) => shell(`<pre${attrs} tabindex="0" role="region" aria-label="Code example; scroll horizontally for more">${code}</pre>`));
+  html = html.replace(/<table([^>]*)>([\s\S]*?)<\/table>/g, (_, attrs, body) => {
+    if (attrs.includes('stack-table')) {
+      const headings = [...body.matchAll(/<th scope="col">([\s\S]*?)<\/th>/g)].map(match => match[1]);
+      body = body.replace(/<tbody>([\s\S]*?)<\/tbody>/, (_, rows) => '<tbody>' + rows.replace(/<tr>([\s\S]*?)<\/tr>/g, (_, cells) => {
+        let column = 0;
+        return '<tr role="row">' + cells.replace(/<(th|td)([^>]*)>([\s\S]*?)<\/\1>/g, (_, tag, attributes, content) => `<${tag}${attributes} role="${tag === 'th' ? 'rowheader' : 'cell'}" data-label="${esc(headings[column++])}"><span class="cell-value">${content}</span></${tag}>`) + '</tr>';
+      }) + '</tbody>');
+      attrs += ' role="table"';
+    }
+    return `<table${attrs}>${body}</table>`;
+  });
+  // The docs reference tables without a pre-existing wrapper get the same region.
+  html = html.replace(/(<div class="table-scroll[^"]*"[^>]*>)?(<table[\s\S]*?<\/table>)(<\/div>)?/g, (_, frame, table) => {
+    frame ||= '<div class="table-scroll" tabindex="0" role="region" aria-label="Documentation table">';
+    frame = frame.replace(/aria-label="([^"]*)"/, (_, label) => `aria-label="${label}; scroll horizontally for more"`);
+    return shell(frame + table + '</div>');
+  });
+  return html;
+}
+
 export function stamp(html, page) {
   const template = TEMPLATES[page.file];
   if (template) html = readFileSync(new URL('./site-templates/' + template, import.meta.url), 'utf8');
-  return html.replace(/<!-- ([a-z]+:[a-z]+) -->[\s\S]*?<!-- \/\1 -->/g, (match, name) => {
+  html = html.replace(/<!-- ([a-z]+:[a-z]+) -->[\s\S]*?<!-- \/\1 -->/g, (match, name) => {
     if (!BLOCKS[name]) throw new Error('unknown block ' + name + ' in ' + page.file);
     return `<!-- ${name} -->${BLOCKS[name](page)}<!-- /${name} -->`;
   });
+  return page.path?.startsWith('/docs/') || page.path === '/pricing/' || page.file === 'agent-setup.html' ? scrollRegions(html) : html;
 }
 export const pageUrl = file => new URL('../public/' + file, import.meta.url);
 

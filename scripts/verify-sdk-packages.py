@@ -98,8 +98,11 @@ with tarfile.open(DIST / "supatrace-0.1.0.tgz") as tar:
     assert_license(tar.extractfile("package/LICENSE").read().decode())
     js_readme = tar.extractfile("package/README.md").read().decode()
 
+assert "Beta. Install the alpha release from PyPI." in py_readme
+assert "pip install supatrace==0.1.0" in py_readme
+assert "pip install 'supatrace[otlp]==0.1.0'" in py_readme
+assert "Coming soon." in js_readme and "public repository root" in js_readme
 for readme in (py_readme, js_readme):
-    assert "Coming soon." in readme and "public repository root" in readme
     assert "github.com/SlanchaAI" not in readme
     assert "YOUR_INGEST_KEY" in readme and "https://supatrace.dev" in readme
 

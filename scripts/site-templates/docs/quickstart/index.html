@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="From sign-in to your first SupaTrace trace: approve a write-only connection, upload a reviewed batch and inspect it. Then review the alpha Python SDK or JavaScript source examples.">
+<meta name="theme-color" content="#f6f3e8">
+<title>Quickstart · SupaTrace docs</title>
+<link rel="icon" href="/favicon.svg?v=classic-s-2" type="image/svg+xml">
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/remodel.css">
+<link rel="stylesheet" href="/site.css">
+<link rel="canonical" href="https://supatrace.dev/docs/quickstart/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="SupaTrace">
+<meta property="og:title" content="Quickstart · SupaTrace docs">
+<meta property="og:description" content="From sign-in to your first SupaTrace trace: approve a write-only connection, upload a reviewed batch and inspect it. Then review the alpha Python SDK or JavaScript source examples.">
+<meta property="og:url" content="https://supatrace.dev/docs/quickstart/">
+<meta property="og:image" content="https://supatrace.dev/og-image.png">
+</head>
+<body class="landing remodel page docs" data-page="docs">
+<a class="skip" href="#content">Skip to content</a>
+<!-- site:header --><!-- /site:header -->
+<div class="docs-layout">
+<!-- docs:nav --><!-- /docs:nav -->
+<main id="content">
+<div class="page-head">
+<p class="eyebrow">Quickstart</p>
+<h1>Your first trace</h1>
+</div>
+<p class="lede">Start with Home: one ingest key and a curl, Python or Node snippet, about 30 seconds after sign-in. Next, send OTLP from any OpenTelemetry exporter. Use the reviewed scripts when an agent needs approval. The Python SDK is on PyPI; the JavaScript npm package is Coming soon.</p>
+<section aria-labelledby="home"><h2 id="home">1. Send a trace from Home <span class="status available">Live</span></h2>
+<ol class="steps-list">
+<li><a href="/#signin">Sign in</a>. A new workspace shows <strong>Send your first trace</strong> on Home.</li>
+<li>Select <strong>Create ingest key and show snippets</strong>. Your browser makes an ingest key (<code>st_pub_…</code>) and sends the server only its SHA-256. The key is shown once, filled into curl, Python and Node snippets.</li>
+<li>Run one snippet. It posts a small synthetic chat call to <code>/api/batches</code> and needs no package install.</li>
+<li>The card shows the trace when the upload is accepted. Open it from there.</li>
+</ol>
+<p>The ingest key can only send traces. It does not expire; revoke or rotate it under <strong>API keys</strong>. Ingest keys from Home or the API keys page do not expire by default; keys from pairing an agent last 30 days. See <a href="/docs/keys/">Keys</a>.</p></section>
+<section aria-labelledby="otlp"><h2 id="otlp">2. OTLP from any OpenTelemetry exporter <span class="status available">Live</span></h2>
+<p>Send traces to supatrace.dev over OTLP/HTTP with protobuf or JSON. No SupaTrace package is needed. No gRPC, metrics or logs. See the <a href="/docs/frameworks/opentelemetry/#otlp">OpenTelemetry guide</a> for limits.</p>
+<!-- otlp:examples --><!-- /otlp:examples -->
+</section>
+<section aria-labelledby="today"><h2 id="today">3. Send a trace with the reviewed scripts <span class="status available">Live</span></h2>
+<p>You need Python 3, a terminal and a SupaTrace sign-in. The <a href="/agent-setup.html">setup guide</a> has the script downloads, the full steps and the recovery notes. In short:</p>
+<ol class="steps-list">
+<li><a href="/#signin">Sign in</a>, open <strong>Agents</strong> in your workspace and copy your project ID.</li>
+<li>Download <code>connect.py</code>, <code>upload.py</code> and <code>first-trace.json</code> from the setup guide into one folder. Read them before running them.</li>
+<li>Create a write-only connection. The script shows a 12-character setup code; approve only that code in your workspace.<pre data-lang="sh"><code>python3 connect.py --project YOUR_PROJECT_ID --config ./supatrace-access.json</code></pre></li>
+<li>Upload the reviewed synthetic example and wait for <strong>Accepted by server</strong>.<pre data-lang="sh"><code>python3 upload.py ./first-trace.json --config ./supatrace-access.json</code></pre></li>
+<li>Open <strong>Traces</strong>, select <strong>Refresh Traces</strong> and open <code>first-trace-example</code>.</li>
+</ol>
+<p>The key in <code>supatrace-access.json</code> is a setup-code key: it can upload but cannot read traces, lasts 30 days and can be revoked. Keep the file private. See <a href="/docs/keys/">Keys</a>.</p></section>
+<section aria-labelledby="sdk"><h2 id="sdk">SDK availability <span class="status beta">Beta</span></h2>
+<p class="preview-note"><strong>Python SDK: Beta. JavaScript SDK: Coming soon.</strong> Install the alpha Python package with <code>pip install supatrace==0.1.0</code> (Python 3.10+). The JavaScript <code>supatrace</code> package is not published to npm; its examples run from the <a href="https://github.com/SlanchaAI/supatrace-public">public repository</a> root. For a first hosted trace, use the <a href="/docs/frameworks/opentelemetry/#otlp">stock OpenTelemetry exporter</a> or the Python/Node snippets on <a href="/app/#home">Home</a>.</p>
+<h3 id="python">Python</h3>
+<pre data-lang="sh"><code>pip install supatrace==0.1.0</code></pre>
+<pre data-lang="python" data-run="py"><code>import supatrace
+
+trace = supatrace.init(service="checkout", spool="./spool")
+result = trace.batch([
+    {"id": "e1", "time": "2026-11-14T00:00:00Z", "kind": "note", "name": "hello", "data": {"message": "safe"}},
+])
+print(result["report"]["valid"], result["report"]["path"])</code></pre>
+<h3 id="javascript">JavaScript</h3>
+<pre data-lang="sh"><code>npm install ./packages/supatrace-js   # from the public repository root. Node 22 or later, ESM only</code></pre>
+<pre data-lang="js" data-run="js"><code>import { init } from "supatrace";
+
+const trace = init("checkout", { spool: "./spool" });
+const result = trace.batch([
+  { id: "e1", time: "2026-11-14T00:00:00Z", kind: "note", name: "hello", data: { message: "safe" } },
+]);
+console.log(result.report.valid, result.report.path);</code></pre>
+<p>Both write the same file for the same batch: <code>spool/&lt;sha256&gt;.json</code>. An event has an <code>id</code>, a <code>time</code>, a <code>kind</code> (<code>request</code>, <code>tool_call</code>, <code>tool_result</code>, <code>response</code>, <code>error</code> or <code>note</code>), a <code>name</code> and a <code>data</code> object. Pass <code>dry_run=True</code> (Python) or <code>dryRun: true</code> (JavaScript) to validate without writing.</p>
+<pre data-lang="python" data-run="py"><code>import supatrace
+
+trace = supatrace.init(service="checkout", spool="./spool")
+report = trace.batch([{"id": "e1", "time": "2026-11-14T00:00:00Z", "kind": "note", "name": "hello", "data": {}}], dry_run=True)["report"]
+print(report["valid"], report["errors"], report["path"])</code></pre>
+<h2 id="upload">Review, then upload</h2>
+<p>Open the spooled file and read it. Remove anything you do not intend to store. Then upload it with the script from the <a href="/agent-setup.html">setup guide</a>, using the write-only connection you approved there:</p>
+<pre data-lang="sh"><code>python3 upload.py ./spool/BATCH.json --config ./supatrace-access.json</code></pre>
+<p>The trace appears under <strong>Traces</strong> in your <a href="/app/">workspace</a>. <a href="/docs/limits/">Batch limits</a> apply: 100 events and 512 KiB per batch.</p></section>
+</main>
+</div>
+<footer class="site-footer"><!-- site:footer --><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>
+<script type="module" src="/docs/docs.js"></script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # Explicit provider file imports
 
-These preview tools prepare a **local file → private staging workspace** for an authorized uploader. The upload integration requires deployment-specific hooks; it is not a runnable customer import flow. It does not authenticate to provider APIs or start live capture. Node 22 and Python 3.12 are required. No new npm runtime dependency is needed for conversion/staging.
+**Coming soon in the hosted service.** Source is in the [public repository](https://github.com/SlanchaAI/supatrace-public). These operator tools prepare a **local file → private staging workspace** for an authorized uploader. The upload integration requires deployment-specific hooks; it is not a runnable customer import flow. It does not authenticate to provider APIs or start live capture. Node 22 and Python 3.12 are required. No new npm runtime dependency is needed for conversion/staging.
 
 ## Prepare an import
 

@@ -54,7 +54,7 @@
 <p>Send a key as <code>x-supatrace-key: KEY</code> or <code>Authorization: Bearer KEY</code>.</p></section>
 <section aria-labelledby="create"><h2 id="create">Setup-code keys</h2>
 <p>Run <code>connect.py</code> from the <a href="/agent-setup.html">setup guide</a>. It creates the key on your machine and shows a 12-character setup code. Approve only the code your own terminal just showed you, under <strong>Agents</strong> in your workspace. Setup codes expire after 10 minutes.</p>
-<pre data-lang="sh"><code>python3 connect.py --project YOUR_PROJECT_ID --config ./supatrace-access.json</code></pre>
+<div class="scroll-shell"><pre data-lang="sh" tabindex="0" role="region" aria-label="Code example; scroll horizontally for more"><code>python3 connect.py --project YOUR_PROJECT_ID --config ./supatrace-access.json</code></pre><span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>
 <p>The script saves the credentials to the config file you chose, with owner-only permissions. Never commit that file or paste it into chat.</p></section>
 <section aria-labelledby="facts"><h2 id="facts">What a setup-code key can do</h2>
 <ul class="facts">
@@ -69,7 +69,7 @@
 </ul>
 <p>The first sign-in with Google or GitHub opens your existing account when both providers verify the same email address. A provider that does not report a verified address gets its own account, and accounts that already exist stay separate unless you link them. Linked sign-in methods are listed under <strong>Settings</strong>, where they can be unlinked.</p></section>
 <section aria-labelledby="sdk-key"><h2 id="sdk-key">Keys in the preview SDK</h2>
-<p>The SDK reads <code>SUPATRACE_API_KEY</code> only for OTLP export, and the hosted OTLP/HTTP receiver accepts traces today. The SDK is a private-checkout preview, unavailable to outside users; use a <a href="/docs/frameworks/opentelemetry/#otlp">stock exporter</a>. Source mode needs no key: it writes local files that you upload with <code>upload.py</code> and your config file.</p></section>
+<p>The SDK reads <code>SUPATRACE_API_KEY</code> only for OTLP export, and the hosted OTLP/HTTP receiver accepts traces today. The Python SDK is Beta on PyPI (supatrace 0.1.0); the JavaScript package is Coming soon on npm. For the hosted first-trace path, use a <a href="/docs/frameworks/opentelemetry/#otlp">stock exporter</a>. Source mode needs no key: it writes local files that you upload with <code>upload.py</code> and your config file.</p></section>
 </main>
 </div>
 <footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/">Security</a><a href="/changelog/">Changelog</a><a href="/status/">Status</a><a href="/docs/quickstart/">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a></nav><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>

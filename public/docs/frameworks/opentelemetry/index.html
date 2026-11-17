@@ -41,27 +41,27 @@
 <h1>OpenTelemetry</h1>
 </div>
 <p class="lede">Send OpenTelemetry traces to supatrace.dev over OTLP/HTTP using stock Python or Node exporters. Protobuf and JSON supported; no gRPC, metrics or logs.</p>
-<p class="preview-note"><strong>Coming soon.</strong> The Python and JavaScript <code>supatrace</code> packages are not published to PyPI or npm. Until then send traces with the <a href="/docs/frameworks/opentelemetry/#otlp">stock OpenTelemetry exporter</a> or the Python/Node snippets on <a href="/app/#home">Home</a>. These SDK examples run from the <a href="https://github.com/SlanchaAI/supatrace-public">public repository</a> checkout.</p>
+<p class="preview-note"><strong>Python SDK: Beta. JavaScript SDK: Coming soon.</strong> Install the alpha Python package with <code>pip install supatrace==0.1.0</code> (Python 3.10+). The JavaScript <code>supatrace</code> package is not published to npm; its examples run from the <a href="https://github.com/SlanchaAI/supatrace-public">public repository</a> root. For a first hosted trace, use the <a href="/docs/frameworks/opentelemetry/#otlp">stock OpenTelemetry exporter</a> or the Python/Node snippets on <a href="/app/#home">Home</a>.</p>
 
-<section aria-labelledby="otlp"><h2 id="otlp">OTLP/HTTP ingest <span class="status available">available</span></h2>
+<section aria-labelledby="otlp"><h2 id="otlp">OTLP/HTTP ingest <span class="status available">Live</span></h2>
 <p>SupaTrace accepts OpenTelemetry traces at <code>POST /v1/traces</code> on supatrace.dev. Any OTLP/HTTP exporter can send traces with two environment variables and an ingest key; no SupaTrace package is needed.</p>
 <!-- otlp:examples -->
 <p>Create an ingest key on <a href="/app/">Home</a> or the <strong>API keys</strong> page. Ingest keys from Home or API keys do not expire by default; keys from pairing an agent last 30 days. In a fresh shell, set these two variables, replacing only <code>YOUR_INGEST_KEY</code>:</p>
-<pre data-lang="sh"><code>export OTEL_EXPORTER_OTLP_ENDPOINT=https://supatrace.dev
-export OTEL_EXPORTER_OTLP_HEADERS=&quot;x-supatrace-key=YOUR_INGEST_KEY&quot;</code></pre>
+<div class="scroll-shell"><pre data-lang="sh" tabindex="0" role="region" aria-label="Code example; scroll horizontally for more"><code>export OTEL_EXPORTER_OTLP_ENDPOINT=https://supatrace.dev
+export OTEL_EXPORTER_OTLP_HEADERS=&quot;x-supatrace-key=YOUR_INGEST_KEY&quot;</code></pre><span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>
 <p>Both <code>x-supatrace-key: &lt;key&gt;</code> and <code>Authorization: Bearer &lt;key&gt;</code> are accepted. The environment-variable alternative is <code>OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer YOUR_INGEST_KEY"</code>. Some SDKs require the space URL-encoded: <code>Authorization=Bearer%20YOUR_INGEST_KEY</code>, following the <a href="https://opentelemetry.io/docs/specs/otel/protocol/exporter/#specifying-headers-via-environment-variables">OpenTelemetry header format</a>.</p>
 <h3>Try HTTP/JSON</h3>
 <p>This fake span calls no model provider. Replace the key before sending:</p>
-<pre data-lang="sh"><code>curl -X POST https://supatrace.dev/v1/traces \
+<div class="scroll-shell"><pre data-lang="sh" tabindex="0" role="region" aria-label="Code example; scroll horizontally for more"><code>curl -X POST https://supatrace.dev/v1/traces \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer YOUR_INGEST_KEY' \
   -d '{&quot;resourceSpans&quot;:[{&quot;scopeSpans&quot;:[{&quot;spans&quot;:[{&quot;traceId&quot;:&quot;11111111111111111111111111111111&quot;,&quot;spanId&quot;:&quot;1111111111111111&quot;,&quot;name&quot;:&quot;synthetic.example&quot;,&quot;startTimeUnixNano&quot;:&quot;1794685870000000000&quot;,&quot;endTimeUnixNano&quot;:&quot;1794685871000000000&quot;}]}]}]}'
-# Or replace Authorization with: -H 'x-supatrace-key: YOUR_INGEST_KEY'</code></pre>
+# Or replace Authorization with: -H 'x-supatrace-key: YOUR_INGEST_KEY'</code></pre><span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>
 <p>The base URL makes both stock exporters append <code>/v1/traces</code>. Leave any <code>OTEL_EXPORTER_OTLP_TRACES_ENDPOINT</code> and <code>OTEL_EXPORTER_OTLP_TRACES_HEADERS</code> overrides unset.</p>
 <h3>Python</h3>
-<pre data-lang="sh"><code>pip install opentelemetry-sdk opentelemetry-exporter-otlp-proto-http</code></pre>
+<div class="scroll-shell"><pre data-lang="sh" tabindex="0" role="region" aria-label="Code example; scroll horizontally for more"><code>pip install opentelemetry-sdk opentelemetry-exporter-otlp-proto-http</code></pre><span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>
 <p>Save as <code>first-trace.py</code>. It sends one synthetic span over HTTP/protobuf and flushes before exit.</p>
-<pre data-lang="python" data-run="otlp"><code>from opentelemetry import trace
+<div class="scroll-shell"><pre data-lang="python" data-run="otlp" tabindex="0" role="region" aria-label="Code example; scroll horizontally for more"><code>from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -74,12 +74,12 @@ with trace.get_tracer(&quot;first-trace-example&quot;).start_as_current_span(&qu
     span.set_attribute(&quot;gen_ai.request.model&quot;, &quot;synthetic-model&quot;)
     print(&quot;Trace: otlp.&quot; + format(span.get_span_context().trace_id, &quot;032x&quot;))
 provider.force_flush()
-provider.shutdown()</code></pre>
-<pre data-lang="sh"><code>python first-trace.py</code></pre>
+provider.shutdown()</code></pre><span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>
+<div class="scroll-shell"><pre data-lang="sh" tabindex="0" role="region" aria-label="Code example; scroll horizontally for more"><code>python first-trace.py</code></pre><span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>
 <h3>JavaScript / Node 22</h3>
-<pre data-lang="sh"><code>npm install @opentelemetry/sdk-trace-base@2.12.1 @opentelemetry/exporter-trace-otlp-http@0.223.2 @opentelemetry/api@1.9.1</code></pre>
+<div class="scroll-shell"><pre data-lang="sh" tabindex="0" role="region" aria-label="Code example; scroll horizontally for more"><code>npm install @opentelemetry/sdk-trace-base@2.12.1 @opentelemetry/exporter-trace-otlp-http@0.223.2 @opentelemetry/api@1.9.1</code></pre><span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>
 <p>These compatible package versions keep the trace SDK and exporter on the same OpenTelemetry API version. Save as <code>first-trace.mjs</code> (ESM). This JavaScript exporter reads the same two environment variables and appends <code>/v1/traces</code> to the base URL. It sends HTTP/JSON.</p>
-<pre data-lang="js" data-run="otlp"><code>import { trace } from &quot;@opentelemetry/api&quot;;
+<div class="scroll-shell"><pre data-lang="js" data-run="otlp" tabindex="0" role="region" aria-label="Code example; scroll horizontally for more"><code>import { trace } from &quot;@opentelemetry/api&quot;;
 import { BasicTracerProvider, SimpleSpanProcessor } from &quot;@opentelemetry/sdk-trace-base&quot;;
 import { OTLPTraceExporter } from &quot;@opentelemetry/exporter-trace-otlp-http&quot;;
 
@@ -93,8 +93,8 @@ span.setAttribute(&quot;gen_ai.request.model&quot;, &quot;synthetic-model&quot;)
 console.log(&quot;Trace: otlp.&quot; + span.spanContext().traceId);
 span.end();
 await provider.forceFlush();
-await provider.shutdown();</code></pre>
-<pre data-lang="sh"><code>node first-trace.mjs</code></pre>
+await provider.shutdown();</code></pre><span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>
+<div class="scroll-shell"><pre data-lang="sh" tabindex="0" role="region" aria-label="Code example; scroll horizontally for more"><code>node first-trace.mjs</code></pre><span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>
 <p>Open <strong>Traces</strong> in the workspace and find the printed <code>otlp.&lt;traceid&gt;</code> run. These examples call no model provider.</p>
 <!-- /otlp:examples -->
 <ul class="facts">
@@ -103,29 +103,29 @@ await provider.shutdown();</code></pre>
 <li><strong>Size:</strong> 512 KiB per request on the wire, 2000 spans and 50 traces per export, 32 KiB stored per span.</li>
 <li><strong>Storage:</strong> each trace becomes a run named <code>otlp.&lt;traceid&gt;</code>. Each span becomes an event. Retried exports store nothing twice.</li>
 </ul>
-<h3 id="sdk-otlp">SDK preview, package coming</h3>
+<h3 id="sdk-otlp">SDK availability</h3>
 <p>The SDKs contain the client side. With <code>mode="otlp"</code> they send <code>POST &lt;SUPATRACE_OTLP_ENDPOINT&gt;/v1/traces</code> with the write key, and only when the endpoint, the key and the OpenTelemetry packages are all present. The SDKs have not been run against the receiver.</p>
-<pre data-lang="sh"><code>pip install "opentelemetry-sdk&gt;=1.27" "opentelemetry-exporter-otlp-proto-http&gt;=1.27" 
-export SUPATRACE_OTLP_ENDPOINT="https://supatrace.dev"   # checkout-only SupaTrace SDK preview
-export SUPATRACE_API_KEY="YOUR_WRITE_KEY"</code></pre>
-<pre data-lang="python" data-run="py"><code>import supatrace
+<div class="scroll-shell"><pre data-lang="sh" tabindex="0" role="region" aria-label="Code example; scroll horizontally for more"><code>pip install "opentelemetry-sdk&gt;=1.27" "opentelemetry-exporter-otlp-proto-http&gt;=1.27"
+export SUPATRACE_OTLP_ENDPOINT="https://supatrace.dev"   # SupaTrace SDK OTLP mode (Python Beta; JavaScript source only)
+export SUPATRACE_API_KEY="YOUR_WRITE_KEY"</code></pre><span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>
+<div class="scroll-shell"><pre data-lang="python" data-run="py" tabindex="0" role="region" aria-label="Code example; scroll horizontally for more"><code>import supatrace
 
 trace = supatrace.init(service="checkout", mode="otlp")
 trace.span("checkout.step", {"cart.items": 3})
 print(trace.capture["sending"], trace.capture["skipped"])
-trace.close()</code></pre>
-<pre data-lang="js" data-run="js"><code>import { init } from "supatrace";
+trace.close()</code></pre><span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>
+<div class="scroll-shell"><pre data-lang="js" data-run="js" tabindex="0" role="region" aria-label="Code example; scroll horizontally for more"><code>import { init } from "supatrace";
 
 const trace = init("checkout", { mode: "otlp" });
 trace.span("checkout.step", { "cart.items": 3 });
 console.log(trace.capture.sending, trace.capture.skipped);
-await trace.close().shutdown;</code></pre>
+await trace.close().shutdown;</code></pre><span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>
 <p>Without an endpoint nothing is sent and nothing is saved: in OTLP mode <code>span</code> returns an in-memory batch with no file, and it is gone when the process exits. To get a file you can review and upload, use source mode as in the <a href="/docs/quickstart/#sdk">quickstart</a>. An endpoint in the environment alone never turns export on; <code>mode="otlp"</code> must be explicit.</p></section>
-<section aria-labelledby="langfuse-sdk"><h2 id="langfuse-sdk">Apps on a Langfuse SDK <span class="status beta">beta</span></h2>
+<section aria-labelledby="langfuse-sdk"><h2 id="langfuse-sdk">Apps on a Langfuse SDK <span class="status beta">Beta</span></h2>
 <p>An app that already uses a Langfuse SDK can send its traces to SupaTrace by changing the host and keys. This is ingest only, not a Langfuse API. Score events sent through batch ingestion are stored as events on the trace, but they are not aggregated or shown as scores. The standalone scores endpoint, prompts, datasets and the trace-reading APIs are not served and answer 404. Hosted routes answer on supatrace.dev. SDK acceptance receipts are local only, so Langfuse SDK compatibility remains beta.</p>
-<pre data-lang="sh"><code>export LANGFUSE_HOST="https://supatrace.dev"        # LANGFUSE_BASEURL for the JS SDK
+<div class="scroll-shell"><pre data-lang="sh" tabindex="0" role="region" aria-label="Code example; scroll horizontally for more"><code>export LANGFUSE_HOST="https://supatrace.dev"        # LANGFUSE_BASEURL for the JS SDK
 export LANGFUSE_PUBLIC_KEY="pk-supatrace"            # any non-empty value; not a credential
-export LANGFUSE_SECRET_KEY="YOUR_WRITE_KEY"</code></pre>
+export LANGFUSE_SECRET_KEY="YOUR_WRITE_KEY"</code></pre><span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>
 <p>Update events are stored as their own events and are not merged into the observation they update. It was tested with the Langfuse JS SDK 3.39.2 and Python SDK 5.2.0; other versions are untested.</p></section>
 </main>
 </div>

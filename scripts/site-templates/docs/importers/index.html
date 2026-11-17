@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Import traces into SupaTrace from Langfuse, LangSmith, Braintrust, Weave, Opik, Datadog LLM Observability, MLflow, Helicone and OTLP JSON.">
+<meta name="theme-color" content="#f6f3e8">
+<title>Importers · SupaTrace docs</title>
+<link rel="icon" href="/favicon.svg?v=classic-s-2" type="image/svg+xml">
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/remodel.css">
+<link rel="stylesheet" href="/site.css">
+<link rel="canonical" href="https://supatrace.dev/docs/importers/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="SupaTrace">
+<meta property="og:title" content="Importers · SupaTrace docs">
+<meta property="og:description" content="Import traces into SupaTrace from Langfuse, LangSmith, Braintrust, Weave, Opik, Datadog LLM Observability, MLflow, Helicone and OTLP JSON.">
+<meta property="og:url" content="https://supatrace.dev/docs/importers/">
+<meta property="og:image" content="https://supatrace.dev/og-image.png">
+</head>
+<body class="landing remodel page docs" data-page="docs">
+<a class="skip" href="#content">Skip to content</a>
+<!-- site:header --><!-- /site:header -->
+<div class="docs-layout">
+<!-- docs:nav --><!-- /docs:nav -->
+<main id="content">
+<div class="page-head">
+<p class="eyebrow">Reference</p>
+<h1>Importers</h1>
+</div>
+<p>For a hosted first trace, use <a href="/docs/quickstart/#home">Home snippets</a>, <a href="/docs/frameworks/opentelemetry/#otlp">hosted OTLP</a> or the <a href="/agent-setup.html">reviewed scripts</a> today.</p>
+<p class="lede">Bring history from another tool. File and API importers stage reviewed batches on your machine first; nothing uploads until you run the uploader. The Langfuse import runs in the workspace after you review its exact scope.</p>
+<section aria-labelledby="files"><h2 id="files">Provider file imports <span class="status preview">Coming soon</span></h2>
+<p>Convert one export file you chose into SupaTrace batches. Formats: LangSmith runs, Braintrust span logs, Weave calls, Opik spans, Datadog LLM Observability JSON, MLflow traces, Helicone request logs and OTLP HTTP JSON (not protobuf or gzip).</p>
+<p>Not available in the hosted service yet. Local staging source is in the <a href="https://github.com/SlanchaAI/supatrace-public">public repository</a> and needs Node 22 and Python 3.12; the converters are not part of the setup guide downloads. Uploading requires deployment-specific hooks. It does not call provider APIs or capture live sessions. The <a href="/agent-setup.html#file-imports">setup guide</a> has a command builder.</p>
+<pre data-lang="sh"><code>node agent/import_traces.mjs ./reviewed-export.json langsmith source-project-name proj_REPLACE_WITH_32_HEX_CHARACTERS ./private-import</code></pre>
+<p>The default keeps metadata only: IDs, timing, span kinds, error status and token counts. Add <code>--include-content</code> to keep prompts, outputs and other source fields, after you have reviewed them for secrets. The command stages locally and reports <code>uploaded:false</code>.</p></section>
+<section aria-labelledby="api"><h2 id="api">LangSmith and Braintrust API imports <span class="status preview">Coming soon</span></h2>
+<p>Not available in the hosted service yet. Operator-run importers live in the <a href="https://github.com/SlanchaAI/supatrace-public">public repository</a>. They read 1 to 25 completed traces you name from the LangSmith or Braintrust API, checkpoint privately and stage the same uploader manifest. These need deployment-specific upload hooks and your own provider key; the hosted workspace does not run them. There is no recurring sync, project discovery or live capture. These have source tests; a hosted end-to-end acceptance run is still open.</p></section>
+<section aria-labelledby="langfuse"><h2 id="langfuse">Langfuse <span class="status beta">Beta</span></h2>
+<p>Under <strong>Agents</strong>, <strong>Import from Langfuse</strong> prepares an exact scope: one Langfuse project, trace, environment and UTC time window. You review that scope and consent to reading and storing it, enter your Langfuse read keys once and start. While the page stays visible it advances the import in small bounded requests and reports progress; you can pause and resume. The keys are sent only to SupaTrace and the Langfuse region you chose, are kept only during the active import and are not saved.</p>
+<p>Limits: 100 observations, 10 pages, 50 rows per page and 128 KiB of source JSON per import. There is no recurring sync or background worker.</p>
+<p>Server pull runs only where the server has it enabled. That is an operator setting; the stack template's default enables it for supatrace.dev. A verified import from a real Langfuse account on the hosted site is still open (#67), which is why this is beta.</p></section>
+<section aria-labelledby="claude"><h2 id="claude">Claude Code</h2>
+<ul class="facts">
+<li><strong>Snapshot</strong> <span class="status available">Live</span>: convert one finished transcript you select with <code>claude_snapshot.py</code>. See the <a href="/agent-setup.html">setup guide</a>.</li>
+<li><strong>Hooks</strong> <span class="status beta">Beta</span>: an opt-in command hook that records prompt, tool and completion events into a private spool. Metadata only by default. See the <a href="/agent-setup.html#claude-hooks">setup guide</a>.</li>
+</ul></section>
+</main>
+</div>
+<footer class="site-footer"><!-- site:footer --><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>
+<script type="module" src="/docs/docs.js"></script>
+</body>
+</html>

@@ -17,7 +17,7 @@ for(const width of [1440,390]) test(`public hero and live-first integrations at 
  await page.goto(live.origin+'/integrations/',{waitUntil:'networkidle'});
  assert.equal(await page.locator('main h1').innerText(),'What works with SupaTrace.');
  assert.equal(await page.locator('section[aria-labelledby=integrations-live] .tile').count(),2);
- assert.equal(await page.locator('section[aria-labelledby=integrations-beta] .tile').count(),3);
+ assert.deepEqual(await page.locator('section[aria-labelledby=integrations-beta] .tile h3').allTextContents(),['LangChain','LlamaIndex','OpenAI (Python)','Anthropic','Langfuse SDKs','Langfuse import','Claude Code hooks']);
  assert.equal(await page.locator('details').count(),1);
  assert.equal(await page.locator('details').evaluate(n=>n.open),false);
  await page.locator('summary').click();

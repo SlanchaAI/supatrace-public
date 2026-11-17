@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="SupaTrace keys: ingest keys, secret keys and setup-code keys; how they are created, what they can do, how long they last and how to rotate and revoke them.">
+<meta name="theme-color" content="#f6f3e8">
+<title>Keys · SupaTrace docs</title>
+<link rel="icon" href="/favicon.svg?v=classic-s-2" type="image/svg+xml">
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/remodel.css">
+<link rel="stylesheet" href="/site.css">
+<link rel="canonical" href="https://supatrace.dev/docs/keys/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="SupaTrace">
+<meta property="og:title" content="Keys · SupaTrace docs">
+<meta property="og:description" content="SupaTrace keys: ingest keys, secret keys and setup-code keys; how they are created, what they can do, how long they last and how to rotate and revoke them.">
+<meta property="og:url" content="https://supatrace.dev/docs/keys/">
+<meta property="og:image" content="https://supatrace.dev/og-image.png">
+</head>
+<body class="landing remodel page docs" data-page="docs">
+<a class="skip" href="#content">Skip to content</a>
+<!-- site:header --><!-- /site:header -->
+<div class="docs-layout">
+<!-- docs:nav --><!-- /docs:nav -->
+<main id="content">
+<div class="page-head">
+<p class="eyebrow">Reference</p>
+<h1>Keys</h1>
+</div>
+<p>Ingest keys from the Home card or API keys page do not expire by default; keys from pairing an agent last 30 days.</p>
+<p class="lede">There are three kinds of key. An ingest key sends traces and cannot read them. A secret key also reads. A setup-code key is the older write-only key that an agent requests and you approve.</p>
+<section aria-labelledby="types"><h2 id="types">Ingest keys and secret keys</h2>
+<p>Create these in your workspace: <strong>Create ingest key and show snippets</strong> on Home makes an ingest key in one click, and <strong>API keys</strong> makes either type. Your browser generates the key and sends the server only its SHA-256, so the key is shown once and cannot be recovered.</p>
+<ul class="facts">
+<li><strong>Ingest key (<code>st_pub_…</code>).</strong> Write-only. It can upload batches, OTLP spans and Langfuse SDK events to its project and environment. It cannot list, read or export traces.</li>
+<li><strong>Secret key (<code>st_sec_…</code>).</strong> Writes, and reads the traces and events of its own workspace and environment through <code>GET /api/v1/traces</code> and <code>/api/v1/traces/{id}/events</code>. It cannot read usage, list keys, workspaces or projects, or reach another workspace or environment. Keep it on a server.</li>
+<li><strong>No expiry by default.</strong> You can choose 30 days, 90 days or 1 year under <strong>API keys</strong>. The Home card's key has no expiry.</li>
+<li><strong>Rotate.</strong> Rotation issues a replacement and keeps the old key working for an overlap window (24 hours by default) so you can deploy the new one.</li>
+<li><strong>Revoke.</strong> Revoking stops new uploads at once; it does not delete stored data.</li>
+</ul>
+<p>Send a key as <code>x-supatrace-key: KEY</code> or <code>Authorization: Bearer KEY</code>.</p></section>
+<section aria-labelledby="create"><h2 id="create">Setup-code keys</h2>
+<p>Run <code>connect.py</code> from the <a href="/agent-setup.html">setup guide</a>. It creates the key on your machine and shows a 12-character setup code. Approve only the code your own terminal just showed you, under <strong>Agents</strong> in your workspace. Setup codes expire after 10 minutes.</p>
+<pre data-lang="sh"><code>python3 connect.py --project YOUR_PROJECT_ID --config ./supatrace-access.json</code></pre>
+<p>The script saves the credentials to the config file you chose, with owner-only permissions. Never commit that file or paste it into chat.</p></section>
+<section aria-labelledby="facts"><h2 id="facts">What a setup-code key can do</h2>
+<ul class="facts">
+<li><strong>Write-only.</strong> A key can upload batches to its project. It cannot list, read or export traces.</li>
+<li><strong>30 days.</strong> Setup-code keys expire 30 days after approval. Make and approve a new connection to continue, or use an ingest key, which does not expire by default.</li>
+<li><strong>Revocable.</strong> Revoke a key under <strong>API keys</strong> in your workspace. Revoking stops new uploads; it does not delete stored data.</li>
+<li><strong>Up to 10 active keys</strong> for a project, of all kinds together.</li>
+</ul></section>
+<section aria-labelledby="not-yet"><h2 id="not-yet">Not available yet</h2>
+<ul class="facts">
+<li>Write operations in the management API. A personal access token, created under <strong>Settings</strong> in your workspace, can read workspaces, keys, usage and traces through <code>/api/v1</code>; the API describes itself at <code>/api/v1/openapi.json</code>.</li>
+</ul>
+<p>The first sign-in with Google or GitHub opens your existing account when both providers verify the same email address. A provider that does not report a verified address gets its own account, and accounts that already exist stay separate unless you link them. Linked sign-in methods are listed under <strong>Settings</strong>, where they can be unlinked.</p></section>
+<section aria-labelledby="sdk-key"><h2 id="sdk-key">Keys in the preview SDK</h2>
+<p>The SDK reads <code>SUPATRACE_API_KEY</code> only for OTLP export, and the hosted OTLP/HTTP receiver accepts traces today. The Python SDK is Beta on PyPI (supatrace 0.1.0); the JavaScript package is Coming soon on npm. For the hosted first-trace path, use a <a href="/docs/frameworks/opentelemetry/#otlp">stock exporter</a>. Source mode needs no key: it writes local files that you upload with <code>upload.py</code> and your config file.</p></section>
+</main>
+</div>
+<footer class="site-footer"><!-- site:footer --><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>
+<script type="module" src="/docs/docs.js"></script>
+</body>
+</html>

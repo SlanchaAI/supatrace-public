@@ -18,16 +18,7 @@ for (const block of document.querySelectorAll('main pre')) {
   });
   const frame = document.createElement('div');
   frame.className = 'snippet';
-  block.before(frame);
-  frame.append(button, block);
-}
-
-// Tables keep their own scroll area and a keyboard target at narrow widths.
-for (const [index, table] of [...document.querySelectorAll('main table')].entries()) {
-  const frame = table.parentElement.classList.contains('table-scroll') ? table.parentElement : document.createElement('div');
-  if (frame !== table.parentElement) { table.before(frame); frame.append(table); }
-  frame.classList.add('table-scroll');
-  frame.tabIndex = 0;
-  frame.setAttribute('role', 'region');
-  frame.setAttribute('aria-label', `Documentation table ${index + 1}; scroll horizontally for more`);
+  const region = block.closest('.scroll-shell') || block;
+  region.before(frame);
+  frame.append(button, region);
 }

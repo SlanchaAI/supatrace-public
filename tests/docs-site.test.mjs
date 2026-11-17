@@ -20,7 +20,7 @@ const read = file => readFileSync(pageUrl(file), 'utf8');
 const decode = text => text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
 const pySource = readFileSync(join(repo, 'packages/supatrace/src/supatrace/__init__.py'), 'utf8');
 const jsSource = readFileSync(join(repo, 'packages/supatrace-js/index.mjs'), 'utf8');
-const snippets = DOC_PAGES.flatMap(page => [...read(page.file).matchAll(/<pre data-lang="([a-z]+)"(?: data-run="([a-z]+)")?><code>([\s\S]*?)<\/code><\/pre>/g)]
+const snippets = DOC_PAGES.flatMap(page => [...read(page.file).matchAll(/<pre data-lang="([a-z]+)"(?: data-run="([a-z]+)")?[^>]*><code>([\s\S]*?)<\/code><\/pre>/g)]
   .map(([, lang, run, body]) => ({file: page.file, lang, run, code: decode(body)})));
 
 // Minimal stand-ins for the provider libraries the snippets import. They return a fixed
@@ -133,19 +133,25 @@ test('every SDK symbol, option and environment variable named in the docs exists
   }
 });
 
-test('the docs distinguish available hosted OTLP from the unpublished SDK', () => {
+test('the docs distinguish hosted OTLP, the alpha Python package and unpublished JavaScript package', () => {
   const api = readFileSync(join(repo, 'src/aws-api.mjs'), 'utf8') + readFileSync(join(repo, 'aws/handler.mjs'), 'utf8');
   const hosted = /['"`]\/v1\/traces/.test(api);
   assert.ok(hosted, 'the hosted receiver exists');
   assert.match(readFileSync(join(repo, 'docs/otlp-ingest.md'), 'utf8'), /\*\*Available\*\* on https:\/\/supatrace\.dev/);
   for (const page of DOC_PAGES) {
     const html = read(page.file), shown = decode(html.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ');
-    assert.doesNotMatch(shown, /pip install supatrace\b|npm install (?:@supatrace\/client|@supatrace\/js|supatrace)\b|npx supatrace/, page.file + ' has no registry install');
+    assert.doesNotMatch(shown, /npm install (?:@supatrace\/client|@supatrace\/js|supatrace)\b|npx supatrace/, page.file + ' has no registry install');
     assert.doesNotMatch(shown, /https:\/\/(?:otlp|api|ingest)\.supatrace\.dev/, page.file + ' invents no endpoint URL');
-    if (/@supatrace\/client|import supatrace/.test(shown)) assert.match(shown, /not published to PyPI or npm/, page.file + ' says the SDK is unpublished');
+    if (/@supatrace\/client|import supatrace/.test(shown)) assert.match(shown, /not published to npm/, page.file + ' states JavaScript package availability');
     assert.doesNotMatch(shown, /not reachable on|hosted edge pending/, page.file + ' has no stale hosted status');
     assert.doesNotMatch(shown, /#99|not live yet/, page.file + ' has no stale OTLP wording');
   }
+  const openai = read('docs/frameworks/openai/index.html');
+  assert.ok(openai.includes('Python <span class="status beta">Beta</span>'));
+  assert.ok(openai.includes('Node <span class="status preview">Coming soon</span>'));
+  assert.ok(openai.includes('Automatic Python spans over OTLP <span class="status beta">Beta</span>'));
+  assert.match(read('docs/quickstart/index.html'), /pip install supatrace==0\.1\.0/);
+  assert.match(read('docs/quickstart/index.html'), /github\.com\/SlanchaAI\/supatrace-public/);
   assert.match(read('docs/frameworks/opentelemetry/index.html'), /nothing is sent and nothing is saved/);
   // Cross-page anchors into the setup guide resolve.
   const guide = read('agent-setup.html');
@@ -168,7 +174,7 @@ test('workspace controls named in the docs exist in the app with the same label'
   assert.ok(app.includes('100 observations, 10 pages, 50 rows per page and 128 KiB source JSON'));
   assert.match(importers, /100 observations, 10 pages, 50 rows per page and 128 KiB of source JSON/);
   assert.match(readFileSync(join(repo, 'aws/template.yaml'), 'utf8'), /ServerPullConfig:[\s\S]{0,80}Default: '\{"mode":"bounded-server-pull-v1","origin":"https:\/\/supatrace\.dev"\}'/);
-  assert.match(importers, /id="langfuse">Langfuse <span class="status beta">beta<\/span>/);
+  assert.match(importers, /id="langfuse">Langfuse <span class="status beta">Beta<\/span>/);
   assert.doesNotMatch(importers, /disabled in the hosted alpha|no customer-run Langfuse import/);
   const exportPage = read('docs/export/index.html');
   assert.match(exportPage, /reads only the environment shown/);
@@ -202,14 +208,14 @@ test('onboarding leads with public paths and keeps stock exporter examples ident
   }
 });
 
-test('public docs state current allowances, key lifetimes and private-checkout limits', () => {
+test('public docs state current allowances, key lifetimes and public source and hosted limits', () => {
   assert.match(read('docs/index.html'), /50,000 spans per UTC month, 1 GB stored, 2 projects/);
   assert.match(read('docs/export/index.html'), /On Free that is 7 days/);
   for (const file of [...DOC_PAGES.map(page => page.file), 'agent-setup.html', 'llms.txt', 'integrations/index.html', 'changelog/index.html']) {
     const html = read(file);
     assert.doesNotMatch(html, /github\.com\/SlanchaAI\/supatrace(?:[\/#"]|$)/, file);
     assert.doesNotMatch(html, /not reachable on (?:https:\/\/)?supatrace\.dev yet|hosted edge pending|100k spans|100,000 spans per UTC/, file);
-    if (html.includes('private checkout') || html.includes('private repository')) assert.match(html, /unavailable to outside users|private repository access/, file);
+    assert.doesNotMatch(html, /private[- ]checkout|private repository|checkout-only/i, file);
   }
   for (const file of ['docs/quickstart/index.html', 'docs/keys/index.html', 'agent-setup.html']) {
     const shown = decode(read(file).replace(/<[^>]+>/g, ' '));

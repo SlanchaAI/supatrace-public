@@ -9,9 +9,9 @@ SupaTrace is a trace service for applications that use large language models. Se
 3. Follow the [OpenTelemetry quickstart](docs/otlp-ingest.md). It works with stock exporters and needs no SupaTrace package.
 4. Open Traces in the same workspace to find your run and export its JSON.
 
-Provider file import tools are a preview. Preparing a file does not upload it; the secure upload runner requires deployment-specific hooks. Start with hosted OpenTelemetry or the local synthetic recipe.
+Provider file import tools are Coming soon in the hosted service. Local staging source is in the [public repository](https://github.com/SlanchaAI/supatrace-public). Preparing a file does not upload it; the secure upload runner requires deployment-specific hooks. Start with hosted OpenTelemetry or the local synthetic recipe.
 
-The SupaTrace packages are coming soon. Until then send traces with the stock OpenTelemetry exporter (see the [OTLP quickstart](docs/otlp-ingest.md)) or the Python/Node snippets on Home. The public repository includes checkout-only SDKs. See the [JavaScript](packages/supatrace-js/README.md) and [Python](packages/supatrace/README.md) guides for exporter setup and configuration.
+The alpha Python package is on PyPI: `pip install supatrace==0.1.0` (Python 3.10+). The JavaScript `supatrace` package is Coming soon and is not published to npm. For a first hosted trace, send traces with the stock OpenTelemetry exporter (see the [OTLP quickstart](docs/otlp-ingest.md)) or the Python/Node snippets on Home. The public repository includes JavaScript source examples. See the [JavaScript](packages/supatrace-js/README.md) and [Python](packages/supatrace/README.md) guides for exporter setup and configuration.
 
 The Free plan permits model training and product improvement on submitted traces. Paid-plan protections apply prospectively; review the [Terms](https://supatrace.dev/terms.html) before uploading real data.
 

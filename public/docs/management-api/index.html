@@ -51,11 +51,11 @@
 </ul></section>
 <section aria-labelledby="call"><h2 id="call">Call the API</h2>
 <p>Send the token in the <code>X-Supatrace-Key</code> header:</p>
-<pre data-lang="sh"><code>curl -H "X-Supatrace-Key: $TOKEN" https://supatrace.dev/api/v1/projects</code></pre>
+<div class="scroll-shell"><pre data-lang="sh" tabindex="0" role="region" aria-label="Code example; scroll horizontally for more"><code>curl -H "X-Supatrace-Key: $TOKEN" https://supatrace.dev/api/v1/projects</code></pre><span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>
 <p>A server you run yourself also accepts <code>Authorization: Bearer $TOKEN</code>. On supatrace.dev the edge replaces the <code>Authorization</code> header before it reaches the API, so use <code>X-Supatrace-Key</code> there.</p>
 <p>Errors are JSON of the form <code>{"error": "code"}</code>. A missing, expired or revoked token is <code>401</code>. A workspace the account cannot open, or a route its role may not call, is <code>403</code>. Each token may make 120 requests a minute; <code>429</code> carries <code>Retry-After</code>.</p></section>
 <section aria-labelledby="endpoints"><h2 id="endpoints">Endpoints</h2>
-<div class="table-scroll" tabindex="0" role="region" aria-label="Management API endpoints"><table class="compare">
+<div class="scroll-shell"><div class="table-scroll" tabindex="0" role="region" aria-label="Management API endpoints; scroll horizontally for more"><table class="compare">
 <thead><tr><th scope="col">Request</th><th scope="col">Returns</th></tr></thead>
 <tbody>
 <tr><th scope="row"><code>GET /api/v1/me</code></th><td>The account and the token making the request</td></tr>
@@ -66,7 +66,7 @@
 <tr><th scope="row"><code>GET /api/v1/logs</code></th><td>Recorded upload attempts of a workspace environment, newest first, with the reason when one was refused. <code>stream</code> (<code>issues</code> or <code>accepted</code>), <code>route</code>, <code>reason</code>, <code>from</code>, <code>to</code>, <code>limit</code>, <code>after</code></td></tr>
 <tr><th scope="row"><code>GET /api/v1/traces</code></th><td>Traces. <code>limit</code>, <code>offset</code>, <code>sort</code>, <code>dir</code>, <code>q</code>, <code>from</code>, <code>to</code></td></tr>
 <tr><th scope="row"><code>GET /api/v1/traces/{trace_id}/events</code></th><td>The events of one trace, one stored batch per page. Follow <code>next</code> with <code>after</code></td></tr>
-</tbody></table></div>
+</tbody></table></div><span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>
 <p>Workspace endpoints take <code>workspace</code> (defaults to the account's own) and, except usage, <code>environment</code> (defaults to <code>default</code>). A parameter that is not listed for an endpoint is refused with <code>400</code>.</p></section>
 <section aria-labelledby="secret"><h2 id="secret">Secret keys</h2>
 <p>A secret key (<code>st_sec_…</code>, created under <strong>API keys</strong>) is also accepted on <code>GET /api/v1/traces</code> and <code>GET /api/v1/traces/{trace_id}/events</code>. It reads only the workspace and environment it belongs to. A <code>workspace</code> or <code>environment</code> parameter naming another one, and every other <code>/api/v1</code> endpoint in the table above, returns <code>403 key_scope_denied</code>. The OpenAPI document needs no credential. Ingest keys (<code>st_pub_…</code>) and setup-code keys cannot read. See <a href="/docs/keys/">Keys</a>.</p></section>

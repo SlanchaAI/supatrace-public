@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Send OpenTelemetry traces to supatrace.dev over OTLP/HTTP using stock Python or Node exporters. Protobuf and JSON supported; no gRPC, metrics or logs.">
+<meta name="theme-color" content="#f6f3e8">
+<title>OpenTelemetry · SupaTrace docs</title>
+<link rel="icon" href="/favicon.svg?v=classic-s-2" type="image/svg+xml">
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/remodel.css">
+<link rel="stylesheet" href="/site.css">
+<link rel="canonical" href="https://supatrace.dev/docs/frameworks/opentelemetry/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="SupaTrace">
+<meta property="og:title" content="OpenTelemetry · SupaTrace docs">
+<meta property="og:description" content="Send OpenTelemetry traces to supatrace.dev over OTLP/HTTP using stock Python or Node exporters. Protobuf and JSON supported; no gRPC, metrics or logs.">
+<meta property="og:url" content="https://supatrace.dev/docs/frameworks/opentelemetry/">
+<meta property="og:image" content="https://supatrace.dev/og-image.png">
+</head>
+<body class="landing remodel page docs" data-page="docs">
+<a class="skip" href="#content">Skip to content</a>
+<!-- site:header --><!-- /site:header -->
+<div class="docs-layout">
+<!-- docs:nav --><!-- /docs:nav -->
+<main id="content">
+<div class="page-head">
+<p class="eyebrow">Framework guide</p>
+<h1>OpenTelemetry</h1>
+</div>
+<p class="lede">Send OpenTelemetry traces to supatrace.dev over OTLP/HTTP using stock Python or Node exporters. Protobuf and JSON supported; no gRPC, metrics or logs.</p>
+<p class="preview-note"><strong>Python SDK: Beta. JavaScript SDK: Coming soon.</strong> Install the alpha Python package with <code>pip install supatrace==0.1.0</code> (Python 3.10+). The JavaScript <code>supatrace</code> package is not published to npm; its examples run from the <a href="https://github.com/SlanchaAI/supatrace-public">public repository</a> root. For a first hosted trace, use the <a href="/docs/frameworks/opentelemetry/#otlp">stock OpenTelemetry exporter</a> or the Python/Node snippets on <a href="/app/#home">Home</a>.</p>
+
+<section aria-labelledby="otlp"><h2 id="otlp">OTLP/HTTP ingest <span class="status available">Live</span></h2>
+<p>SupaTrace accepts OpenTelemetry traces at <code>POST /v1/traces</code> on supatrace.dev. Any OTLP/HTTP exporter can send traces with two environment variables and an ingest key; no SupaTrace package is needed.</p>
+<!-- otlp:examples --><!-- /otlp:examples -->
+<ul class="facts">
+<li><strong>Encoding:</strong> protobuf or JSON, with or without gzip. gRPC is not supported.</li>
+<li><strong>Signals:</strong> traces only. Metrics and logs are not served.</li>
+<li><strong>Size:</strong> 512 KiB per request on the wire, 2000 spans and 50 traces per export, 32 KiB stored per span.</li>
+<li><strong>Storage:</strong> each trace becomes a run named <code>otlp.&lt;traceid&gt;</code>. Each span becomes an event. Retried exports store nothing twice.</li>
+</ul>
+<h3 id="sdk-otlp">SDK availability</h3>
+<p>The SDKs contain the client side. With <code>mode="otlp"</code> they send <code>POST &lt;SUPATRACE_OTLP_ENDPOINT&gt;/v1/traces</code> with the write key, and only when the endpoint, the key and the OpenTelemetry packages are all present. The SDKs have not been run against the receiver.</p>
+<pre data-lang="sh"><code>pip install "opentelemetry-sdk&gt;=1.27" "opentelemetry-exporter-otlp-proto-http&gt;=1.27"
+export SUPATRACE_OTLP_ENDPOINT="https://supatrace.dev"   # SupaTrace SDK OTLP mode (Python Beta; JavaScript source only)
+export SUPATRACE_API_KEY="YOUR_WRITE_KEY"</code></pre>
+<pre data-lang="python" data-run="py"><code>import supatrace
+
+trace = supatrace.init(service="checkout", mode="otlp")
+trace.span("checkout.step", {"cart.items": 3})
+print(trace.capture["sending"], trace.capture["skipped"])
+trace.close()</code></pre>
+<pre data-lang="js" data-run="js"><code>import { init } from "supatrace";
+
+const trace = init("checkout", { mode: "otlp" });
+trace.span("checkout.step", { "cart.items": 3 });
+console.log(trace.capture.sending, trace.capture.skipped);
+await trace.close().shutdown;</code></pre>
+<p>Without an endpoint nothing is sent and nothing is saved: in OTLP mode <code>span</code> returns an in-memory batch with no file, and it is gone when the process exits. To get a file you can review and upload, use source mode as in the <a href="/docs/quickstart/#sdk">quickstart</a>. An endpoint in the environment alone never turns export on; <code>mode="otlp"</code> must be explicit.</p></section>
+<section aria-labelledby="langfuse-sdk"><h2 id="langfuse-sdk">Apps on a Langfuse SDK <span class="status beta">Beta</span></h2>
+<p>An app that already uses a Langfuse SDK can send its traces to SupaTrace by changing the host and keys. This is ingest only, not a Langfuse API. Score events sent through batch ingestion are stored as events on the trace, but they are not aggregated or shown as scores. The standalone scores endpoint, prompts, datasets and the trace-reading APIs are not served and answer 404. Hosted routes answer on supatrace.dev. SDK acceptance receipts are local only, so Langfuse SDK compatibility remains beta.</p>
+<pre data-lang="sh"><code>export LANGFUSE_HOST="https://supatrace.dev"        # LANGFUSE_BASEURL for the JS SDK
+export LANGFUSE_PUBLIC_KEY="pk-supatrace"            # any non-empty value; not a credential
+export LANGFUSE_SECRET_KEY="YOUR_WRITE_KEY"</code></pre>
+<p>Update events are stored as their own events and are not merged into the observation they update. It was tested with the Langfuse JS SDK 3.39.2 and Python SDK 5.2.0; other versions are untested.</p></section>
+</main>
+</div>
+<footer class="site-footer"><!-- site:footer --><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>
+<script type="module" src="/docs/docs.js"></script>
+</body>
+</html>

@@ -41,11 +41,11 @@
 <h1>Vercel AI SDK</h1>
 </div>
 <p class="lede">Record Vercel AI SDK calls as SupaTrace events from Node.</p>
-<p class="preview-note"><strong>Coming soon.</strong> The Python and JavaScript <code>supatrace</code> packages are not published to PyPI or npm. Until then send traces with the <a href="/docs/frameworks/opentelemetry/#otlp">stock OpenTelemetry exporter</a> or the Python/Node snippets on <a href="/app/#home">Home</a>. These SDK examples run from the <a href="https://github.com/SlanchaAI/supatrace-public">public repository</a> checkout.</p>
+<p class="preview-note"><strong>Python SDK: Beta. JavaScript SDK: Coming soon.</strong> Install the alpha Python package with <code>pip install supatrace==0.1.0</code> (Python 3.10+). The JavaScript <code>supatrace</code> package is not published to npm; its examples run from the <a href="https://github.com/SlanchaAI/supatrace-public">public repository</a> root. For a first hosted trace, use the <a href="/docs/frameworks/opentelemetry/#otlp">stock OpenTelemetry exporter</a> or the Python/Node snippets on <a href="/app/#home">Home</a>.</p>
 
-<section aria-labelledby="source"><h2 id="source">Record a call in source mode <span class="status preview">preview</span></h2><p>Source mode is the default. It makes no network request: you choose the events, the SDK checks them against the same batch rules the server applies and writes one file to a local spool for you to review. The example records the model name and token counts, not the prompt or the reply.</p>
-<pre data-lang="sh"><code>npm install ./packages/supatrace-js   # from the public repository root. Node 22 or later, ESM only</code></pre>
-<pre data-lang="js" data-run="js"><code>import { init } from "supatrace";
+<section aria-labelledby="source"><h2 id="source">Record a call in source mode <span class="status preview">Coming soon</span></h2><p>Source mode is the default. It makes no network request: you choose the events, the SDK checks them against the same batch rules the server applies and writes one file to a local spool for you to review. The example records the model name and token counts, not the prompt or the reply.</p>
+<div class="scroll-shell"><pre data-lang="sh" tabindex="0" role="region" aria-label="Code example; scroll horizontally for more"><code>npm install ./packages/supatrace-js   # from the public repository root. Node 22 or later, ESM only</code></pre><span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>
+<div class="scroll-shell"><pre data-lang="js" data-run="js" tabindex="0" role="region" aria-label="Code example; scroll horizontally for more"><code>import { init } from "supatrace";
 import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
 
@@ -56,18 +56,18 @@ const result = trace.batch([
   { id: "req-1", time: started, kind: "request", name: "generateText", data: { model: "YOUR_MODEL" } },
   { id: "res-1", time: new Date().toISOString(), kind: "response", name: "generateText", data: { totalTokens: usage.totalTokens } },
 ]);
-console.log(result.report.valid, result.report.path);</code></pre>
+console.log(result.report.valid, result.report.path);</code></pre><span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>
 <p>The SDK reads and writes local files, so run it in a Node runtime such as a route handler or server action, not in the Edge runtime or the browser.</p></section>
 <section aria-labelledby="upload"><h2 id="upload">Review, then upload</h2>
 <p>Open the spooled file and read it. Remove anything you do not intend to store. Then upload it with the script from the <a href="/agent-setup.html">setup guide</a>, using the write-only connection you approved there:</p>
-<pre data-lang="sh"><code>python3 upload.py ./spool/BATCH.json --config ./supatrace-access.json</code></pre>
+<div class="scroll-shell"><pre data-lang="sh" tabindex="0" role="region" aria-label="Code example; scroll horizontally for more"><code>python3 upload.py ./spool/BATCH.json --config ./supatrace-access.json</code></pre><span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>
 <p>The trace appears under <strong>Traces</strong> in your <a href="/app/">workspace</a>. <a href="/docs/limits/">Batch limits</a> apply: 100 events and 512 KiB per batch.</p></section>
-<section aria-labelledby="otlp"><h2 id="otlp">AI SDK telemetry over OTLP <span class="status preview">SDK preview, package coming</span></h2>
-<p>The AI SDK can emit OpenTelemetry spans through a tracer you pass in its telemetry settings. With <code>mode: "otlp"</code>, an endpoint, a key and the OpenTelemetry packages installed, the SupaTrace handle exposes such a tracer as <code>trace.tracer</code>. SupaTrace accepts OTLP/HTTP traces on supatrace.dev. This checkout-only SDK tracer hand-off has not been run against the receiver and is unavailable to outside users. Use a stock exporter from the <a href="/docs/frameworks/opentelemetry/#otlp">OpenTelemetry guide</a> today.</p>
-<pre data-lang="sh"><code>npm install @opentelemetry/sdk-trace-base @opentelemetry/exporter-trace-otlp-http @opentelemetry/resources
-export SUPATRACE_OTLP_ENDPOINT="https://supatrace.dev"   # checkout-only SupaTrace SDK preview
-export SUPATRACE_API_KEY="YOUR_WRITE_KEY"</code></pre>
-<pre data-lang="js" data-run="js"><code>import { init } from "supatrace";
+<section aria-labelledby="otlp"><h2 id="otlp">AI SDK telemetry over OTLP <span class="status preview">Coming soon</span></h2>
+<p>The AI SDK can emit OpenTelemetry spans through a tracer you pass in its telemetry settings. With <code>mode: "otlp"</code>, an endpoint, a key and the OpenTelemetry packages installed, the SupaTrace handle exposes such a tracer as <code>trace.tracer</code>. SupaTrace accepts OTLP/HTTP traces on supatrace.dev. This JavaScript SDK tracer hand-off has not been run against the receiver. Its npm package is Coming soon; source examples use the public repository. Use a stock exporter from the <a href="/docs/frameworks/opentelemetry/#otlp">OpenTelemetry guide</a> today.</p>
+<div class="scroll-shell"><pre data-lang="sh" tabindex="0" role="region" aria-label="Code example; scroll horizontally for more"><code>npm install @opentelemetry/sdk-trace-base @opentelemetry/exporter-trace-otlp-http @opentelemetry/resources
+export SUPATRACE_OTLP_ENDPOINT="https://supatrace.dev"   # SupaTrace SDK OTLP mode (Python Beta; JavaScript source only)
+export SUPATRACE_API_KEY="YOUR_WRITE_KEY"</code></pre><span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>
+<div class="scroll-shell"><pre data-lang="js" data-run="js" tabindex="0" role="region" aria-label="Code example; scroll horizontally for more"><code>import { init } from "supatrace";
 import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
 
@@ -78,7 +78,7 @@ await generateText({
   prompt: "Say hello.",
   experimental_telemetry: { isEnabled: true, tracer: trace.tracer },
 });
-await trace.close().shutdown;</code></pre>
+await trace.close().shutdown;</code></pre><span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>
 <p>When the endpoint, the key or a package is missing, <code>trace.capture.sending</code> is <code>false</code>, <code>trace.tracer</code> is not set and <code>trace.capture.skipped</code> says why.</p></section>
 </main>
 </div>

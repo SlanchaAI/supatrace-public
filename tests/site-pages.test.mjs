@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {existsSync, readFileSync, readdirSync, statSync} from 'node:fs';
-import {REDIRECTS, redirectHtml, PAGES, NAV, FOOTER, ORIGIN, stamp, pageUrl, format, planCards, planCompare, planOverage, plansToday} from '../scripts/site-pages.mjs';
+import {REDIRECTS, redirectHtml, PAGES, NAV, FOOTER, ORIGIN, stamp, pageUrl, format, planCards, planCompare, planOverage, plansToday, scrollRegions} from '../scripts/site-pages.mjs';
 import {spawnSync} from 'node:child_process';
 import {PLAN_LIMITS} from '../src/plan-limits.mjs';
 import {PLANS, FEATURES, PLAN_CATALOG, accountPlanConfiguration} from '../src/plans.mjs';
@@ -86,7 +86,7 @@ test('the plan table holds the approved prices, the limits and the feature split
 test('the pricing page shows the numbers in src/plans.mjs and nothing else', () => {
   const html = read('pricing/index.html'), shown = text(html);
   // The generated blocks are rendered from the table, so a changed table changes the page.
-  for (const block of [planCards(), planCompare(), planOverage()]) assert.ok(html.includes(block));
+  for (const block of [planCards(), scrollRegions(planCompare()), scrollRegions(planOverage())]) assert.ok(html.includes(block));
   const changed = JSON.parse(JSON.stringify(PLANS));
   changed.plans[1].monthly_base_usd = 31;
   assert.ok(planCards(changed).includes('$31') && !html.includes('$31'));
@@ -307,6 +307,38 @@ test('all public generator outputs match checked-in files', () => {
   assert.equal(result.status, 0, result.stdout + result.stderr);
 });
 
+
+test('capability badges use only Live, Beta and Coming soon', () => {
+  const allowed = new Set(['Live', 'Beta', 'Coming soon']);
+  for (const page of PAGES.filter(page => page.path.startsWith('/docs/'))) {
+    const badges = [...read(page.file).matchAll(/<span class="status [^"]+">([^<]+)<\/span>/g)];
+    for (const [, label] of badges) assert.ok(allowed.has(label), page.file + ': ' + label);
+  }
+  const overview = read('docs/index.html');
+  const rows = [...overview.matchAll(/<tr role="row">[\s\S]*?<td[^>]*data-label="Status"[^>]*><span class="cell-value"><span class="status [^"]+">([^<]+)<\/span>/g)];
+  assert.equal(rows.length, 11, 'every status-column row was checked');
+  assert.deepEqual(new Set(rows.map(row => row[1])), allowed);
+});
+
+test('generated scroll regions include static focus, labels, hints and fading CSS', () => {
+  const css = read('site.css');
+  assert.match(css, /background-attachment:local,local,scroll,scroll/);
+  assert.match(css, /scroll-timeline:--region inline/);
+  assert.match(css, /animation-timeline:--region/);
+  assert.match(css, /@supports \(animation-timeline:--region\)\{[\s\S]*?animation:scroll-right[\s\S]*?animation:scroll-left/);
+  assert.match(css, /main pre\{white-space:pre\}/);
+  assert.match(css, /@media\(max-width:639px\)/);
+  for (const page of PAGES.filter(page => page.path.startsWith('/docs/') || page.path === '/pricing/')) {
+    const html = read(page.file);
+    const count = (html.match(/<pre[ >]|<table[ >]/g) || []).length;
+    assert.equal((html.match(/class="scroll-shell"/g) || []).length, count, page.file);
+    assert.equal((html.match(/class="scroll-hint" aria-hidden="true">Scroll for more/g) || []).length, count, page.file);
+    for (const [, attrs] of html.matchAll(/<pre([^>]*)>/g)) {
+      assert.match(attrs, /tabindex="0"/); assert.match(attrs, /role="region"/);
+      assert.match(attrs, /aria-label="Code example; scroll horizontally for more"/);
+    }
+  }
+});
 
 test('default favicon is a published multi-size ICO and declared icon targets resolve', () => {
   const icon = readFileSync(pageUrl('favicon.ico'));

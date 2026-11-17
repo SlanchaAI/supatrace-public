@@ -3,7 +3,7 @@
 // Optional screenshots: SUPATRACE_SITE_SCREENSHOT_DIR=/output/directory
 import test, {before, after} from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdirSync} from 'node:fs';
+import {mkdirSync, readFileSync} from 'node:fs';
 import {start} from './harness.mjs';
 import {launch} from './browser.mjs';
 import {PAGES, NAV} from '../scripts/site-pages.mjs';
@@ -82,7 +82,7 @@ test('docs pages share a sidebar and every code block has a working Copy button'
     await page.locator('.docs-nav a[href="/docs/frameworks/openai/"]').click();
     await page.waitForURL(live.origin + '/docs/frameworks/openai/');
     assert.equal(await page.locator('h1').innerText(), 'OpenAI');
-    assert.match(await page.locator('.preview-note').first().innerText(), /not published to PyPI or npm/);
+    assert.match(await page.locator('.preview-note').first().innerText(), /not published to npm/);
     assert.deepEqual(errors, []);
   } finally { await context.close(); }
 });
@@ -273,5 +273,74 @@ test('live billing copy renders on pricing and terms at desktop and mobile sizes
         if (out) await page.screenshot({path: `${out}/${path === '/pricing/' ? 'pricing' : 'terms'}-${viewport.width}.png`, fullPage: true});
       } finally { await context.close(); }
     }
+  }
+});
+
+
+test('sitemap docs and pricing have truthful overflow cues at mobile and desktop widths', {timeout: 120000}, async () => {
+  const sitemap = readFileSync(new URL('../public/sitemap.xml', import.meta.url), 'utf8');
+  const paths = new Set(['/pricing/', '/agent-setup.html', ...[...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => new URL(match[1]).pathname).filter(path => path.startsWith('/docs/'))]);
+  const contrast = (first, second) => {
+    const luminance = color => {
+      const channels = color.match(/[\d.]+/g).slice(0, 3).map(value => {
+        const channel = Number(value) / 255;
+        return channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4;
+      });
+      return channels[0] * .2126 + channels[1] * .7152 + channels[2] * .0722;
+    };
+    const values = [luminance(first), luminance(second)].sort((a, b) => b - a);
+    return (values[0] + .05) / (values[1] + .05);
+  };
+  for (const viewport of [{width:390,height:844},{width:1440,height:900}]) {
+    const context = await browser.newContext({viewport, reducedMotion:'reduce'});
+    const page = await context.newPage();
+    try {
+      for (const path of paths) {
+        await page.goto(live.origin + path, {waitUntil:'networkidle'});
+        if (!await page.locator('main table, main pre').count()) continue;
+        await fits(page, path + ' ' + viewport.width);
+        const regions = page.locator('.scroll-shell');
+        assert.equal(await regions.count(), await page.locator('main table, main pre').count(), path);
+        for (const shell of await regions.all()) {
+          if (!await shell.isVisible()) continue;
+          const region = shell.locator(':scope > pre, :scope > .table-scroll');
+          await region.evaluate(node => {node.scrollLeft = 0;});
+          await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+          const measure = () => shell.evaluate(node => {
+            const region = node.querySelector('pre, .table-scroll');
+            const hint = getComputedStyle(node.querySelector('.scroll-hint'));
+            return {overflow:region.scrollWidth > region.clientWidth + 1, left:region.scrollLeft,
+              rightOpacity:Number(getComputedStyle(node,'::after').opacity), leftOpacity:Number(getComputedStyle(node,'::before').opacity),
+              hintVisible:hint.display !== 'none' && Number(hint.opacity) > .5,
+              hintColor:hint.color, background:getComputedStyle(document.body).backgroundColor,
+              focus:region.tabIndex, role:region.getAttribute('role'), label:region.getAttribute('aria-label'),
+              whitespace:region.matches('pre') ? getComputedStyle(region).whiteSpace : null};
+          });
+          const initial = await measure();
+          if (viewport.width < 640 && await shell.locator('.stack-table').count()) assert.equal(initial.overflow, false, path + ' mobile cards fit');
+          assert.equal(initial.focus, 0, path); assert.equal(initial.role, 'region', path);
+          assert.match(initial.label, /scroll horizontally/, path);
+          if (initial.whitespace) assert.equal(initial.whitespace, 'pre', path);
+          assert.equal(initial.rightOpacity > .5, initial.overflow, `${path} ${viewport.width} right cue ${JSON.stringify(initial)}`);
+          assert.equal(initial.leftOpacity, 0, path + ' left start');
+          assert.equal(initial.hintVisible, initial.overflow && viewport.width < 640, path + ' hint');
+          if (initial.overflow) {
+            if (initial.hintVisible) assert.ok(contrast(initial.hintColor, initial.background) >= 4.5, path + ' hint contrast');
+            await region.focus();
+            assert.notEqual(await region.evaluate(node => getComputedStyle(node).outlineStyle), 'none');
+            const outlineColor = await region.evaluate(node => getComputedStyle(node).outlineColor);
+            assert.ok(contrast(outlineColor, initial.background) >= 3, path + ' focus contrast');
+            await region.press('ArrowRight');
+            await page.waitForFunction(node => node.scrollLeft > 0, await region.elementHandle());
+            await region.evaluate(node => {node.scrollLeft = node.scrollWidth;});
+            await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+            const end = await measure();
+            assert.equal(end.rightOpacity, 0, path + ' right end');
+            assert.equal(end.leftOpacity, 1, path + ' left end');
+            assert.equal(end.hintVisible, false, path + ' hint end');
+          }
+        }
+      }
+    } finally {await context.close();}
   }
 });

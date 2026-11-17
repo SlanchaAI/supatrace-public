@@ -42,7 +42,7 @@
 </div>
 <p class="lede">These are the limits the service enforces. Plan limits come from the <a href="/pricing/">plan table</a>; Base and Pro subscriptions are billed monthly through Stripe.</p>
 <section aria-labelledby="current"><h2 id="current">Current limits</h2>
-<div class="table-scroll" tabindex="0" role="region" aria-label="Current limits"><table class="compare"><thead><tr><th scope="col">Area</th><th scope="col">Limit</th></tr></thead><tbody>
+<div class="scroll-shell"><div class="table-scroll" tabindex="0" role="region" aria-label="Current limits; scroll horizontally for more"><table class="compare"><thead><tr><th scope="col">Area</th><th scope="col">Limit</th></tr></thead><tbody>
 <tr><th scope="row">Free allowance</th><td>50k spans per UTC calendar month and 1 GB stored, per organization. Base, Pro and Enterprise raise both; see <a href="/pricing/">Pricing</a>. A span is one accepted trace event. The span count resets on the first of the month; stored bytes count accepted and pending uploads and do not reset. At either limit uploads are rejected with an error that names the limit; nothing already stored is dropped.</td></tr>
 <tr><th scope="row">Retention</th><td>7 days on Free, 30 on Base, 90 on Pro and 1 year on Enterprise, counted from when a batch is accepted. After that it is no longer listed, opened or exported. Data stored before retention existed does not expire.</td></tr>
 <tr><th scope="row">Service capacity</th><td>Shared service caps can stop an upload before an organization reaches its allowance.</td></tr>
@@ -53,7 +53,7 @@
 <tr><th scope="row">Claude snapshot</th><td>Input at most 20 MiB. Finished transcripts you select; not a live tailer.</td></tr>
 <tr><th scope="row">Trace listing</th><td>100,000 run IDs, 20 MiB of metadata and five minutes per scan.</td></tr>
 <tr><th scope="row">Export without Save File support</th><td>20 MiB and 100,000 events.</td></tr>
-</tbody></table></div>
+</tbody></table></div><span class="scroll-hint" aria-hidden="true">Scroll for more →</span></div>
 <p>The <a href="/agent-setup.html#limits">setup guide</a> has the recovery steps for each limit.</p></section>
 <section aria-labelledby="not-yet"><h2 id="not-yet">Billing and service boundaries</h2>
 <ul class="facts">

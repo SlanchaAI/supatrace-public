@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Export a trace, an environment or a whole SupaTrace workspace as JSON, and what the exports do and do not contain.">
+<meta name="theme-color" content="#f6f3e8">
+<title>Export · SupaTrace docs</title>
+<link rel="icon" href="/favicon.svg?v=classic-s-2" type="image/svg+xml">
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/remodel.css">
+<link rel="stylesheet" href="/site.css">
+<link rel="canonical" href="https://supatrace.dev/docs/export/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="SupaTrace">
+<meta property="og:title" content="Export · SupaTrace docs">
+<meta property="og:description" content="Export a trace, an environment or a whole SupaTrace workspace as JSON, and what the exports do and do not contain.">
+<meta property="og:url" content="https://supatrace.dev/docs/export/">
+<meta property="og:image" content="https://supatrace.dev/og-image.png">
+</head>
+<body class="landing remodel page docs" data-page="docs">
+<a class="skip" href="#content">Skip to content</a>
+<!-- site:header --><!-- /site:header -->
+<div class="docs-layout">
+<!-- docs:nav --><!-- /docs:nav -->
+<main id="content">
+<div class="page-head">
+<p class="eyebrow">Reference</p>
+<h1>Export</h1>
+</div>
+<p class="lede">Your traces are yours to take. Export one trace, one environment or every environment in a workspace as JSON from the workspace app.</p>
+<section aria-labelledby="trace"><h2 id="trace">Export one trace</h2>
+<p>Open a trace under <strong>Traces</strong> and choose <strong>Export original JSON</strong>. The file has every accepted event of that trace with its original fields. In browsers with Save File support the export streams to disk; other browsers are limited to 20 MiB and 100,000 events per trace.</p></section>
+<section aria-labelledby="account"><h2 id="account">Export an environment or the workspace</h2>
+<p><strong>Export selected environment</strong> reads only the environment shown in the workspace switcher. It is not a complete export when the workspace has more than one environment.</p>
+<p><strong>Export all workspace environments</strong> includes every listed environment in the workspace, after you confirm that scope. It does not include other workspaces.</p>
+<p>How the archive is saved depends on the browser:</p>
+<ul class="facts">
+<li><strong>With Save File support</strong>, you pick a file first and the archive streams straight to it. The status line reports the archive as saved; there is no separate download step.</li>
+<li><strong>Without Save File support</strong>, the app prepares the archive in the tab, limited to 20 MiB and 100,000 events in total. When the status line says the archive is ready, choose <strong>Download prepared archive</strong>, then check your browser downloads.</li>
+</ul>
+<p>Pause uploads while an export runs: the archive is an observed read, not a point-in-time snapshot.</p></section>
+<section aria-labelledby="review"><h2 id="review">Review before sharing</h2>
+<ul class="facts">
+<li>Exports are not automatically redacted. They can contain prompts, tool output, personal information and secrets.</li>
+<li><strong>Prepare redacted copy</strong> masks paths and exact text you select, locally, for one trace. Its input limit is 2 MiB. It does not change stored traces, does not apply to environment or workspace archives and does not guarantee anonymity.</li>
+<li>Exports preserve event fields, not the original uploaded batch bytes.</li>
+<li>Exports contain only data inside its retention period. On Free that is 7 days from when a batch was accepted; export before then. Data stored before retention existed has no expiry and stays exportable.</li>
+</ul></section>
+<section aria-labelledby="mcp"><h2 id="mcp">Read traces from an agent with MCP <span class="status preview">Coming soon</span></h2>
+<p>The repository includes a local stdio MCP server with four tools: list traces, search traces, inspect one trace and export one trace. Not available in the hosted service yet. Source is in the <a href="https://github.com/SlanchaAI/supatrace-public">public repository</a>. In an operator-configured deployment it runs on your machine, inside a project scope you review, and returns event IDs, times and kinds unless you opt in to content. It is not a hosted MCP endpoint. Write keys cannot read, so it needs a host that supplies a short-lived read credential; the browser consent flow for that is off by default on the hosted alpha.</p></section>
+<section aria-labelledby="not-yet"><h2 id="not-yet">Not available yet</h2>
+<p>There is no scheduled export. To forward batches as they arrive, add a trace drain (a signed HTTPS webhook) under <strong>Settings</strong> in your workspace. To list traces and read their events from a script, use a personal access token with <code>/api/v1</code>. File exports run in a signed-in browser.</p></section>
+</main>
+</div>
+<footer class="site-footer"><!-- site:footer --><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>
+<script type="module" src="/docs/docs.js"></script>
+</body>
+</html>
