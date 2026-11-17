@@ -1,0 +1,175 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  sdk:
+    # The root `npm test` list does not reach packages/**, so the SDK suites run here.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install JS SDK dev dependencies (OpenTelemetry, for the export test)
+        run: npm --prefix packages/supatrace-js ci --ignore-scripts
+      - name: JS SDK tests
+        run: npm --prefix packages/supatrace-js test
+      - name: Python SDK tests without OpenTelemetry
+        env:
+          PYTHONPATH: packages/supatrace/src:agent
+        run: python3 -m unittest discover -s packages/supatrace/tests -p 'test_*.py'
+      - name: Install Python OpenTelemetry (the package's otlp extra, pinned)
+        run: python3 -m pip install --disable-pip-version-check opentelemetry-sdk==1.45.2 opentelemetry-exporter-otlp-proto-http==1.45.2
+      - name: Python SDK tests with OpenTelemetry
+        env:
+          PYTHONPATH: packages/supatrace/src:agent
+        run: python3 -m unittest discover -s packages/supatrace/tests -p 'test_*.py'
+
+      - name: Build and verify release packages (no publishing)
+        run: |
+          python3 -m pip install --disable-pip-version-check build twine
+          python3 -m build packages/supatrace --outdir dist
+          python3 -m twine check dist/*.whl dist/*.tar.gz
+          npm pack ./packages/supatrace-js --pack-destination dist
+          python3 scripts/verify-sdk-packages.py "$PWD/dist"
+
+  # Node, MCP and Python suites, the template lint and the synthetic screenshots: about 5 of the 15 minutes.
+  # The browser suite is the `ui` job. One job ran both and took 14 to 15 minutes, so it was cancelled on time (#156).
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Verify the exact tested revision
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          npm ci --ignore-scripts
+          npm --prefix mcp ci --ignore-scripts
+      - name: Node tests
+        run: npm test
+      - name: MCP client acceptance and bounds
+        run: npm run test:mcp
+      - name: Python tests
+        run: python3 -m unittest tests/test_upload.py tests/test_claude_snapshot.py tests/test_profile_snapshot.py tests/test_connect.py
+      - name: Select browser
+        id: browser
+        timeout-minutes: 4
+        env:
+          CONFIGURED_BROWSER: ${{ vars.PLAYWRIGHT_CHROMIUM_PATH }}
+        run: |
+          set -euo pipefail
+          browser_path="${CONFIGURED_BROWSER}"
+          if [ -z "$browser_path" ] && [ -x /usr/bin/google-chrome ]; then
+            browser_path=/usr/bin/google-chrome
+          fi
+          if [ -n "$browser_path" ]; then
+            case "$browser_path" in *$'\n'*|*$'\r'*) echo "Invalid browser path"; exit 1 ;; esac
+            [ -x "$browser_path" ] || { echo "Configured browser is not executable"; exit 1; }
+            "$browser_path" --version
+          else
+            npx playwright-core install --with-deps chromium
+          fi
+          echo "path=$browser_path" >> "$GITHUB_OUTPUT"
+      - name: CloudFormation lint
+        run: |
+          python3 -m pip install --disable-pip-version-check cfn-lint==1.58.0
+          cfn-lint aws/template.yaml aws/github-oidc-deploy-role.yaml
+      - name: Stateful resource guard
+        run: node --test tests/stateful-guard.test.mjs
+      - name: Capture synthetic desktop and mobile views
+        env:
+          PLAYWRIGHT_CHROMIUM_PATH: ${{ steps.browser.outputs.path }}
+          SUPATRACE_SCREENSHOT_DIR: test-artifacts/ui
+        run: npm run screenshots
+      - name: Bound synthetic artifact storage
+        run: python3 scripts/check_ci_artifacts.py test-artifacts/ui
+      - uses: actions/upload-artifact@v4
+        with:
+          name: supatrace-ui-${{ github.sha }}
+          path: test-artifacts/ui/
+          retention-days: 7
+
+  # The browser suite, split by test file across three runners (`node --test --test-shard`). Every file in the
+  # `test:ui` list runs in exactly one shard; the files stay serial inside a shard, as before.
+  ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Verify the exact tested revision
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # The private import host test starts the Python upload worker, which needs the pinned Python.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          npm ci --ignore-scripts
+          npm --prefix mcp ci --ignore-scripts
+      - name: Select browser
+        id: browser
+        timeout-minutes: 4
+        env:
+          CONFIGURED_BROWSER: ${{ vars.PLAYWRIGHT_CHROMIUM_PATH }}
+        run: |
+          set -euo pipefail
+          browser_path="${CONFIGURED_BROWSER}"
+          if [ -z "$browser_path" ] && [ -x /usr/bin/google-chrome ]; then
+            browser_path=/usr/bin/google-chrome
+          fi
+          if [ -n "$browser_path" ]; then
+            case "$browser_path" in *$'\n'*|*$'\r'*) echo "Invalid browser path"; exit 1 ;; esac
+            [ -x "$browser_path" ] || { echo "Configured browser is not executable"; exit 1; }
+            "$browser_path" --version
+          else
+            npx playwright-core install --with-deps chromium
+          fi
+          echo "path=$browser_path" >> "$GITHUB_OUTPUT"
+      - name: Playwright
+        env:
+          PLAYWRIGHT_CHROMIUM_PATH: ${{ steps.browser.outputs.path }}
+          SUPATRACE_SCREENSHOT_DIR: ${{ vars.SUPATRACE_SCREENSHOT_DIR }}
+          # NODE_OPTIONS, because a flag after the file list in the npm script is not read by the runner.
+          NODE_OPTIONS: --test-shard=${{ matrix.shard }}/3
+        run: |
+          npm run test:ui
+      - name: Bound the screenshots the browser tests wrote
+        run: |
+          if [ -d test-artifacts/ui ]; then python3 scripts/check_ci_artifacts.py test-artifacts/ui; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: supatrace-ui-tests-${{ github.sha }}-${{ matrix.shard }}
+          path: test-artifacts/ui/
+          if-no-files-found: ignore
+          retention-days: 7

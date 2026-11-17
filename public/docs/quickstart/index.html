@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="From sign-in to your first SupaTrace trace: approve a write-only connection, upload a reviewed batch and inspect it. Then try the preview SDK in source mode.">
+<meta name="theme-color" content="#f6f3e8">
+<title>Quickstart · SupaTrace docs</title>
+<link rel="icon" href="/favicon.svg?v=classic-s-2" type="image/svg+xml">
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/remodel.css">
+<link rel="stylesheet" href="/site.css">
+<link rel="canonical" href="https://supatrace.dev/docs/quickstart/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="SupaTrace">
+<meta property="og:title" content="Quickstart · SupaTrace docs">
+<meta property="og:description" content="From sign-in to your first SupaTrace trace: approve a write-only connection, upload a reviewed batch and inspect it. Then try the preview SDK in source mode.">
+<meta property="og:url" content="https://supatrace.dev/docs/quickstart/">
+<meta property="og:image" content="https://supatrace.dev/og-image.png">
+</head>
+<body class="landing remodel page docs" data-page="docs">
+<a class="skip" href="#content">Skip to content</a>
+<!-- site:header -->
+<header class="site-header">
+<a class="wordmark" href="/" aria-label="SupaTrace home"><img class="brand-mark" src="/brand-mark.svg" alt="" width="25" height="46">SupaTrace</a>
+<nav aria-label="Main"><a href="/docs/" aria-current="page">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/app/">Workspace</a></nav>
+</header>
+<!-- /site:header -->
+<div class="docs-layout">
+<!-- docs:nav -->
+<nav class="docs-nav" aria-label="Docs">
+<h2>Start</h2><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quickstart/" aria-current="page">Quickstart</a></li></ul>
+<h2>Frameworks</h2><ul><li><a href="/docs/frameworks/openai/">OpenAI</a></li><li><a href="/docs/frameworks/anthropic/">Anthropic</a></li><li><a href="/docs/frameworks/langchain/">LangChain</a></li><li><a href="/docs/frameworks/llamaindex/">LlamaIndex</a></li><li><a href="/docs/frameworks/vercel-ai-sdk/">Vercel AI SDK</a></li><li><a href="/docs/frameworks/opentelemetry/">OpenTelemetry</a></li></ul>
+<h2>Reference</h2><ul><li><a href="/docs/keys/">Keys</a></li><li><a href="/docs/management-api/">Management API</a></li><li><a href="/docs/limits/">Limits</a></li><li><a href="/docs/export/">Export</a></li><li><a href="/docs/importers/">Importers</a></li></ul>
+</nav>
+<!-- /docs:nav -->
+<main id="content">
+<div class="page-head">
+<p class="eyebrow">Quickstart</p>
+<h1>Your first trace</h1>
+</div>
+<p class="lede">Start with Home: one ingest key and a curl, Python or Node snippet, about 30 seconds after sign-in. Next, send OTLP from any OpenTelemetry exporter. Use the reviewed scripts when an agent needs approval. SDK packages are coming.</p>
+<section aria-labelledby="home"><h2 id="home">1. Send a trace from Home <span class="status available">available</span></h2>
+<ol class="steps-list">
+<li><a href="/#signin">Sign in</a>. A new workspace shows <strong>Send your first trace</strong> on Home.</li>
+<li>Select <strong>Create ingest key and show snippets</strong>. Your browser makes an ingest key (<code>st_pub_…</code>) and sends the server only its SHA-256. The key is shown once, filled into curl, Python and Node snippets.</li>
+<li>Run one snippet. It posts a small synthetic chat call to <code>/api/batches</code> and needs no package install.</li>
+<li>The card shows the trace when the upload is accepted. Open it from there.</li>
+</ol>
+<p>The ingest key can only send traces. It does not expire; revoke or rotate it under <strong>API keys</strong>. Ingest keys from Home or the API keys page do not expire by default; keys from pairing an agent last 30 days. See <a href="/docs/keys/">Keys</a>.</p></section>
+<section aria-labelledby="otlp"><h2 id="otlp">2. OTLP from any OpenTelemetry exporter <span class="status available">available</span></h2>
+<p>Send traces to supatrace.dev over OTLP/HTTP with protobuf or JSON. No SupaTrace package is needed. No gRPC, metrics or logs. See the <a href="/docs/frameworks/opentelemetry/#otlp">OpenTelemetry guide</a> for limits.</p>
+<!-- otlp:examples -->
+<p>Create an ingest key on <a href="/app/">Home</a> or the <strong>API keys</strong> page. Ingest keys from Home or API keys do not expire by default; keys from pairing an agent last 30 days. In a fresh shell, set these two variables, replacing only <code>YOUR_INGEST_KEY</code>:</p>
+<pre data-lang="sh"><code>export OTEL_EXPORTER_OTLP_ENDPOINT=https://supatrace.dev
+export OTEL_EXPORTER_OTLP_HEADERS=&quot;x-supatrace-key=YOUR_INGEST_KEY&quot;</code></pre>
+<p>The base URL makes both stock exporters append <code>/v1/traces</code>. Leave any <code>OTEL_EXPORTER_OTLP_TRACES_ENDPOINT</code> and <code>OTEL_EXPORTER_OTLP_TRACES_HEADERS</code> overrides unset.</p>
+<h3>Python</h3>
+<pre data-lang="sh"><code>pip install opentelemetry-sdk opentelemetry-exporter-otlp-proto-http</code></pre>
+<p>Save as <code>first-trace.py</code>. It sends one synthetic span over HTTP/protobuf and flushes before exit.</p>
+<pre data-lang="python" data-run="otlp"><code>from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+provider = TracerProvider()
+provider.add_span_processor(SimpleSpanProcessor(OTLPSpanExporter()))
+trace.set_tracer_provider(provider)
+with trace.get_tracer(&quot;first-trace-example&quot;).start_as_current_span(&quot;synthetic.chat&quot;) as span:
+    span.set_attribute(&quot;gen_ai.provider.name&quot;, &quot;example&quot;)
+    span.set_attribute(&quot;gen_ai.request.model&quot;, &quot;synthetic-model&quot;)
+    print(&quot;Trace: otlp.&quot; + format(span.get_span_context().trace_id, &quot;032x&quot;))
+provider.force_flush()
+provider.shutdown()</code></pre>
+<pre data-lang="sh"><code>python first-trace.py</code></pre>
+<h3>JavaScript / Node 22</h3>
+<pre data-lang="sh"><code>npm install @opentelemetry/sdk-trace-base@2.12.1 @opentelemetry/exporter-trace-otlp-http@0.223.2 @opentelemetry/api@1.9.1</code></pre>
+<p>These compatible package versions keep the trace SDK and exporter on the same OpenTelemetry API version. Save as <code>first-trace.mjs</code> (ESM). This JavaScript exporter reads the same two environment variables and appends <code>/v1/traces</code> to the base URL. It sends HTTP/JSON.</p>
+<pre data-lang="js" data-run="otlp"><code>import { trace } from &quot;@opentelemetry/api&quot;;
+import { BasicTracerProvider, SimpleSpanProcessor } from &quot;@opentelemetry/sdk-trace-base&quot;;
+import { OTLPTraceExporter } from &quot;@opentelemetry/exporter-trace-otlp-http&quot;;
+
+const provider = new BasicTracerProvider({
+  spanProcessors: [new SimpleSpanProcessor(new OTLPTraceExporter())],
+});
+trace.setGlobalTracerProvider(provider);
+const span = trace.getTracer(&quot;first-trace-example&quot;).startSpan(&quot;synthetic.chat&quot;);
+span.setAttribute(&quot;gen_ai.provider.name&quot;, &quot;example&quot;);
+span.setAttribute(&quot;gen_ai.request.model&quot;, &quot;synthetic-model&quot;);
+console.log(&quot;Trace: otlp.&quot; + span.spanContext().traceId);
+span.end();
+await provider.forceFlush();
+await provider.shutdown();</code></pre>
+<pre data-lang="sh"><code>node first-trace.mjs</code></pre>
+<p>Open <strong>Traces</strong> in the workspace and find the printed <code>otlp.&lt;traceid&gt;</code> run. These examples call no model provider.</p>
+<!-- /otlp:examples -->
+</section>
+<section aria-labelledby="today"><h2 id="today">3. Send a trace with the reviewed scripts <span class="status available">available</span></h2>
+<p>You need Python 3, a terminal and a SupaTrace sign-in. The <a href="/agent-setup.html">setup guide</a> has the script downloads, the full steps and the recovery notes. In short:</p>
+<ol class="steps-list">
+<li><a href="/#signin">Sign in</a>, open <strong>Agents</strong> in your workspace and copy your project ID.</li>
+<li>Download <code>connect.py</code>, <code>upload.py</code> and <code>first-trace.json</code> from the setup guide into one folder. Read them before running them.</li>
+<li>Create a write-only connection. The script shows a 12-character setup code; approve only that code in your workspace.<pre data-lang="sh"><code>python3 connect.py --project YOUR_PROJECT_ID --config ./supatrace-access.json</code></pre></li>
+<li>Upload the reviewed synthetic example and wait for <strong>Accepted by server</strong>.<pre data-lang="sh"><code>python3 upload.py ./first-trace.json --config ./supatrace-access.json</code></pre></li>
+<li>Open <strong>Traces</strong>, select <strong>Refresh Traces</strong> and open <code>first-trace-example</code>.</li>
+</ol>
+<p>The key in <code>supatrace-access.json</code> is a setup-code key: it can upload but cannot read traces, lasts 30 days and can be revoked. Keep the file private. See <a href="/docs/keys/">Keys</a>.</p></section>
+<section aria-labelledby="sdk"><h2 id="sdk">SDK preview, package coming <span class="status preview">preview</span></h2>
+<p class="preview-note"><strong>SDK preview, package coming.</strong> The <code>supatrace</code> Python package and <code>@supatrace/client</code> JavaScript package are not published to PyPI or npm. The repository is private, so these checkout-only examples are unavailable to outside users. Use the <a href="/docs/quickstart/#home">Home snippets</a>, <a href="/docs/frameworks/opentelemetry/#otlp">stock OpenTelemetry exporters</a> or <a href="/agent-setup.html">reviewed script downloads</a> today.</p>
+<h3 id="python">Python</h3>
+<pre data-lang="sh"><code>pip install ./packages/supatrace   # private checkout only; unavailable to outside users</code></pre>
+<pre data-lang="python" data-run="py"><code>import supatrace
+
+trace = supatrace.init(service="checkout", spool="./spool")
+result = trace.batch([
+    {"id": "e1", "time": "2026-11-14T00:00:00Z", "kind": "note", "name": "hello", "data": {"message": "safe"}},
+])
+print(result["report"]["valid"], result["report"]["path"])</code></pre>
+<h3 id="javascript">JavaScript</h3>
+<pre data-lang="sh"><code>npm install ./packages/supatrace-js   # private checkout only; unavailable to outside users. Node 22 or later, ESM only</code></pre>
+<pre data-lang="js" data-run="js"><code>import { init } from "@supatrace/client";
+
+const trace = init("checkout", { spool: "./spool" });
+const result = trace.batch([
+  { id: "e1", time: "2026-11-14T00:00:00Z", kind: "note", name: "hello", data: { message: "safe" } },
+]);
+console.log(result.report.valid, result.report.path);</code></pre>
+<p>Both write the same file for the same batch: <code>spool/&lt;sha256&gt;.json</code>. An event has an <code>id</code>, a <code>time</code>, a <code>kind</code> (<code>request</code>, <code>tool_call</code>, <code>tool_result</code>, <code>response</code>, <code>error</code> or <code>note</code>), a <code>name</code> and a <code>data</code> object. Pass <code>dry_run=True</code> (Python) or <code>dryRun: true</code> (JavaScript) to validate without writing.</p>
+<pre data-lang="python" data-run="py"><code>import supatrace
+
+trace = supatrace.init(service="checkout", spool="./spool")
+report = trace.batch([{"id": "e1", "time": "2026-11-14T00:00:00Z", "kind": "note", "name": "hello", "data": {}}], dry_run=True)["report"]
+print(report["valid"], report["errors"], report["path"])</code></pre>
+<h2 id="upload">Review, then upload</h2>
+<p>Open the spooled file and read it. Remove anything you do not intend to store. Then upload it with the script from the <a href="/agent-setup.html">setup guide</a>, using the write-only connection you approved there:</p>
+<pre data-lang="sh"><code>python3 upload.py ./spool/BATCH.json --config ./supatrace-access.json</code></pre>
+<p>The trace appears under <strong>Traces</strong> in your <a href="/app/">workspace</a>. <a href="/docs/limits/">Batch limits</a> apply: 100 events and 512 KiB per batch.</p></section>
+</main>
+</div>
+<footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/">Security</a><a href="/changelog/">Changelog</a><a href="/status/">Status</a><a href="/agent-setup.html">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a><span id="build" class="build" hidden></span></nav><script type="module" src="/build.js"></script><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>
+<script type="module" src="/docs/docs.js"></script>
+</body>
+</html>

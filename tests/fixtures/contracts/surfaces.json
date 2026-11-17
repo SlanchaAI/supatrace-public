@@ -1,0 +1,466 @@
+{
+  "complete": false,
+  "evidence_kind": "source-only",
+  "base_branch": "main",
+  "base_commit": "0000000000000000000000000000000000000000",
+  "summary": {
+    "total_surfaces": 21,
+    "present": 0,
+    "partial": 16,
+    "missing": 5,
+    "note": "Counts computed from surfaces. Partial can mean source capability with unverified live result; it does not imply a confirmed defect. Missing platform surfaces 3-5 are outside trace-product scope."
+  },
+  "surfaces": [
+    {
+      "name": "Projects",
+      "score": "partial",
+      "evidence": "Synthetic source inventory fixture for Projects.",
+      "issues": [],
+      "source_paths": [
+        "public/app/workspaces.js",
+        "src/alpha-projects.mjs",
+        "src/aws-api.mjs"
+      ],
+      "unfiled_reason": "Synthetic schema fixture; no issue filing implied."
+    },
+    {
+      "name": "Project / workspace switcher",
+      "score": "partial",
+      "evidence": "Synthetic source inventory fixture for Project / workspace switcher.",
+      "issues": [],
+      "unfiled_reason": "Synthetic schema fixture; no issue filing implied.",
+      "source_paths": [
+        "public/app/workspaces.js",
+        "public/app/app.js"
+      ]
+    },
+    {
+      "name": "Database (Postgres)",
+      "score": "missing",
+      "evidence": "Synthetic source inventory fixture for Database (Postgres).",
+      "issues": [],
+      "unfiled_reason": "Synthetic schema fixture; no issue filing implied.",
+      "source_paths": [
+        "public/app/index.html"
+      ]
+    },
+    {
+      "name": "Storage",
+      "score": "missing",
+      "evidence": "Synthetic source inventory fixture for Storage.",
+      "issues": [],
+      "unfiled_reason": "Synthetic schema fixture; no issue filing implied.",
+      "source_paths": [
+        "src/s3-objects.mjs",
+        "public/app/index.html"
+      ]
+    },
+    {
+      "name": "Edge functions",
+      "score": "missing",
+      "evidence": "Synthetic source inventory fixture for Edge functions.",
+      "issues": [],
+      "source_paths": [
+        "README.md",
+        "public/app/index.html"
+      ],
+      "unfiled_reason": "Synthetic schema fixture; no issue filing implied."
+    },
+    {
+      "name": "Authentication",
+      "score": "partial",
+      "evidence": "Synthetic source inventory fixture for Authentication.",
+      "issues": [],
+      "unfiled_reason": "Synthetic schema fixture; no issue filing implied.",
+      "source_paths": [
+        "src/dashboard-auth.mjs",
+        "public/app/startup-ui.js",
+        "README.md"
+      ]
+    },
+    {
+      "name": "Two-factor authentication",
+      "score": "partial",
+      "evidence": "Synthetic source inventory fixture for Two-factor authentication.",
+      "issues": [],
+      "source_paths": [
+        "src/dashboard-auth.mjs",
+        "aws/template.yaml",
+        "README.md"
+      ],
+      "unfiled_reason": "Synthetic schema fixture; no issue filing implied."
+    },
+    {
+      "name": "Members, roles and invitations",
+      "score": "partial",
+      "evidence": "Synthetic source inventory fixture for Members, roles and invitations.",
+      "issues": [],
+      "source_paths": [
+        "public/app/workspaces.js",
+        "src/workspaces.mjs",
+        "tests/workspaces.test.mjs"
+      ],
+      "unfiled_reason": "Synthetic schema fixture; no issue filing implied."
+    },
+    {
+      "name": "API keys and tokens",
+      "score": "partial",
+      "evidence": "Synthetic source inventory fixture for API keys and tokens.",
+      "issues": [],
+      "source_paths": [
+        "src/key-model.mjs",
+        "src/access-tokens.mjs",
+        "src/management-openapi.mjs"
+      ],
+      "unfiled_reason": "Synthetic schema fixture; no issue filing implied."
+    },
+    {
+      "name": "Settings",
+      "score": "partial",
+      "evidence": "Synthetic source inventory fixture for Settings.",
+      "issues": [],
+      "unfiled_reason": "Synthetic schema fixture; no issue filing implied.",
+      "source_paths": [
+        "public/app/app.js",
+        "src/dashboard-auth.mjs",
+        "tests/dashboard-auth.test.mjs"
+      ]
+    },
+    {
+      "name": "Usage and quota",
+      "score": "partial",
+      "evidence": "Synthetic source inventory fixture for Usage and quota.",
+      "issues": [],
+      "unfiled_reason": "Synthetic schema fixture; no issue filing implied.",
+      "source_paths": [
+        "public/app/usage-data.js",
+        "public/app/workspaces.js"
+      ]
+    },
+    {
+      "name": "Billing",
+      "score": "partial",
+      "evidence": "Synthetic source inventory fixture for Billing.",
+      "issues": [],
+      "unfiled_reason": "Synthetic schema fixture; no issue filing implied.",
+      "source_paths": [
+        "src/commercial-policy.mjs",
+        "src/stripe-billing.mjs",
+        "public/app/app.js",
+        "docs/architecture.md"
+      ]
+    },
+    {
+      "name": "Logs and observability",
+      "score": "missing",
+      "evidence": "Synthetic source inventory fixture for Logs and observability.",
+      "issues": [],
+      "source_paths": [
+        "public/app/index.html",
+        "public/app/app.js"
+      ],
+      "unfiled_reason": "Synthetic schema fixture; no issue filing implied."
+    },
+    {
+      "name": "Realtime updates",
+      "score": "partial",
+      "evidence": "Synthetic source inventory fixture for Realtime updates.",
+      "issues": [],
+      "source_paths": [
+        "public/app/app.js",
+        "public/app/live-data.js",
+        "tests/live-data.test.mjs"
+      ],
+      "unfiled_reason": "Synthetic schema fixture; no issue filing implied."
+    },
+    {
+      "name": "Integrations",
+      "score": "partial",
+      "evidence": "Synthetic source inventory fixture for Integrations.",
+      "issues": [],
+      "source_paths": [
+        "agent/import_langfuse.mjs",
+        "agent/import_braintrust.mjs",
+        "agent/import_langsmith.mjs",
+        "public/app/index.html",
+        "src/private-import-host.mjs"
+      ],
+      "unfiled_reason": "Synthetic schema fixture; no issue filing implied."
+    },
+    {
+      "name": "First-load and error resilience",
+      "score": "partial",
+      "evidence": "Synthetic source inventory fixture for First-load and error resilience.",
+      "issues": [],
+      "source_paths": [
+        "public/app/startup-data.js",
+        "public/app/startup-ui.js"
+      ],
+      "unfiled_reason": "Synthetic schema fixture; no issue filing implied."
+    },
+    {
+      "name": "Secret management (agent side)",
+      "score": "partial",
+      "evidence": "Synthetic source inventory fixture for Secret management (agent side).",
+      "issues": [],
+      "unfiled_reason": "Synthetic schema fixture; no issue filing implied.",
+      "source_paths": [
+        "agent/connect.py",
+        "docs/claude-hooks.md",
+        "agent/upload.py"
+      ]
+    },
+    {
+      "name": "Organizations (multiple orgs, projects per org)",
+      "score": "missing",
+      "evidence": "Synthetic source inventory fixture for Organizations (multiple orgs, projects per org).",
+      "issues": [],
+      "source_paths": [
+        "src/plans.mjs",
+        "src/alpha-projects.mjs",
+        "public/app/workspaces.js"
+      ],
+      "unfiled_reason": "Synthetic schema fixture; no issue filing implied."
+    },
+    {
+      "name": "Onboarding",
+      "score": "partial",
+      "evidence": "Synthetic source inventory fixture for Onboarding.",
+      "issues": [],
+      "source_paths": [
+        "public/agent-setup.html",
+        "public/app/first-trace.js",
+        "public/app/app.js"
+      ],
+      "unfiled_reason": "Synthetic schema fixture; no issue filing implied."
+    },
+    {
+      "name": "Docs and legal (privacy, terms)",
+      "score": "partial",
+      "evidence": "Synthetic source inventory fixture for Docs and legal (privacy, terms).",
+      "issues": [],
+      "source_paths": [
+        "public/privacy.html",
+        "public/terms.html",
+        "public/llms.txt"
+      ],
+      "unfiled_reason": "Synthetic schema fixture; no issue filing implied."
+    },
+    {
+      "name": "Sign-up (distinct from sign-in)",
+      "score": "partial",
+      "evidence": "Synthetic source inventory fixture for Sign-up (distinct from sign-in).",
+      "issues": [],
+      "unfiled_reason": "Synthetic schema fixture; no issue filing implied.",
+      "source_paths": [
+        "src/dashboard-auth.mjs",
+        "src/aws-api.mjs"
+      ]
+    }
+  ],
+  "issues": [
+    {
+      "id": "GAP-LOG-VIEW",
+      "kind": "task",
+      "audience": "human-facing",
+      "title": "Synthetic tracking case GAP-LOG-VIEW",
+      "body": "Synthetic GAP-schema record used to verify required tracking fields and probe associations.",
+      "searched": [
+        "Synthetic fixture search"
+      ]
+    },
+    {
+      "id": "GAP-REALTIME",
+      "kind": "task",
+      "audience": "bot-facing",
+      "title": "Synthetic tracking case GAP-REALTIME",
+      "body": "Synthetic GAP-schema record used to verify required tracking fields and probe associations.",
+      "searched": [
+        "Synthetic fixture search"
+      ]
+    },
+    {
+      "id": "GAP-MFA-GATED",
+      "kind": "task",
+      "audience": "human-facing",
+      "title": "Synthetic tracking case GAP-MFA-GATED",
+      "body": "Synthetic GAP-schema record used to verify required tracking fields and probe associations.",
+      "searched": [
+        "Synthetic fixture search"
+      ]
+    },
+    {
+      "id": "GAP-INVITE-DISCOVERY",
+      "kind": "bug",
+      "audience": "human-facing",
+      "title": "Synthetic tracking case GAP-INVITE-DISCOVERY",
+      "body": "Synthetic GAP-schema record used to verify required tracking fields and probe associations.",
+      "searched": [
+        "Synthetic fixture search"
+      ]
+    },
+    {
+      "id": "GAP-TEAM-NAV",
+      "kind": "task",
+      "audience": "human-facing",
+      "title": "Synthetic tracking case GAP-TEAM-NAV",
+      "body": "Synthetic GAP-schema record used to verify required tracking fields and probe associations.",
+      "searched": [
+        "Synthetic fixture search"
+      ]
+    },
+    {
+      "id": "GAP-MFA-DISABLE-NOCODE",
+      "kind": "bug",
+      "audience": "bot-facing",
+      "title": "Synthetic tracking case GAP-MFA-DISABLE-NOCODE",
+      "body": "Synthetic GAP-schema record used to verify required tracking fields and probe associations.",
+      "searched": [
+        "Synthetic fixture search"
+      ]
+    },
+    {
+      "id": "GAP-INTEGRATION-HUB",
+      "kind": "task",
+      "audience": "bot-facing",
+      "title": "Synthetic tracking case GAP-INTEGRATION-HUB",
+      "body": "Synthetic GAP-schema record used to verify required tracking fields and probe associations.",
+      "searched": [
+        "Synthetic fixture search"
+      ]
+    },
+    {
+      "id": "GAP-READ-KEYS",
+      "kind": "task",
+      "audience": "human-facing",
+      "title": "Synthetic tracking case GAP-READ-KEYS",
+      "body": "Synthetic GAP-schema record used to verify required tracking fields and probe associations.",
+      "searched": [
+        "Synthetic fixture search"
+      ]
+    },
+    {
+      "id": "GAP-FIRSTLOAD-BLOCKING",
+      "kind": "task",
+      "audience": "bot-facing",
+      "title": "Synthetic tracking case GAP-FIRSTLOAD-BLOCKING",
+      "body": "Synthetic GAP-schema record used to verify required tracking fields and probe associations.",
+      "searched": [
+        "Synthetic fixture search"
+      ]
+    },
+    {
+      "id": "HANDOFF-LIVE-VISUAL-ACCEPTANCE",
+      "kind": "task",
+      "audience": "human-facing",
+      "title": "Synthetic tracking case HANDOFF-LIVE-VISUAL-ACCEPTANCE",
+      "body": "Synthetic GAP-schema record used to verify required tracking fields and probe associations.",
+      "searched": [
+        "Synthetic fixture search"
+      ]
+    },
+    {
+      "id": "F-NO-MEMBER-VIEW",
+      "kind": "task",
+      "audience": "human-facing",
+      "title": "Synthetic tracking case F-NO-MEMBER-VIEW",
+      "body": "Synthetic GAP-schema record used to verify required tracking fields and probe associations.",
+      "searched": [
+        "Synthetic fixture search"
+      ]
+    },
+    {
+      "id": "F-TEAM-BEHIND-SETTINGS",
+      "kind": "task",
+      "audience": "human-facing",
+      "title": "Synthetic tracking case F-TEAM-BEHIND-SETTINGS",
+      "body": "Synthetic GAP-schema record used to verify required tracking fields and probe associations.",
+      "searched": [
+        "Synthetic fixture search"
+      ]
+    },
+    {
+      "id": "F-MFA-GATED-OFF",
+      "kind": "task",
+      "audience": "bot-facing",
+      "title": "Synthetic tracking case F-MFA-GATED-OFF",
+      "body": "Synthetic GAP-schema record used to verify required tracking fields and probe associations.",
+      "searched": [
+        "Synthetic fixture search"
+      ]
+    },
+    {
+      "id": "F-NO-LOG-VIEW",
+      "kind": "task",
+      "audience": "bot-facing",
+      "title": "Synthetic tracking case F-NO-LOG-VIEW",
+      "body": "Synthetic GAP-schema record used to verify required tracking fields and probe associations.",
+      "searched": [
+        "Synthetic fixture search"
+      ]
+    },
+    {
+      "id": "F-NO-INTEGRATION-HUB",
+      "kind": "task",
+      "audience": "bot-facing",
+      "title": "Synthetic tracking case F-NO-INTEGRATION-HUB",
+      "body": "Synthetic GAP-schema record used to verify required tracking fields and probe associations.",
+      "searched": [
+        "Synthetic fixture search"
+      ]
+    },
+    {
+      "id": "F-NO-REALTIME",
+      "kind": "task",
+      "audience": "bot-facing",
+      "title": "Synthetic tracking case F-NO-REALTIME",
+      "body": "Synthetic GAP-schema record used to verify required tracking fields and probe associations.",
+      "searched": [
+        "Synthetic fixture search"
+      ]
+    },
+    {
+      "id": "F-NO-PENDING-INVITE-DISCOVERY",
+      "kind": "bug",
+      "audience": "bot-facing",
+      "title": "Synthetic tracking case F-NO-PENDING-INVITE-DISCOVERY",
+      "body": "Synthetic GAP-schema record used to verify required tracking fields and probe associations.",
+      "searched": [
+        "Synthetic fixture search"
+      ]
+    },
+    {
+      "id": "F-BILLING-NO-PURCHASE",
+      "kind": "task",
+      "audience": "human-facing",
+      "title": "Synthetic tracking case F-BILLING-NO-PURCHASE",
+      "body": "Synthetic GAP-schema record used to verify required tracking fields and probe associations.",
+      "searched": [
+        "Synthetic fixture search"
+      ]
+    },
+    {
+      "id": "GAP-BILLING-NO-PURCHASE",
+      "kind": "task",
+      "audience": "human-facing",
+      "title": "Synthetic tracking case GAP-BILLING-NO-PURCHASE",
+      "body": "Synthetic GAP-schema record used to verify required tracking fields and probe associations.",
+      "searched": [
+        "Synthetic fixture search"
+      ]
+    },
+    {
+      "id": "GAP-PROJECT-CREATE",
+      "kind": "task",
+      "audience": "human-facing",
+      "title": "Synthetic tracking case GAP-PROJECT-CREATE",
+      "body": "Synthetic GAP-schema record used to verify required tracking fields and probe associations.",
+      "searched": [
+        "Synthetic fixture search"
+      ]
+    }
+  ],
+  "github_issues_filed": true,
+  "gap_table_path": "tests/fixtures/contracts/gap-table.md",
+  "issue_filing_note": "Synthetic issue records exercise the tracking schema; they do not establish live findings."
+}

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="How SupaTrace stores and protects traces today, stated from the deployment template and source, and what is not in place: no SOC 2 report, DPA or HIPAA.">
+<meta name="theme-color" content="#f6f3e8">
+<title>Security · SupaTrace</title>
+<link rel="icon" href="/favicon.svg?v=classic-s-2" type="image/svg+xml">
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/remodel.css">
+<link rel="stylesheet" href="/site.css">
+<link rel="canonical" href="https://supatrace.dev/security/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SupaTrace">
+<meta property="og:title" content="Security · SupaTrace">
+<meta property="og:description" content="How SupaTrace stores and protects traces today, stated from the deployment template and source, and what is not in place: no SOC 2 report, DPA or HIPAA.">
+<meta property="og:url" content="https://supatrace.dev/security/">
+<meta property="og:image" content="https://supatrace.dev/og-image.png">
+</head>
+<body class="landing remodel page" data-page="security">
+<a class="skip" href="#content">Skip to content</a>
+<!-- site:header -->
+<header class="site-header">
+<a class="wordmark" href="/" aria-label="SupaTrace home"><img class="brand-mark" src="/brand-mark.svg" alt="" width="25" height="46">SupaTrace</a>
+<nav aria-label="Main"><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/app/">Workspace</a></nav>
+</header>
+<!-- /site:header -->
+<main id="content">
+<div class="page-head">
+<p class="eyebrow">Security</p>
+<h1>What is in place.<br>What is not.</h1>
+<p class="lede">Traces can contain prompts, tool output, personal information and secrets. This page states only what can be checked in the SupaTrace deployment template and source, and lists plainly what does not exist yet.</p>
+</div>
+<p class="preview-note"><strong>SupaTrace holds no security certification.</strong> There is no SOC 2 report, no ISO 27001 certificate, no HIPAA program and no DPA. It is a small alpha: use synthetic or deliberately reviewed data.</p>
+<section aria-labelledby="hosting"><h2 id="hosting">Where data lives</h2>
+<ul class="facts">
+<li><strong>One AWS region.</strong> The service runs in AWS us-east-1 from one CloudFormation stack: CloudFront, a Lambda function, S3 buckets and a DynamoDB table.</li>
+<li><strong>Trace payloads</strong> are stored as objects in a private S3 bucket. <strong>Metadata</strong> (accounts, sessions, keys, trace indexes) is stored in DynamoDB.</li>
+<li><strong>No public buckets.</strong> Both S3 buckets block all public access; CloudFront reads the static bucket through origin access control.</li>
+</ul></section>
+<section aria-labelledby="encryption"><h2 id="encryption">Encryption</h2>
+<ul class="facts">
+<li><strong>At rest:</strong> the S3 buckets use server-side encryption with Amazon S3 managed keys (SSE-S3, AES-256), and the DynamoDB table has server-side encryption enabled. Keys are AWS-managed; there are no customer-managed keys.</li>
+<li><strong>In transit:</strong> CloudFront redirects HTTP to HTTPS, requires TLS 1.2 or later (policy TLSv1.2_2021) and sends HSTS for one year. The API origin is HTTPS only.</li>
+</ul></section>
+<section aria-labelledby="access"><h2 id="access">Sign-in and access</h2>
+<ul class="facts">
+<li><strong>Sign-in:</strong> GitHub OAuth, and Google OAuth where configured. The first sign-in with Google or GitHub opens an existing account when both providers verify the same email address; that verified address is stored on the account to decide this. Accounts that already exist stay separate unless their owner links them. Linked sign-in methods are listed in Settings and can be unlinked. SupaTrace does not store a password or a provider token for these sign-ins.</li>
+<li><strong>Sessions:</strong> the session cookie is HttpOnly, Secure and SameSite=Lax, and the server stores a SHA-256 digest of the session token, not the token.</li>
+<li><strong>Ingest keys are write-only.</strong> An ingest key (<code>st_pub_…</code>) can upload to one project and environment and cannot read traces. It does not expire unless you set an expiry, and it can be rotated or revoked. Keys made with a setup code are also write-only and expire after 30 days. A secret key (<code>st_sec_…</code>) can also read the traces of its own workspace and environment, so keep it on a server. The server stores a SHA-256 of each key, not the key. See <a href="/docs/keys/">Keys</a>.</li>
+<li><strong>Roles:</strong> workspace owners can invite existing accounts as Admin, Developer or Read-only, with plan-gated roles and environment scopes. Enterprise supports custom roles.</li>
+<li><strong>Browser hardening:</strong> pages are served with a Content-Security-Policy that allows only same-origin scripts and styles, X-Frame-Options DENY, nosniff and no-referrer.</li>
+</ul></section>
+<section aria-labelledby="control"><h2 id="control">Your data</h2>
+<ul class="facts">
+<li><strong>Explicit capture.</strong> Manual uploads send only the batch files you chose. Two paths store data without a per-batch review, and only after you opt in: the Claude Code hook beta uploads the events it captured when Claude completes if you enabled <code>--upload-on-stop</code> for that spool, and the Langfuse import stores the exact scope you reviewed. Nothing searches your disk or tails transcripts.</li>
+<li><strong>Export:</strong> you can export a trace, an environment or a workspace as JSON. Exports are not redacted. See <a href="/docs/export/">Export</a>.</li>
+<li><strong>Logs:</strong> application logs are kept for 7 days.</li>
+</ul></section>
+<section aria-labelledby="subprocessors"><h2 id="subprocessors">Subprocessors</h2>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Subprocessors"><table class="compare"><thead><tr><th scope="col">Provider</th><th scope="col">Used for</th><th scope="col">Sees trace content</th></tr></thead><tbody>
+<tr><th scope="row">Amazon Web Services</th><td>Hosting, storage, delivery (CloudFront, Lambda, S3, DynamoDB), us-east-1</td><td>Yes: it stores and serves it</td></tr>
+<tr><th scope="row">GitHub</th><td>Sign-in with GitHub (OAuth)</td><td>No</td></tr>
+<tr><th scope="row">Google</th><td>Sign-in with Google (OAuth), where configured</td><td>No</td></tr>
+<tr><th scope="row">Stripe</th><td>TEST-mode billing only; live payments disabled</td><td>No</td></tr>
+<tr><th scope="row">Cloudflare</th><td>DNS for the SupaTrace domains</td><td>No</td></tr>
+</tbody></table></div>
+<p>Stripe handles TEST-mode checkout, subscriptions and invoices; no live payment is processed and no real card is charged. If you start a Langfuse import, SupaTrace calls the Langfuse region you chose with the keys you enter; that is your provider, not a SupaTrace subprocessor.</p></section>
+<section aria-labelledby="not-yet"><h2 id="not-yet">Boundaries and unavailable features</h2>
+<ul class="facts">
+<li><strong>SOC 2:</strong> no report and no audit under way. No auditor or target date has been chosen.</li>
+<li><strong>ISO 27001:</strong> none.</li>
+<li><strong>HIPAA:</strong> not supported. No BAA is offered. Do not send protected health information.</li>
+<li><strong>DPA:</strong> none available.</li>
+<li><strong>Terms of service and privacy policy:</strong> read the <a href="/terms.html">Terms</a>, <a href="/privacy.html">Privacy Policy</a>, <a href="/aup.html">Acceptable Use Policy</a> and <a href="/subprocessors.html">Subprocessors</a>.</li>
+<li><strong>Penetration test:</strong> no third-party test report.</li>
+<li><strong>Security contact and disclosure policy:</strong> report security concerns to <a href="mailto:security@supatrace.dev">security@supatrace.dev</a>. No <code>security.txt</code> or bug bounty is published.</li>
+<li><strong>Deletion:</strong> individual-trace deletion is unavailable. Self-service account, organization, project and environment deletion revoke access and queue physical erasure. Retention is 7 days on Free (longer on paid plans), counted from when a batch is accepted: expired data is hidden immediately and the scheduled worker erases payload versions. Data stored before retention existed has no expiry and stays readable. DynamoDB point-in-time backups expire within 35 days.</li>
+<li><strong>Multi-factor authentication and SAML single sign-on:</strong> MFA is enabled on supatrace.dev; Enterprise SAML login and enforcement have live acceptance. The repository template leaves MFA disabled until the operator enables it.</li>
+<li><strong>Audit log and SCIM:</strong> Pro includes audit viewing; Enterprise adds audit export and SCIM provisioning. Both have live acceptance. Customer-managed keys and region choice are unavailable; no uptime SLA is offered without agreed contractual terms.</li>
+</ul>
+<p>The <a href="/enterprise/">Enterprise page</a> tracks which of these are planned.</p></section>
+</main>
+<footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/" aria-current="page">Security</a><a href="/changelog/">Changelog</a><a href="/status/">Status</a><a href="/agent-setup.html">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a><span id="build" class="build" hidden></span></nav><script type="module" src="/build.js"></script><!-- /site:footer --><span>SupaTrace holds no security certification. Review before upload.</span></footer>
+</body>
+</html>

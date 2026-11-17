@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "name": "hue-sdk-import-parsers",
+  "license": "MIT",
+  "repository": "https://github.com/hue-run/hue-sdk",
+  "revision": "4ac88431eab76b4e12737c1b279dc58dbed87bf8",
+  "upstreamBase": "packages/sdk-typescript/src/cli/",
+  "sources": [
+    {
+      "file": "langsmith.ts",
+      "upstreamPath": "packages/sdk-typescript/src/cli/import-formats/langsmith.ts",
+      "sha256": "79a8dea821cc9a413b8d18c34c9e94a535e88371415dc6dda71a35b3f77b6f15"
+    },
+    {
+      "file": "braintrust.ts",
+      "upstreamPath": "packages/sdk-typescript/src/cli/import-formats/braintrust.ts",
+      "sha256": "1253e0229efd9aa93b2fcd2a89633b82c350dc899da957181d1586302a153da1"
+    },
+    {
+      "file": "weave.ts",
+      "upstreamPath": "packages/sdk-typescript/src/cli/import-formats/weave.ts",
+      "sha256": "c33beed6e4c272f7780fc0bdbbba1fd021086ae22b5c1572179d3139cc013146"
+    },
+    {
+      "file": "opik.ts",
+      "upstreamPath": "packages/sdk-typescript/src/cli/import-formats/opik.ts",
+      "sha256": "118905e9613e4dba10d458b191e3d016f0c32c89bdb2a3a7607b3886b5eaca7d"
+    },
+    {
+      "file": "datadog.ts",
+      "upstreamPath": "packages/sdk-typescript/src/cli/import-formats/datadog.ts",
+      "sha256": "414c8cd7afcea7e6dcc498db79e02cba010568769ce4997d028c8130d06e6a48"
+    },
+    {
+      "file": "mlflow.ts",
+      "upstreamPath": "packages/sdk-typescript/src/cli/import-formats/mlflow.ts",
+      "sha256": "2e8b6678c377a7b98a6a30f38dd0abf42889bf49ab174dd2536468fc348bccf7"
+    },
+    {
+      "file": "row-platform-fields.ts",
+      "upstreamPath": "packages/sdk-typescript/src/cli/import-formats/row-platform-fields.ts",
+      "sha256": "b305670cc083b9d948398b5abd5555e08a8b46e03c28ff5cbfebd1a672b48c47"
+    },
+    {
+      "file": "helicone.ts",
+      "upstreamPath": "packages/sdk-typescript/src/cli/import-formats/helicone.ts",
+      "sha256": "b03c315e6c3c2bec94dbc935caf20b83e69ce2b25fea75bdfe6c13d100296ed1"
+    },
+    {
+      "file": "traces-import-convert.ts",
+      "upstreamPath": "packages/sdk-typescript/src/cli/traces-import-convert.ts",
+      "sha256": "7932f348004c14490343ae61c6582e1623f817d3d59238434c1be9184a44efc8"
+    },
+    {
+      "file": "rows.ts",
+      "upstreamPath": "packages/sdk-typescript/src/cli/import-formats/rows.ts",
+      "sha256": "ba3a4fd42de6c08c77081ad6cf8b15633655a5e2fbe556a9ab896353ed71bdd8"
+    },
+    {
+      "file": "identity.ts",
+      "upstreamPath": "packages/sdk-typescript/src/cli/import-formats/identity.ts",
+      "sha256": "5fa9586c95fa68dc5fea7ce00dc93f45d6eff25e68ba3a1436cb67d7e7366c6d"
+    },
+    {
+      "file": "otel-spans.ts",
+      "upstreamPath": "packages/sdk-typescript/src/cli/import-formats/otel-spans.ts",
+      "sha256": "4c64f68ecc7cb73304e2c53777f7474dd128facb5393c9e0dad68fda48a5a603"
+    },
+    {
+      "file": "LICENSE",
+      "upstreamPath": "LICENSE",
+      "sha256": "474a4ede42b639603ff2041e6aaa0452e068e1666688f3512792723924a780da"
+    }
+  ],
+  "generated": [
+    {
+      "file": "langsmith.mjs",
+      "sha256": "9109ccee2786356ba0ae04dbd7c0cadecd50968b27222b5e43ffb32527ff7e79"
+    },
+    {
+      "file": "braintrust.mjs",
+      "sha256": "ea0766d5a51fb4588089b89173f3b04bd61411566914b9323245873e16c42cc4"
+    },
+    {
+      "file": "weave.mjs",
+      "sha256": "90fd6ceea09d553045d56111a29a32a289868657b96a775843aaceba55a25395"
+    },
+    {
+      "file": "opik.mjs",
+      "sha256": "0271579f6fa6dfb4f9d73bc7454fd6b05f41a5dac21e7e27d5a1789a16acd36b"
+    },
+    {
+      "file": "datadog.mjs",
+      "sha256": "d3df800ccbb78f106558935f8defcaa5a3816126a678cca73bd276a41d45c94b"
+    },
+    {
+      "file": "mlflow.mjs",
+      "sha256": "15598f2e3ff948429ecade824b6bf3436c61168c5044786aad947ae93803c00f"
+    },
+    {
+      "file": "row-platform-fields.mjs",
+      "sha256": "d1e6e78080394f0fc8be440665433d62c3ec2e8d843b6dc6bb1d7e0a5026a1ca"
+    },
+    {
+      "file": "helicone.mjs",
+      "sha256": "307a585308544400424fd9f265ff935906aeec932413f5001a7595a10c7930cd"
+    },
+    {
+      "file": "fields.mjs",
+      "sha256": "b213f5fbd1c0960a1d268614bbf960959fe6d4259a6a3132054340a52fa3e5d0"
+    }
+  ],
+  "adaptations": [
+    "TypeScript annotations removed with Node stripTypeScriptTypes; runtime imports redirected to the retained pure field helpers.",
+    "Only row parser modules and pure helpers retained; SupaTrace owns validation, privacy projection, grouping, identifiers, storage and export.",
+    "unixNano delegates to upstream isoNanos (accepts timezone-free UTC timestamps).",
+    "Helicone omits Hue-derived conversation reconstruction; its exact source record is retained with content opt-in.",
+    "No Hue network client, uploader, blob offloader, identity inference or extra runtime dependency."
+  ]
+}

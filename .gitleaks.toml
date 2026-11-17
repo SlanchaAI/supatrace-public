@@ -1,0 +1,34 @@
+# Built-in rules stay enabled. Exact public hashes and synthetic fixtures only.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Pinned upstream/source content hashes"
+condition = "AND"
+regexTarget = "secret"
+paths = ['''(?:^|/)src/importers/vendor/kitaru/provenance\.json$''']
+regexes = ['''^d6592894a918c7f393b81f91b1196059bd3f8a47$''']
+
+[[rules.allowlists]]
+description = "Pinned upstream/source content hashes"
+condition = "AND"
+regexTarget = "secret"
+paths = ['''(?:^|/)tests/fixtures/economics/workloads\.json$''']
+regexes = ['''^b78b3d31a0293f4483d0d72bc5a9b07946eee2840e8393a2519eae4b16f3d232$''']
+
+[[rules.allowlists]]
+description = "Public synthetic two-factor test fixture"
+condition = "AND"
+regexTarget = "secret"
+paths = ['''(?:^|/)tests/session\-epoch\.test\.mjs$''']
+regexes = ['''^GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ$''']
+
+[[rules.allowlists]]
+description = "Public synthetic two-factor test fixture"
+condition = "AND"
+regexTarget = "secret"
+paths = ['''(?:^|/)tests/ui\.test\.mjs$''']
+regexes = ['''^GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ$''']

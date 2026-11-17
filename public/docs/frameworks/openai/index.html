@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Record OpenAI calls as SupaTrace events from Python or Node.">
+<meta name="theme-color" content="#f6f3e8">
+<title>OpenAI · SupaTrace docs</title>
+<link rel="icon" href="/favicon.svg?v=classic-s-2" type="image/svg+xml">
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/remodel.css">
+<link rel="stylesheet" href="/site.css">
+<link rel="canonical" href="https://supatrace.dev/docs/frameworks/openai/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="SupaTrace">
+<meta property="og:title" content="OpenAI · SupaTrace docs">
+<meta property="og:description" content="Record OpenAI calls as SupaTrace events from Python or Node.">
+<meta property="og:url" content="https://supatrace.dev/docs/frameworks/openai/">
+<meta property="og:image" content="https://supatrace.dev/og-image.png">
+</head>
+<body class="landing remodel page docs" data-page="docs">
+<a class="skip" href="#content">Skip to content</a>
+<!-- site:header -->
+<header class="site-header">
+<a class="wordmark" href="/" aria-label="SupaTrace home"><img class="brand-mark" src="/brand-mark.svg" alt="" width="25" height="46">SupaTrace</a>
+<nav aria-label="Main"><a href="/docs/" aria-current="page">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/app/">Workspace</a></nav>
+</header>
+<!-- /site:header -->
+<div class="docs-layout">
+<!-- docs:nav -->
+<nav class="docs-nav" aria-label="Docs">
+<h2>Start</h2><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quickstart/">Quickstart</a></li></ul>
+<h2>Frameworks</h2><ul><li><a href="/docs/frameworks/openai/" aria-current="page">OpenAI</a></li><li><a href="/docs/frameworks/anthropic/">Anthropic</a></li><li><a href="/docs/frameworks/langchain/">LangChain</a></li><li><a href="/docs/frameworks/llamaindex/">LlamaIndex</a></li><li><a href="/docs/frameworks/vercel-ai-sdk/">Vercel AI SDK</a></li><li><a href="/docs/frameworks/opentelemetry/">OpenTelemetry</a></li></ul>
+<h2>Reference</h2><ul><li><a href="/docs/keys/">Keys</a></li><li><a href="/docs/management-api/">Management API</a></li><li><a href="/docs/limits/">Limits</a></li><li><a href="/docs/export/">Export</a></li><li><a href="/docs/importers/">Importers</a></li></ul>
+</nav>
+<!-- /docs:nav -->
+<main id="content">
+<div class="page-head">
+<p class="eyebrow">Framework guide</p>
+<h1>OpenAI</h1>
+</div>
+<p class="lede">Record OpenAI calls as SupaTrace events from Python or Node.</p>
+<p class="preview-note"><strong>SDK preview, package coming.</strong> The <code>supatrace</code> Python package and <code>@supatrace/client</code> JavaScript package are not published to PyPI or npm. The repository is private, so these checkout-only examples are unavailable to outside users. Use the <a href="/docs/quickstart/#home">Home snippets</a>, <a href="/docs/frameworks/opentelemetry/#otlp">stock OpenTelemetry exporters</a> or <a href="/agent-setup.html">reviewed script downloads</a> today.</p>
+
+<section aria-labelledby="source"><h2 id="source">Record a call in source mode <span class="status preview">preview</span></h2><p>Source mode is the default. It makes no network request: you choose the events, the SDK checks them against the same batch rules the server applies and writes one file to a local spool for you to review. The example records the model name and token counts, not the prompt or the reply.</p>
+<h3 id="python">Python</h3>
+<pre data-lang="sh"><code>pip install ./packages/supatrace   # private checkout only; unavailable to outside users</code></pre>
+<pre data-lang="python" data-run="py"><code>import datetime
+import supatrace
+from openai import OpenAI
+
+trace = supatrace.init(service="support-bot", spool="./spool")
+now = lambda: datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+started = now()
+reply = OpenAI().chat.completions.create(model="YOUR_MODEL", messages=[{"role": "user", "content": "Say hello."}])
+result = trace.batch([
+    {"id": "req-1", "time": started, "kind": "request", "name": "chat.completions", "data": {"model": "YOUR_MODEL"}},
+    {"id": "res-1", "time": now(), "kind": "response", "name": "chat.completions", "data": {"total_tokens": reply.usage.total_tokens}},
+])
+print(result["report"]["valid"], result["report"]["path"])</code></pre>
+<h3 id="node">Node</h3>
+<pre data-lang="sh"><code>npm install ./packages/supatrace-js   # private checkout only; unavailable to outside users. Node 22 or later, ESM only</code></pre>
+<pre data-lang="js" data-run="js"><code>import { init } from "@supatrace/client";
+import OpenAI from "openai";
+
+const trace = init("support-bot", { spool: "./spool" });
+const started = new Date().toISOString();
+const reply = await new OpenAI().chat.completions.create({ model: "YOUR_MODEL", messages: [{ role: "user", content: "Say hello." }] });
+const result = trace.batch([
+  { id: "req-1", time: started, kind: "request", name: "chat.completions", data: { model: "YOUR_MODEL" } },
+  { id: "res-1", time: new Date().toISOString(), kind: "response", name: "chat.completions", data: { total_tokens: reply.usage.total_tokens } },
+]);
+console.log(result.report.valid, result.report.path);</code></pre>
+<p>The JavaScript SDK has no automatic OpenAI instrumentation.</p></section>
+<section aria-labelledby="upload"><h2 id="upload">Review, then upload</h2>
+<p>Open the spooled file and read it. Remove anything you do not intend to store. Then upload it with the script from the <a href="/agent-setup.html">setup guide</a>, using the write-only connection you approved there:</p>
+<pre data-lang="sh"><code>python3 upload.py ./spool/BATCH.json --config ./supatrace-access.json</code></pre>
+<p>The trace appears under <strong>Traces</strong> in your <a href="/app/">workspace</a>. <a href="/docs/limits/">Batch limits</a> apply: 100 events and 512 KiB per batch.</p></section>
+<section aria-labelledby="otlp"><h2 id="otlp">Automatic spans over OTLP <span class="status preview">SDK preview, package coming</span></h2>
+<p>With <code>mode="otlp"</code> the Python SDK registers the <code>opentelemetry-instrumentation-openai</code> instrumentor when it is installed and exports spans to <code>SUPATRACE_OTLP_ENDPOINT</code> + <code>/v1/traces</code>, authenticated with your write key. SupaTrace accepts traces over OTLP/HTTP on supatrace.dev. The SupaTrace SDK remains a checkout-only preview, unavailable to outside users; use a stock exporter from the <a href="/docs/frameworks/opentelemetry/#otlp">OpenTelemetry guide</a> today. </p>
+<pre data-lang="sh"><code>pip install "opentelemetry-sdk&gt;=1.27" "opentelemetry-exporter-otlp-proto-http&gt;=1.27" opentelemetry-instrumentation-openai
+export SUPATRACE_OTLP_ENDPOINT="https://supatrace.dev"   # checkout-only SupaTrace SDK preview
+export SUPATRACE_API_KEY="YOUR_WRITE_KEY"</code></pre>
+<pre data-lang="python" data-run="py"><code>import supatrace
+
+trace = supatrace.init(service="support-bot", mode="otlp", instruments=["openai"])
+print(trace.capture["sending"], trace.capture["instrumented"], trace.capture["skipped"])</code></pre>
+<p>Nothing is sent unless the endpoint, the key and the OpenTelemetry packages are all present. When one is missing, <code>trace.capture["skipped"]</code> says which. Prompt and response content is not captured unless you pass <code>capture_content=True</code> or set <code>SUPATRACE_CAPTURE_CONTENT=1</code>.</p></section>
+</main>
+</div>
+<footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/">Security</a><a href="/changelog/">Changelog</a><a href="/status/">Status</a><a href="/agent-setup.html">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a><span id="build" class="build" hidden></span></nav><script type="module" src="/build.js"></script><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>
+<script type="module" src="/docs/docs.js"></script>
+</body>
+</html>

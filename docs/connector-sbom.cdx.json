@@ -1,0 +1,1068 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "components": [
+    {
+      "type": "library",
+      "name": "hue-sdk-import-parsers",
+      "version": "4ac88431eab76b4e12737c1b279dc58dbed87bf8",
+      "scope": "required",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:github/hue-run/hue-sdk@4ac88431eab76b4e12737c1b279dc58dbed87bf8",
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "vendored-pure-file-parsers"
+        },
+        {
+          "name": "supatrace:provenance",
+          "value": "src/importers/vendor/hue/provenance.json"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "kitaru-braintrust-importer-query-adaptation",
+      "version": "0.4.0+82fd53d16f406fff92eb19a68f088dfa68488af3",
+      "scope": "required",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:github/zenml-io/kitaru@82fd53d16f406fff92eb19a68f088dfa68488af3",
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "historical-braintrust-query-only-no-kitaru-runtime-dependency"
+        },
+        {
+          "name": "supatrace:provenance",
+          "value": "src/importers/vendor/kitaru/provenance.json"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "kitaru-langsmith-completion-adaptation",
+      "version": "0.4.0+82fd53d16f406fff92eb19a68f088dfa68488af3",
+      "scope": "required",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:github/zenml-io/kitaru@82fd53d16f406fff92eb19a68f088dfa68488af3",
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "completed-root-check-and-per-trace-fetch-approach-no-kitaru-runtime-dependency"
+        },
+        {
+          "name": "supatrace:provenance",
+          "value": "src/importers/vendor/kitaru/langsmith-provenance.json"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "annotated-types",
+      "version": "0.8.0",
+      "scope": "optional",
+      "purl": "pkg:pypi/annotated-types@0.8.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "MIT"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "anyio",
+      "version": "4.16.0",
+      "scope": "optional",
+      "purl": "pkg:pypi/anyio@4.16.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c66ae634e0b8228396b801741beb3294326d4b6102f7bba4041c0dfb58c29026"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "MIT"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "certifi",
+      "version": "2026.10.23",
+      "scope": "optional",
+      "purl": "pkg:pypi/certifi@2026.10.23",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "MPL-2.0"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "charset-normalizer",
+      "version": "3.5.2",
+      "scope": "optional",
+      "purl": "pkg:pypi/charset-normalizer@3.5.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ed2a239c0ea213acc1908150a3037257083c7c083128f1a4cec2ec4b97dca491"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "MIT"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "distro",
+      "version": "1.9.0",
+      "scope": "optional",
+      "purl": "pkg:pypi/distro@1.9.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "Apache License, Version 2.0"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "h11",
+      "version": "0.16.0",
+      "scope": "optional",
+      "purl": "pkg:pypi/h11@0.16.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "MIT"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "httpcore2",
+      "version": "2.16.0",
+      "scope": "optional",
+      "purl": "pkg:pypi/httpcore2@2.16.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "5c4358319f2602d984ad93182c9fee5160f22e9da7babdda870a5e7c4e2dc34f"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "BSD-3-Clause"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "httpx2",
+      "version": "2.16.0",
+      "scope": "optional",
+      "purl": "pkg:pypi/httpx2@2.16.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "fd2c5d7909e8d86fe92d53020c310ca0e4e431b838c207c5754b9bbf0308d49a"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "BSD-3-Clause"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "idna",
+      "version": "3.20",
+      "scope": "optional",
+      "purl": "pkg:pypi/idna@3.20",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "BSD-3-Clause"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "importlib_metadata",
+      "version": "8.7.1",
+      "scope": "optional",
+      "purl": "pkg:pypi/importlib-metadata@8.7.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "5a1f80bf1daa489495071efbb095d75a634cf28a8bc299581244063b53176151"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "Apache-2.0"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "jsonpatch",
+      "version": "1.42",
+      "scope": "optional",
+      "purl": "pkg:pypi/jsonpatch@1.42",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "0a94e8725b8b53cafdf3eba3112a7ccd31ea420bb04e6374096d9d17bf4563e9"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "BSD-3-Clause"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "jsonpointer",
+      "version": "3.8",
+      "scope": "optional",
+      "purl": "pkg:pypi/jsonpointer@3.8",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d69af85adaea202111bbc931067ead68dc16bca4592c74e1a1953152e2a330ab"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "Modified BSD License"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "langchain-core",
+      "version": "0.3.79",
+      "scope": "optional",
+      "purl": "pkg:pypi/langchain-core@0.3.79",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "92045bfda3e741f8018e1356f83be203ec601561c6a7becfefe85be5ddc58fdb"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "MIT"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "langsmith",
+      "version": "0.14.17",
+      "scope": "optional",
+      "purl": "pkg:pypi/langsmith@0.14.17",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "0aa2c79936c93c7cea9c55656f05e21cc5da715fecbdbda439d084adc08429be"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "MIT"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "openinference-instrumentation",
+      "version": "0.1.75",
+      "scope": "optional",
+      "purl": "pkg:pypi/openinference-instrumentation@0.1.75",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1c0e32802772d9137b35a80101769b066b8f5f620487c5f3c589470a463cfe5e"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "Apache-2.0"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "openinference-instrumentation-langchain",
+      "version": "0.1.80",
+      "scope": "optional",
+      "purl": "pkg:pypi/openinference-instrumentation-langchain@0.1.80",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e8ea746b068699a4d2ebffd4eb7e00174bfb416fdec8d2fff4f66520cbcd73c7"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "Apache-2.0"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "openinference-semantic-conventions",
+      "version": "0.1.43",
+      "scope": "optional",
+      "purl": "pkg:pypi/openinference-semantic-conventions@0.1.43",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "058cf01935df390775605a87df07840dbd80ac1a92800a329c169b0d633f64ce"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "Apache-2.0"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "opentelemetry-api",
+      "version": "1.38.0",
+      "scope": "optional",
+      "purl": "pkg:pypi/opentelemetry-api@1.38.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2891b0197f47124454ab9f0cf58f3be33faca394457ac3e09daba13ff50aa582"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "Apache-2.0"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "opentelemetry-exporter-otlp-proto-common",
+      "version": "1.38.0",
+      "scope": "optional",
+      "purl": "pkg:pypi/opentelemetry-exporter-otlp-proto-common@1.38.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "03cb76ab213300fe4f4c62b7d8f17d97fcfd21b89f0b5ce38ea156327ddda74a"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "Apache-2.0"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "opentelemetry-instrumentation",
+      "version": "0.59b0",
+      "scope": "optional",
+      "purl": "pkg:pypi/opentelemetry-instrumentation@0.59b0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "44082cc8fe56b0186e87ee8f7c17c327c4c2ce93bdbe86496e600985d74368ee"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "Apache-2.0"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "opentelemetry-proto",
+      "version": "1.38.0",
+      "scope": "optional",
+      "purl": "pkg:pypi/opentelemetry-proto@1.38.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b6ebe54d3217c42e45462e2a1ae28c3e2bf2ec5a5645236a490f55f45f1a0a18"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "Apache-2.0"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "opentelemetry-sdk",
+      "version": "1.38.0",
+      "scope": "optional",
+      "purl": "pkg:pypi/opentelemetry-sdk@1.38.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1c66af6564ecc1553d72d811a01df063ff097cdc82ce188da9951f93b8d10f6b"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "Apache-2.0"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "opentelemetry-semantic-conventions",
+      "version": "0.59b0",
+      "scope": "optional",
+      "purl": "pkg:pypi/opentelemetry-semantic-conventions@0.59b0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "35d3b8833ef97d614136e253c1da9342b4c3c083bbaf29ce31d572a1c3825eed"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "Apache-2.0"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "orjson",
+      "version": "3.13.0",
+      "scope": "optional",
+      "purl": "pkg:pypi/orjson@3.13.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "6ff2a2c67f35202f7d823753d38ad371a9b7fc297567cdfff4420e763cb9f6f8"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "MPL-2.0 AND (Apache-2.0 OR MIT)"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "packaging",
+      "version": "25.0",
+      "scope": "optional",
+      "purl": "pkg:pypi/packaging@25.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "29572ef2b1f17581046b3a2227d5c611fb25ec70ca1ba8554b24b0e69331a484"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "License :: OSI Approved :: Apache Software License; License :: OSI Approved :: BSD License"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "protobuf",
+      "version": "6.33.6",
+      "scope": "optional",
+      "purl": "pkg:pypi/protobuf@6.33.6",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9720e6961b251bde64edfdab7d500725a2af5280f3f4c87e57c0208376aa8c3a"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "3-Clause BSD License"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "pydantic",
+      "version": "2.14.2",
+      "scope": "optional",
+      "purl": "pkg:pypi/pydantic@2.14.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7efbf7507b937931cd32a5755acb00ea1cf5ccb1d4e8067a5850d5069e382118"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "MIT"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "pydantic_core",
+      "version": "2.50.2",
+      "scope": "optional",
+      "purl": "pkg:pypi/pydantic-core@2.50.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "596921489390a002d6a5e303384a0f1f98384f8bb550fbf38a1aafa6093da0f9"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "MIT"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "PyYAML",
+      "version": "6.0.3",
+      "scope": "optional",
+      "purl": "pkg:pypi/pyyaml@6.0.3",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "fc09d0aa354569bc501d4e787133afc08552722d3ab34836a80547331bb5d4a0"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "MIT"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "requests",
+      "version": "2.34.2",
+      "scope": "optional",
+      "purl": "pkg:pypi/requests@2.34.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "Apache-2.0"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "requests-toolbelt",
+      "version": "1.0.0",
+      "scope": "optional",
+      "purl": "pkg:pypi/requests-toolbelt@1.0.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "cccfdd665f0a24fcf4726e690f65639d272bb0637b9b92dfd91a5568ccf6bd06"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "Apache 2.0"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "sniffio",
+      "version": "1.3.1",
+      "scope": "optional",
+      "purl": "pkg:pypi/sniffio@1.3.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "MIT OR Apache-2.0"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "tenacity",
+      "version": "9.2.1",
+      "scope": "optional",
+      "purl": "pkg:pypi/tenacity@9.2.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9e56f17539296baab7beabb08b92f6ee3d7be92d8be72d763360677c2ad6580e"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "Apache-2.0"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "truststore",
+      "version": "0.10.5",
+      "scope": "optional",
+      "purl": "pkg:pypi/truststore@0.10.5",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9aaaedaefaf06d8b206278cf8b5012bc897f485a874503501e12d776df78951c"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "MIT"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "typing_extensions",
+      "version": "4.16.0",
+      "scope": "optional",
+      "purl": "pkg:pypi/typing-extensions@4.16.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "PSF-2.0"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "typing-inspection",
+      "version": "0.4.5",
+      "scope": "optional",
+      "purl": "pkg:pypi/typing-inspection@0.4.5",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "bc210535442b39e1bf2805e0c7a17dfd6a4ace760c84c7f7d16245d23a6b1c39"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "MIT"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "urllib3",
+      "version": "2.8.0",
+      "scope": "optional",
+      "purl": "pkg:pypi/urllib3@2.8.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "MIT"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "uuid_utils",
+      "version": "0.19.0",
+      "scope": "optional",
+      "purl": "pkg:pypi/uuid-utils@0.19.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "84929d8c594381c6f1444afa2a25cce9ff7edac99d35e071ebc48275bae83730"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "BSD-3-Clause"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "websockets",
+      "version": "17.4",
+      "scope": "optional",
+      "purl": "pkg:pypi/websockets@17.4",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "bcad49104711f88b2b7c3ba166de172857d837248205e541b044a552558fecc3"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "BSD-3-Clause"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "wrapt",
+      "version": "1.17.3",
+      "scope": "optional",
+      "purl": "pkg:pypi/wrapt@1.17.3",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "6b538e31eca1a7ea4605e44f81a48aa24c4632a277431a6ed3f328835901f4fd"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "BSD"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "xxhash",
+      "version": "4.0.2",
+      "scope": "optional",
+      "purl": "pkg:pypi/xxhash@4.0.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "aeda53dfb6bcae94adb1f5df4246fe13b9c4202f531dd9d39e0d55b36ba8db0e"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "BSD-2-Clause"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "zipp",
+      "version": "4.1.2",
+      "scope": "optional",
+      "purl": "pkg:pypi/zipp@4.1.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b30cb6cd253122169c47de245ca24a86bac2a5d3802ba15bf7ba6414eb9e144d"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "MIT"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "zstandard",
+      "version": "0.25.0",
+      "scope": "optional",
+      "purl": "pkg:pypi/zstandard@0.25.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "913cbd31a400febff93b564a23e17c3ed2d56c064006f54efec210d586171c00"
+        }
+      ],
+      "properties": [
+        {
+          "name": "supatrace:scope",
+          "value": "synthetic-capture-proof-only"
+        },
+        {
+          "name": "upstream:declared-license",
+          "value": "BSD-3-Clause"
+        }
+      ]
+    }
+  ]
+}

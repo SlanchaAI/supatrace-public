@@ -1,0 +1,1948 @@
+{
+  "as_of": "2026-11-04",
+  "measured_local_runtime_commit": "1cdbb061d7cd74700548ea18ff794c1925ee2d9e",
+  "equivalent_review_runtime_commit": "c88acf16f7f1f882791a92cb7e9c534342bbf1e4",
+  "source_runtime_tree": "80174835ce27ab7d05e988877a57fa7965b9dc86",
+  "source_description": "Synthetic offline workload counters; no customer data or cloud execution.",
+  "scenario_names_are_hypothetical": true,
+  "reports": {
+    "light": {
+      "version": 1,
+      "mode": "offline_handler_and_adapter_simulation",
+      "network_calls": 0,
+      "measured_aws_billed_duration": false,
+      "representative_customer_day": false,
+      "implementation": {
+        "node": "v24.22.1",
+        "files": {
+          "scripts/profile-workload.mjs": "5f80b0ecd9d061294c146bf46126f512f17c13bab3f98cf4432bc4146b500797",
+          "tests/memory-dynamo.mjs": "8e5c6587398792aa22bd4665246430333efdd3c119b8442f1e8cac2c22337ff0",
+          "src/aws-api.mjs": "b78b3d31a0293f4483d0d72bc5a9b07946eee2840e8393a2519eae4b16f3d232",
+          "src/dynamodb-store.mjs": "268c65a1fefe803933a829afcf604804b1ad01c71101715c7aef1b2f4793d80e",
+          "src/s3-objects.mjs": "2c94d0c187b65bd4228734e920cb2b4656286e425e7553875d4711f33d0b415f",
+          "src/trace.mjs": "639359c3588895108f0734066646e8f7540ea737254925ad18143289df034821",
+          "src/alpha-projects.mjs": "c07c2d8efec076ef73ccb738ade4232b6bc6b44089e47bc8dce3c744e781f6cb",
+          "public/app/account-export.js": "e6e7d1455e49463cb6fc6ab75cd4677e473a03af987525bee238a7b06ef4d56e"
+        }
+      },
+      "input": {
+        "batches": 80,
+        "events": 80,
+        "traces": 20,
+        "sha256": "908cce30c78f18d33929169737ff94dfa1632c0e4e45ad1a93cdd0443ee1f6c4"
+      },
+      "scenario": {
+        "copies": 1,
+        "spacing_seconds": 3,
+        "attempted_batches": 80,
+        "accepted_batches": 80,
+        "rejected_batches": 0,
+        "recovery_probes": true,
+        "recovery_upload": "failed_then_accepted_without_double_reservation",
+        "ingest_rejections": {},
+        "arrival_model": "simulated clock; not measured throughput"
+      },
+      "measured": {
+        "ingest_local_elapsed_ms": 140.555339,
+        "payload_bytes": 142099,
+        "gzip_bytes_hypothetical": 68404,
+        "objects": 81,
+        "metadata_items": 208,
+        "metadata_json_bytes": 116667,
+        "metadata_storage_proxy_bytes": 137467,
+        "reserved_bytes": 142099,
+        "archive_bytes": 134707,
+        "archive_sha256": "aca80c12bf4c1b292001f92ca86ec332c47c9b8d0e25f082eaafbfb2369fb7cb",
+        "archive_runs": 21,
+        "archive_events": 81
+      },
+      "phases": {
+        "setup": {
+          "http_requests": 0,
+          "http_statuses": {},
+          "request_body_bytes": 0,
+          "response_body_bytes": 0,
+          "dynamo_commands": {
+            "GetCommand": 5,
+            "TransactWriteCommand": 4,
+            "QueryCommand": 1
+          },
+          "dynamo_failures": {},
+          "dynamo_item_actions": {
+            "strong_get": 5,
+            "transaction_put": 7,
+            "transaction_update": 2,
+            "transaction_conditioncheck": 2,
+            "strong_query": 1
+          },
+          "estimated_rrus": 6,
+          "estimated_wrus": 22,
+          "s3_commands": {},
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 0
+        },
+        "ingest": {
+          "http_requests": 80,
+          "http_statuses": {
+            "201": 80
+          },
+          "request_body_bytes": 140297,
+          "response_body_bytes": 19040,
+          "dynamo_commands": {
+            "PutCommand": 160,
+            "GetCommand": 400,
+            "TransactWriteCommand": 160,
+            "UpdateCommand": 150
+          },
+          "dynamo_failures": {
+            "PutCommand": 150
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 160,
+            "strong_get": 400,
+            "transaction_put": 160,
+            "transaction_update": 400,
+            "ordinary_update": 150
+          },
+          "estimated_rrus": 400,
+          "estimated_wrus": 1430,
+          "s3_commands": {
+            "PutObjectCommand": 80
+          },
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 140297
+        },
+        "duplicate": {
+          "http_requests": 1,
+          "http_statuses": {
+            "201": 1
+          },
+          "request_body_bytes": 1784,
+          "response_body_bytes": 238,
+          "dynamo_commands": {
+            "PutCommand": 2,
+            "GetCommand": 2
+          },
+          "dynamo_failures": {},
+          "dynamo_item_actions": {
+            "ordinary_put": 2,
+            "strong_get": 2
+          },
+          "estimated_rrus": 2,
+          "estimated_wrus": 2,
+          "s3_commands": {},
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 0
+        },
+        "conflict": {
+          "http_requests": 1,
+          "http_statuses": {
+            "409": 1
+          },
+          "request_body_bytes": 1782,
+          "response_body_bytes": 32,
+          "dynamo_commands": {
+            "PutCommand": 2,
+            "UpdateCommand": 2,
+            "GetCommand": 2
+          },
+          "dynamo_failures": {
+            "PutCommand": 2
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 2,
+            "ordinary_update": 2,
+            "strong_get": 2
+          },
+          "estimated_rrus": 2,
+          "estimated_wrus": 4,
+          "s3_commands": {},
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 0
+        },
+        "hash_rejection": {
+          "http_requests": 1,
+          "http_statuses": {
+            "400": 1
+          },
+          "request_body_bytes": 1784,
+          "response_body_bytes": 33,
+          "dynamo_commands": {
+            "PutCommand": 2,
+            "UpdateCommand": 2,
+            "GetCommand": 1
+          },
+          "dynamo_failures": {
+            "PutCommand": 2
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 2,
+            "ordinary_update": 2,
+            "strong_get": 1
+          },
+          "estimated_rrus": 1,
+          "estimated_wrus": 4,
+          "s3_commands": {},
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 0
+        },
+        "failed_upload": {
+          "http_requests": 1,
+          "http_statuses": {
+            "503": 1
+          },
+          "request_body_bytes": 1802,
+          "response_body_bytes": 35,
+          "dynamo_commands": {
+            "PutCommand": 2,
+            "UpdateCommand": 2,
+            "GetCommand": 2,
+            "TransactWriteCommand": 1
+          },
+          "dynamo_failures": {
+            "PutCommand": 2
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 2,
+            "ordinary_update": 2,
+            "strong_get": 2,
+            "transaction_put": 1,
+            "transaction_update": 2
+          },
+          "estimated_rrus": 2,
+          "estimated_wrus": 10,
+          "s3_commands": {
+            "PutObjectCommand": 1
+          },
+          "s3_failures": {
+            "PutObjectCommand": 1
+          },
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 0
+        },
+        "recovery_retry": {
+          "http_requests": 1,
+          "http_statuses": {
+            "201": 1
+          },
+          "request_body_bytes": 1802,
+          "response_body_bytes": 247,
+          "dynamo_commands": {
+            "PutCommand": 2,
+            "UpdateCommand": 2,
+            "GetCommand": 5,
+            "TransactWriteCommand": 1
+          },
+          "dynamo_failures": {
+            "PutCommand": 2
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 2,
+            "ordinary_update": 2,
+            "strong_get": 5,
+            "transaction_update": 3,
+            "transaction_put": 1
+          },
+          "estimated_rrus": 5,
+          "estimated_wrus": 12,
+          "s3_commands": {
+            "PutObjectCommand": 1
+          },
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 1802
+        },
+        "export": {
+          "http_requests": 83,
+          "http_statuses": {
+            "200": 83
+          },
+          "request_body_bytes": 0,
+          "response_body_bytes": 159389,
+          "dynamo_commands": {
+            "PutCommand": 83,
+            "GetCommand": 166,
+            "QueryCommand": 83,
+            "UpdateCommand": 78
+          },
+          "dynamo_failures": {
+            "PutCommand": 78
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 83,
+            "strong_get": 166,
+            "strong_query": 83,
+            "ordinary_update": 78
+          },
+          "estimated_rrus": 253,
+          "estimated_wrus": 161,
+          "s3_commands": {
+            "GetObjectCommand": 81
+          },
+          "s3_failures": {},
+          "s3_read_bytes": 142099,
+          "s3_write_bytes": 0
+        }
+      },
+      "limitations": [
+        "Existing memory adapter is not DynamoDB, S3 or production latency acceptance.",
+        "Capacity estimates use JSON item-size proxies; no AWS ConsumedCapacity receipt. Canceled transactions conservatively count every submitted action; ConditionCheck follows the general transaction-write rule including a minimum for absent items.",
+        "Metadata includes live rate/setup/session rows; TTL removal is not simulated.",
+        "Response/body bytes exclude HTTP headers, TLS, CDN functions, static assets and network retries.",
+        "Gzip is a measured hypothetical alternative; current S3 objects remain raw JSON.",
+        "Successful recovery adds one accepted batch beyond the workload; a capacity-blocked probe is reported as not exercised and never claimed successful.",
+        "Alpha 10 MiB cumulative quota and request limits remain active; this does not approve commercial limits."
+      ]
+    },
+    "typical": {
+      "version": 1,
+      "mode": "offline_handler_and_adapter_simulation",
+      "network_calls": 0,
+      "measured_aws_billed_duration": false,
+      "representative_customer_day": false,
+      "implementation": {
+        "node": "v24.22.1",
+        "files": {
+          "scripts/profile-workload.mjs": "5f80b0ecd9d061294c146bf46126f512f17c13bab3f98cf4432bc4146b500797",
+          "tests/memory-dynamo.mjs": "8e5c6587398792aa22bd4665246430333efdd3c119b8442f1e8cac2c22337ff0",
+          "src/aws-api.mjs": "b78b3d31a0293f4483d0d72bc5a9b07946eee2840e8393a2519eae4b16f3d232",
+          "src/dynamodb-store.mjs": "268c65a1fefe803933a829afcf604804b1ad01c71101715c7aef1b2f4793d80e",
+          "src/s3-objects.mjs": "2c94d0c187b65bd4228734e920cb2b4656286e425e7553875d4711f33d0b415f",
+          "src/trace.mjs": "639359c3588895108f0734066646e8f7540ea737254925ad18143289df034821",
+          "src/alpha-projects.mjs": "c07c2d8efec076ef73ccb738ade4232b6bc6b44089e47bc8dce3c744e781f6cb",
+          "public/app/account-export.js": "e6e7d1455e49463cb6fc6ab75cd4677e473a03af987525bee238a7b06ef4d56e"
+        }
+      },
+      "input": {
+        "batches": 80,
+        "events": 80,
+        "traces": 20,
+        "sha256": "908cce30c78f18d33929169737ff94dfa1632c0e4e45ad1a93cdd0443ee1f6c4"
+      },
+      "scenario": {
+        "copies": 5,
+        "spacing_seconds": 3,
+        "attempted_batches": 400,
+        "accepted_batches": 400,
+        "rejected_batches": 0,
+        "recovery_probes": true,
+        "recovery_upload": "failed_then_accepted_without_double_reservation",
+        "ingest_rejections": {},
+        "arrival_model": "simulated clock; not measured throughput"
+      },
+      "measured": {
+        "ingest_local_elapsed_ms": 1604.9698640000001,
+        "payload_bytes": 703287,
+        "gzip_bytes_hypothetical": 338526,
+        "objects": 401,
+        "metadata_items": 976,
+        "metadata_json_bytes": 566141,
+        "metadata_storage_proxy_bytes": 663741,
+        "reserved_bytes": 703287,
+        "archive_bytes": 664381,
+        "archive_sha256": "f0efb06b5620c79a156a7e4c683ca9dea2b6ec36f19228d5aebfea0d0c1c3663",
+        "archive_runs": 101,
+        "archive_events": 401
+      },
+      "phases": {
+        "setup": {
+          "http_requests": 0,
+          "http_statuses": {},
+          "request_body_bytes": 0,
+          "response_body_bytes": 0,
+          "dynamo_commands": {
+            "GetCommand": 5,
+            "TransactWriteCommand": 4,
+            "QueryCommand": 1
+          },
+          "dynamo_failures": {},
+          "dynamo_item_actions": {
+            "strong_get": 5,
+            "transaction_put": 7,
+            "transaction_update": 2,
+            "transaction_conditioncheck": 2,
+            "strong_query": 1
+          },
+          "estimated_rrus": 6,
+          "estimated_wrus": 22,
+          "s3_commands": {},
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 0
+        },
+        "ingest": {
+          "http_requests": 400,
+          "http_statuses": {
+            "201": 400
+          },
+          "request_body_bytes": 701485,
+          "response_body_bytes": 95200,
+          "dynamo_commands": {
+            "PutCommand": 800,
+            "GetCommand": 2000,
+            "TransactWriteCommand": 800,
+            "UpdateCommand": 758
+          },
+          "dynamo_failures": {
+            "PutCommand": 758
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 800,
+            "strong_get": 2000,
+            "transaction_put": 800,
+            "transaction_update": 2000,
+            "ordinary_update": 758
+          },
+          "estimated_rrus": 2000,
+          "estimated_wrus": 7158,
+          "s3_commands": {
+            "PutObjectCommand": 400
+          },
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 701485
+        },
+        "duplicate": {
+          "http_requests": 1,
+          "http_statuses": {
+            "201": 1
+          },
+          "request_body_bytes": 1784,
+          "response_body_bytes": 238,
+          "dynamo_commands": {
+            "PutCommand": 2,
+            "GetCommand": 2
+          },
+          "dynamo_failures": {},
+          "dynamo_item_actions": {
+            "ordinary_put": 2,
+            "strong_get": 2
+          },
+          "estimated_rrus": 2,
+          "estimated_wrus": 2,
+          "s3_commands": {},
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 0
+        },
+        "conflict": {
+          "http_requests": 1,
+          "http_statuses": {
+            "409": 1
+          },
+          "request_body_bytes": 1782,
+          "response_body_bytes": 32,
+          "dynamo_commands": {
+            "PutCommand": 2,
+            "UpdateCommand": 2,
+            "GetCommand": 2
+          },
+          "dynamo_failures": {
+            "PutCommand": 2
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 2,
+            "ordinary_update": 2,
+            "strong_get": 2
+          },
+          "estimated_rrus": 2,
+          "estimated_wrus": 4,
+          "s3_commands": {},
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 0
+        },
+        "hash_rejection": {
+          "http_requests": 1,
+          "http_statuses": {
+            "400": 1
+          },
+          "request_body_bytes": 1784,
+          "response_body_bytes": 33,
+          "dynamo_commands": {
+            "PutCommand": 2,
+            "UpdateCommand": 2,
+            "GetCommand": 1
+          },
+          "dynamo_failures": {
+            "PutCommand": 2
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 2,
+            "ordinary_update": 2,
+            "strong_get": 1
+          },
+          "estimated_rrus": 1,
+          "estimated_wrus": 4,
+          "s3_commands": {},
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 0
+        },
+        "failed_upload": {
+          "http_requests": 1,
+          "http_statuses": {
+            "503": 1
+          },
+          "request_body_bytes": 1802,
+          "response_body_bytes": 35,
+          "dynamo_commands": {
+            "PutCommand": 2,
+            "UpdateCommand": 2,
+            "GetCommand": 2,
+            "TransactWriteCommand": 1
+          },
+          "dynamo_failures": {
+            "PutCommand": 2
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 2,
+            "ordinary_update": 2,
+            "strong_get": 2,
+            "transaction_put": 1,
+            "transaction_update": 2
+          },
+          "estimated_rrus": 2,
+          "estimated_wrus": 10,
+          "s3_commands": {
+            "PutObjectCommand": 1
+          },
+          "s3_failures": {
+            "PutObjectCommand": 1
+          },
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 0
+        },
+        "recovery_retry": {
+          "http_requests": 1,
+          "http_statuses": {
+            "201": 1
+          },
+          "request_body_bytes": 1802,
+          "response_body_bytes": 247,
+          "dynamo_commands": {
+            "PutCommand": 2,
+            "UpdateCommand": 2,
+            "GetCommand": 5,
+            "TransactWriteCommand": 1
+          },
+          "dynamo_failures": {
+            "PutCommand": 2
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 2,
+            "ordinary_update": 2,
+            "strong_get": 5,
+            "transaction_update": 3,
+            "transaction_put": 1
+          },
+          "estimated_rrus": 5,
+          "estimated_wrus": 12,
+          "s3_commands": {
+            "PutObjectCommand": 1
+          },
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 1802
+        },
+        "export": {
+          "http_requests": 403,
+          "http_statuses": {
+            "200": 403
+          },
+          "request_body_bytes": 0,
+          "response_body_bytes": 786825,
+          "dynamo_commands": {
+            "PutCommand": 403,
+            "GetCommand": 806,
+            "QueryCommand": 405,
+            "UpdateCommand": 382
+          },
+          "dynamo_failures": {
+            "PutCommand": 382
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 403,
+            "strong_get": 806,
+            "strong_query": 405,
+            "ordinary_update": 382
+          },
+          "estimated_rrus": 1231,
+          "estimated_wrus": 785,
+          "s3_commands": {
+            "GetObjectCommand": 401
+          },
+          "s3_failures": {},
+          "s3_read_bytes": 703287,
+          "s3_write_bytes": 0
+        }
+      },
+      "limitations": [
+        "Existing memory adapter is not DynamoDB, S3 or production latency acceptance.",
+        "Capacity estimates use JSON item-size proxies; no AWS ConsumedCapacity receipt. Canceled transactions conservatively count every submitted action; ConditionCheck follows the general transaction-write rule including a minimum for absent items.",
+        "Metadata includes live rate/setup/session rows; TTL removal is not simulated.",
+        "Response/body bytes exclude HTTP headers, TLS, CDN functions, static assets and network retries.",
+        "Gzip is a measured hypothetical alternative; current S3 objects remain raw JSON.",
+        "Successful recovery adds one accepted batch beyond the workload; a capacity-blocked probe is reported as not exercised and never claimed successful.",
+        "Alpha 10 MiB cumulative quota and request limits remain active; this does not approve commercial limits."
+      ]
+    },
+    "large": {
+      "version": 1,
+      "mode": "offline_handler_and_adapter_simulation",
+      "network_calls": 0,
+      "measured_aws_billed_duration": false,
+      "representative_customer_day": false,
+      "implementation": {
+        "node": "v24.22.1",
+        "files": {
+          "scripts/profile-workload.mjs": "5f80b0ecd9d061294c146bf46126f512f17c13bab3f98cf4432bc4146b500797",
+          "tests/memory-dynamo.mjs": "8e5c6587398792aa22bd4665246430333efdd3c119b8442f1e8cac2c22337ff0",
+          "src/aws-api.mjs": "b78b3d31a0293f4483d0d72bc5a9b07946eee2840e8393a2519eae4b16f3d232",
+          "src/dynamodb-store.mjs": "268c65a1fefe803933a829afcf604804b1ad01c71101715c7aef1b2f4793d80e",
+          "src/s3-objects.mjs": "2c94d0c187b65bd4228734e920cb2b4656286e425e7553875d4711f33d0b415f",
+          "src/trace.mjs": "639359c3588895108f0734066646e8f7540ea737254925ad18143289df034821",
+          "src/alpha-projects.mjs": "c07c2d8efec076ef73ccb738ade4232b6bc6b44089e47bc8dce3c744e781f6cb",
+          "public/app/account-export.js": "e6e7d1455e49463cb6fc6ab75cd4677e473a03af987525bee238a7b06ef4d56e"
+        }
+      },
+      "input": {
+        "batches": 80,
+        "events": 80,
+        "traces": 20,
+        "sha256": "908cce30c78f18d33929169737ff94dfa1632c0e4e45ad1a93cdd0443ee1f6c4"
+      },
+      "scenario": {
+        "copies": 10,
+        "spacing_seconds": 3,
+        "attempted_batches": 800,
+        "accepted_batches": 800,
+        "rejected_batches": 0,
+        "recovery_probes": true,
+        "recovery_upload": "failed_then_accepted_without_double_reservation",
+        "ingest_rejections": {},
+        "arrival_model": "simulated clock; not measured throughput"
+      },
+      "measured": {
+        "ingest_local_elapsed_ms": 5709.421152,
+        "payload_bytes": 1404772,
+        "gzip_bytes_hypothetical": 676217,
+        "objects": 801,
+        "metadata_items": 1936,
+        "metadata_json_bytes": 1128032,
+        "metadata_storage_proxy_bytes": 1321632,
+        "reserved_bytes": 1404772,
+        "archive_bytes": 1326471,
+        "archive_sha256": "5b12a4280bfb41a3e0bc5fca2c648cb11654d94ee0863bc917128993afca6f21",
+        "archive_runs": 201,
+        "archive_events": 801
+      },
+      "phases": {
+        "setup": {
+          "http_requests": 0,
+          "http_statuses": {},
+          "request_body_bytes": 0,
+          "response_body_bytes": 0,
+          "dynamo_commands": {
+            "GetCommand": 5,
+            "TransactWriteCommand": 4,
+            "QueryCommand": 1
+          },
+          "dynamo_failures": {},
+          "dynamo_item_actions": {
+            "strong_get": 5,
+            "transaction_put": 7,
+            "transaction_update": 2,
+            "transaction_conditioncheck": 2,
+            "strong_query": 1
+          },
+          "estimated_rrus": 6,
+          "estimated_wrus": 22,
+          "s3_commands": {},
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 0
+        },
+        "ingest": {
+          "http_requests": 800,
+          "http_statuses": {
+            "201": 800
+          },
+          "request_body_bytes": 1402970,
+          "response_body_bytes": 190400,
+          "dynamo_commands": {
+            "PutCommand": 1600,
+            "GetCommand": 4000,
+            "TransactWriteCommand": 1600,
+            "UpdateCommand": 1518
+          },
+          "dynamo_failures": {
+            "PutCommand": 1518
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 1600,
+            "strong_get": 4000,
+            "transaction_put": 1600,
+            "transaction_update": 4000,
+            "ordinary_update": 1518
+          },
+          "estimated_rrus": 4000,
+          "estimated_wrus": 14318,
+          "s3_commands": {
+            "PutObjectCommand": 800
+          },
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 1402970
+        },
+        "duplicate": {
+          "http_requests": 1,
+          "http_statuses": {
+            "201": 1
+          },
+          "request_body_bytes": 1784,
+          "response_body_bytes": 238,
+          "dynamo_commands": {
+            "PutCommand": 2,
+            "GetCommand": 2
+          },
+          "dynamo_failures": {},
+          "dynamo_item_actions": {
+            "ordinary_put": 2,
+            "strong_get": 2
+          },
+          "estimated_rrus": 2,
+          "estimated_wrus": 2,
+          "s3_commands": {},
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 0
+        },
+        "conflict": {
+          "http_requests": 1,
+          "http_statuses": {
+            "409": 1
+          },
+          "request_body_bytes": 1782,
+          "response_body_bytes": 32,
+          "dynamo_commands": {
+            "PutCommand": 2,
+            "UpdateCommand": 2,
+            "GetCommand": 2
+          },
+          "dynamo_failures": {
+            "PutCommand": 2
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 2,
+            "ordinary_update": 2,
+            "strong_get": 2
+          },
+          "estimated_rrus": 2,
+          "estimated_wrus": 4,
+          "s3_commands": {},
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 0
+        },
+        "hash_rejection": {
+          "http_requests": 1,
+          "http_statuses": {
+            "400": 1
+          },
+          "request_body_bytes": 1784,
+          "response_body_bytes": 33,
+          "dynamo_commands": {
+            "PutCommand": 2,
+            "UpdateCommand": 2,
+            "GetCommand": 1
+          },
+          "dynamo_failures": {
+            "PutCommand": 2
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 2,
+            "ordinary_update": 2,
+            "strong_get": 1
+          },
+          "estimated_rrus": 1,
+          "estimated_wrus": 4,
+          "s3_commands": {},
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 0
+        },
+        "failed_upload": {
+          "http_requests": 1,
+          "http_statuses": {
+            "503": 1
+          },
+          "request_body_bytes": 1802,
+          "response_body_bytes": 35,
+          "dynamo_commands": {
+            "PutCommand": 2,
+            "UpdateCommand": 2,
+            "GetCommand": 2,
+            "TransactWriteCommand": 1
+          },
+          "dynamo_failures": {
+            "PutCommand": 2
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 2,
+            "ordinary_update": 2,
+            "strong_get": 2,
+            "transaction_put": 1,
+            "transaction_update": 2
+          },
+          "estimated_rrus": 2,
+          "estimated_wrus": 10,
+          "s3_commands": {
+            "PutObjectCommand": 1
+          },
+          "s3_failures": {
+            "PutObjectCommand": 1
+          },
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 0
+        },
+        "recovery_retry": {
+          "http_requests": 1,
+          "http_statuses": {
+            "201": 1
+          },
+          "request_body_bytes": 1802,
+          "response_body_bytes": 247,
+          "dynamo_commands": {
+            "PutCommand": 2,
+            "UpdateCommand": 2,
+            "GetCommand": 5,
+            "TransactWriteCommand": 1
+          },
+          "dynamo_failures": {
+            "PutCommand": 2
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 2,
+            "ordinary_update": 2,
+            "strong_get": 5,
+            "transaction_update": 3,
+            "transaction_put": 1
+          },
+          "estimated_rrus": 5,
+          "estimated_wrus": 12,
+          "s3_commands": {
+            "PutObjectCommand": 1
+          },
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 1802
+        },
+        "export": {
+          "http_requests": 803,
+          "http_statuses": {
+            "200": 803
+          },
+          "request_body_bytes": 0,
+          "response_body_bytes": 1571120,
+          "dynamo_commands": {
+            "PutCommand": 803,
+            "GetCommand": 1606,
+            "QueryCommand": 807,
+            "UpdateCommand": 762
+          },
+          "dynamo_failures": {
+            "PutCommand": 762
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 803,
+            "strong_get": 1606,
+            "strong_query": 807,
+            "ordinary_update": 762
+          },
+          "estimated_rrus": 2453,
+          "estimated_wrus": 1565,
+          "s3_commands": {
+            "GetObjectCommand": 801
+          },
+          "s3_failures": {},
+          "s3_read_bytes": 1404772,
+          "s3_write_bytes": 0
+        }
+      },
+      "limitations": [
+        "Existing memory adapter is not DynamoDB, S3 or production latency acceptance.",
+        "Capacity estimates use JSON item-size proxies; no AWS ConsumedCapacity receipt. Canceled transactions conservatively count every submitted action; ConditionCheck follows the general transaction-write rule including a minimum for absent items.",
+        "Metadata includes live rate/setup/session rows; TTL removal is not simulated.",
+        "Response/body bytes exclude HTTP headers, TLS, CDN functions, static assets and network retries.",
+        "Gzip is a measured hypothetical alternative; current S3 objects remain raw JSON.",
+        "Successful recovery adds one accepted batch beyond the workload; a capacity-blocked probe is reported as not exercised and never claimed successful.",
+        "Alpha 10 MiB cumulative quota and request limits remain active; this does not approve commercial limits."
+      ]
+    },
+    "unpaced": {
+      "version": 1,
+      "mode": "offline_handler_and_adapter_simulation",
+      "network_calls": 0,
+      "measured_aws_billed_duration": false,
+      "representative_customer_day": false,
+      "implementation": {
+        "node": "v24.22.1",
+        "files": {
+          "scripts/profile-workload.mjs": "5f80b0ecd9d061294c146bf46126f512f17c13bab3f98cf4432bc4146b500797",
+          "tests/memory-dynamo.mjs": "8e5c6587398792aa22bd4665246430333efdd3c119b8442f1e8cac2c22337ff0",
+          "src/aws-api.mjs": "b78b3d31a0293f4483d0d72bc5a9b07946eee2840e8393a2519eae4b16f3d232",
+          "src/dynamodb-store.mjs": "268c65a1fefe803933a829afcf604804b1ad01c71101715c7aef1b2f4793d80e",
+          "src/s3-objects.mjs": "2c94d0c187b65bd4228734e920cb2b4656286e425e7553875d4711f33d0b415f",
+          "src/trace.mjs": "639359c3588895108f0734066646e8f7540ea737254925ad18143289df034821",
+          "src/alpha-projects.mjs": "c07c2d8efec076ef73ccb738ade4232b6bc6b44089e47bc8dce3c744e781f6cb",
+          "public/app/account-export.js": "e6e7d1455e49463cb6fc6ab75cd4677e473a03af987525bee238a7b06ef4d56e"
+        }
+      },
+      "input": {
+        "batches": 80,
+        "events": 80,
+        "traces": 20,
+        "sha256": "908cce30c78f18d33929169737ff94dfa1632c0e4e45ad1a93cdd0443ee1f6c4"
+      },
+      "scenario": {
+        "copies": 1,
+        "spacing_seconds": 0,
+        "attempted_batches": 80,
+        "accepted_batches": 30,
+        "rejected_batches": 50,
+        "recovery_probes": true,
+        "recovery_upload": "failed_then_accepted_without_double_reservation",
+        "ingest_rejections": {
+          "rate_limit": 50
+        },
+        "arrival_model": "simulated clock; not measured throughput"
+      },
+      "measured": {
+        "ingest_local_elapsed_ms": 28.1416449999997,
+        "payload_bytes": 53946,
+        "gzip_bytes_hypothetical": 25972,
+        "objects": 31,
+        "metadata_items": 96,
+        "metadata_json_bytes": 50490,
+        "metadata_storage_proxy_bytes": 60090,
+        "reserved_bytes": 53946,
+        "archive_bytes": 55489,
+        "archive_sha256": "3e0719a83c40d037e33753e0727d9171c257c7d5b9b7b9ba241c93d937be55fe",
+        "archive_runs": 19,
+        "archive_events": 31
+      },
+      "phases": {
+        "setup": {
+          "http_requests": 0,
+          "http_statuses": {},
+          "request_body_bytes": 0,
+          "response_body_bytes": 0,
+          "dynamo_commands": {
+            "GetCommand": 5,
+            "TransactWriteCommand": 4,
+            "QueryCommand": 1
+          },
+          "dynamo_failures": {},
+          "dynamo_item_actions": {
+            "strong_get": 5,
+            "transaction_put": 7,
+            "transaction_update": 2,
+            "transaction_conditioncheck": 2,
+            "strong_query": 1
+          },
+          "estimated_rrus": 6,
+          "estimated_wrus": 22,
+          "s3_commands": {},
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 0
+        },
+        "ingest": {
+          "http_requests": 80,
+          "http_statuses": {
+            "201": 30,
+            "429": 50
+          },
+          "request_body_bytes": 140297,
+          "response_body_bytes": 8240,
+          "dynamo_commands": {
+            "PutCommand": 140,
+            "GetCommand": 180,
+            "TransactWriteCommand": 60,
+            "UpdateCommand": 138
+          },
+          "dynamo_failures": {
+            "PutCommand": 138,
+            "UpdateCommand": 50
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 140,
+            "strong_get": 180,
+            "transaction_put": 60,
+            "transaction_update": 150,
+            "ordinary_update": 138
+          },
+          "estimated_rrus": 180,
+          "estimated_wrus": 698,
+          "s3_commands": {
+            "PutObjectCommand": 30
+          },
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 52144
+        },
+        "duplicate": {
+          "http_requests": 1,
+          "http_statuses": {
+            "201": 1
+          },
+          "request_body_bytes": 1784,
+          "response_body_bytes": 238,
+          "dynamo_commands": {
+            "PutCommand": 2,
+            "GetCommand": 2
+          },
+          "dynamo_failures": {},
+          "dynamo_item_actions": {
+            "ordinary_put": 2,
+            "strong_get": 2
+          },
+          "estimated_rrus": 2,
+          "estimated_wrus": 2,
+          "s3_commands": {},
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 0
+        },
+        "conflict": {
+          "http_requests": 1,
+          "http_statuses": {
+            "409": 1
+          },
+          "request_body_bytes": 1782,
+          "response_body_bytes": 32,
+          "dynamo_commands": {
+            "PutCommand": 2,
+            "UpdateCommand": 2,
+            "GetCommand": 2
+          },
+          "dynamo_failures": {
+            "PutCommand": 2
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 2,
+            "ordinary_update": 2,
+            "strong_get": 2
+          },
+          "estimated_rrus": 2,
+          "estimated_wrus": 4,
+          "s3_commands": {},
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 0
+        },
+        "hash_rejection": {
+          "http_requests": 1,
+          "http_statuses": {
+            "400": 1
+          },
+          "request_body_bytes": 1784,
+          "response_body_bytes": 33,
+          "dynamo_commands": {
+            "PutCommand": 2,
+            "UpdateCommand": 2,
+            "GetCommand": 1
+          },
+          "dynamo_failures": {
+            "PutCommand": 2
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 2,
+            "ordinary_update": 2,
+            "strong_get": 1
+          },
+          "estimated_rrus": 1,
+          "estimated_wrus": 4,
+          "s3_commands": {},
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 0
+        },
+        "failed_upload": {
+          "http_requests": 1,
+          "http_statuses": {
+            "503": 1
+          },
+          "request_body_bytes": 1802,
+          "response_body_bytes": 35,
+          "dynamo_commands": {
+            "PutCommand": 2,
+            "UpdateCommand": 2,
+            "GetCommand": 2,
+            "TransactWriteCommand": 1
+          },
+          "dynamo_failures": {
+            "PutCommand": 2
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 2,
+            "ordinary_update": 2,
+            "strong_get": 2,
+            "transaction_put": 1,
+            "transaction_update": 2
+          },
+          "estimated_rrus": 2,
+          "estimated_wrus": 10,
+          "s3_commands": {
+            "PutObjectCommand": 1
+          },
+          "s3_failures": {
+            "PutObjectCommand": 1
+          },
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 0
+        },
+        "recovery_retry": {
+          "http_requests": 1,
+          "http_statuses": {
+            "201": 1
+          },
+          "request_body_bytes": 1802,
+          "response_body_bytes": 247,
+          "dynamo_commands": {
+            "PutCommand": 2,
+            "UpdateCommand": 2,
+            "GetCommand": 5,
+            "TransactWriteCommand": 1
+          },
+          "dynamo_failures": {
+            "PutCommand": 2
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 2,
+            "ordinary_update": 2,
+            "strong_get": 5,
+            "transaction_update": 3,
+            "transaction_put": 1
+          },
+          "estimated_rrus": 5,
+          "estimated_wrus": 12,
+          "s3_commands": {
+            "PutObjectCommand": 1
+          },
+          "s3_failures": {},
+          "s3_read_bytes": 0,
+          "s3_write_bytes": 1802
+        },
+        "export": {
+          "http_requests": 33,
+          "http_statuses": {
+            "200": 33
+          },
+          "request_body_bytes": 0,
+          "response_body_bytes": 65630,
+          "dynamo_commands": {
+            "PutCommand": 33,
+            "GetCommand": 66,
+            "QueryCommand": 33,
+            "UpdateCommand": 30
+          },
+          "dynamo_failures": {
+            "PutCommand": 30
+          },
+          "dynamo_item_actions": {
+            "ordinary_put": 33,
+            "strong_get": 66,
+            "strong_query": 33,
+            "ordinary_update": 30
+          },
+          "estimated_rrus": 101,
+          "estimated_wrus": 63,
+          "s3_commands": {
+            "GetObjectCommand": 31
+          },
+          "s3_failures": {},
+          "s3_read_bytes": 53946,
+          "s3_write_bytes": 0
+        }
+      },
+      "limitations": [
+        "Existing memory adapter is not DynamoDB, S3 or production latency acceptance.",
+        "Capacity estimates use JSON item-size proxies; no AWS ConsumedCapacity receipt. Canceled transactions conservatively count every submitted action; ConditionCheck follows the general transaction-write rule including a minimum for absent items.",
+        "Metadata includes live rate/setup/session rows; TTL removal is not simulated.",
+        "Response/body bytes exclude HTTP headers, TLS, CDN functions, static assets and network retries.",
+        "Gzip is a measured hypothetical alternative; current S3 objects remain raw JSON.",
+        "Successful recovery adds one accepted batch beyond the workload; a capacity-blocked probe is reported as not exercised and never claimed successful.",
+        "Alpha 10 MiB cumulative quota and request limits remain active; this does not approve commercial limits."
+      ]
+    }
+  },
+  "costs": {
+    "light": {
+      "100": {
+        "currency": "USD",
+        "rate_date": "2026-11-04",
+        "kind": "illustrative_variable_cost_plus_full_month_storage",
+        "units": {
+          "requests": 168,
+          "rrus": 671,
+          "wrus": 1645,
+          "s3_puts": 82,
+          "s3_gets": 81,
+          "response_bytes": 179014,
+          "upload_bytes": 149251
+        },
+        "assumptions": {
+          "billedMs": 100,
+          "ingestedLogBytesPerRequest": 1024,
+          "storedLogBytesPerRequest": 512,
+          "storageMonths": 1,
+          "secretReads": 2
+        },
+        "components": {
+          "s3_puts": 0.00041000000000000005,
+          "s3_gets": 3.24e-05,
+          "s3_storage": 3.0438201501965523e-06,
+          "dynamodb_writes": 0.001028125,
+          "dynamodb_reads": 8.3875e-05,
+          "dynamodb_storage_proxy": 3.2006530091166496e-05,
+          "lambda_requests": 3.3600000000000004e-05,
+          "lambda_compute_assumed": 7.000014e-05,
+          "cloudfront_https": 0.000168,
+          "cloudfront_functions": 1.6800000000000002e-05,
+          "cloudfront_viewer_egress": 1.4171181246638299e-05,
+          "cloudfront_origin_upload": 2.7800165116786957e-06,
+          "logs_ingest_assumed": 8.0108642578125e-05,
+          "logs_storage_assumed": 2.40325927734375e-06,
+          "secret_reads_assumed": 1e-05
+        },
+        "total_usd": 0.0019873135898551488,
+        "includes_full_login_or_support": false
+      },
+      "1000": {
+        "currency": "USD",
+        "rate_date": "2026-11-04",
+        "kind": "illustrative_variable_cost_plus_full_month_storage",
+        "units": {
+          "requests": 168,
+          "rrus": 671,
+          "wrus": 1645,
+          "s3_puts": 82,
+          "s3_gets": 81,
+          "response_bytes": 179014,
+          "upload_bytes": 149251
+        },
+        "assumptions": {
+          "billedMs": 1000,
+          "ingestedLogBytesPerRequest": 1024,
+          "storedLogBytesPerRequest": 512,
+          "storageMonths": 1,
+          "secretReads": 2
+        },
+        "components": {
+          "s3_puts": 0.00041000000000000005,
+          "s3_gets": 3.24e-05,
+          "s3_storage": 3.0438201501965523e-06,
+          "dynamodb_writes": 0.001028125,
+          "dynamodb_reads": 8.3875e-05,
+          "dynamodb_storage_proxy": 3.2006530091166496e-05,
+          "lambda_requests": 3.3600000000000004e-05,
+          "lambda_compute_assumed": 0.0007000014,
+          "cloudfront_https": 0.000168,
+          "cloudfront_functions": 1.6800000000000002e-05,
+          "cloudfront_viewer_egress": 1.4171181246638299e-05,
+          "cloudfront_origin_upload": 2.7800165116786957e-06,
+          "logs_ingest_assumed": 8.0108642578125e-05,
+          "logs_storage_assumed": 2.40325927734375e-06,
+          "secret_reads_assumed": 1e-05
+        },
+        "total_usd": 0.002617314849855149,
+        "includes_full_login_or_support": false
+      },
+      "15000": {
+        "currency": "USD",
+        "rate_date": "2026-11-04",
+        "kind": "illustrative_variable_cost_plus_full_month_storage",
+        "units": {
+          "requests": 168,
+          "rrus": 671,
+          "wrus": 1645,
+          "s3_puts": 82,
+          "s3_gets": 81,
+          "response_bytes": 179014,
+          "upload_bytes": 149251
+        },
+        "assumptions": {
+          "billedMs": 15000,
+          "ingestedLogBytesPerRequest": 1024,
+          "storedLogBytesPerRequest": 512,
+          "storageMonths": 1,
+          "secretReads": 2
+        },
+        "components": {
+          "s3_puts": 0.00041000000000000005,
+          "s3_gets": 3.24e-05,
+          "s3_storage": 3.0438201501965523e-06,
+          "dynamodb_writes": 0.001028125,
+          "dynamodb_reads": 8.3875e-05,
+          "dynamodb_storage_proxy": 3.2006530091166496e-05,
+          "lambda_requests": 3.3600000000000004e-05,
+          "lambda_compute_assumed": 0.010500021,
+          "cloudfront_https": 0.000168,
+          "cloudfront_functions": 1.6800000000000002e-05,
+          "cloudfront_viewer_egress": 1.4171181246638299e-05,
+          "cloudfront_origin_upload": 2.7800165116786957e-06,
+          "logs_ingest_assumed": 8.0108642578125e-05,
+          "logs_storage_assumed": 2.40325927734375e-06,
+          "secret_reads_assumed": 1e-05
+        },
+        "total_usd": 0.012417334449855148,
+        "includes_full_login_or_support": false
+      }
+    },
+    "typical": {
+      "100": {
+        "currency": "USD",
+        "rate_date": "2026-11-04",
+        "kind": "illustrative_variable_cost_plus_full_month_storage",
+        "units": {
+          "requests": 808,
+          "rrus": 3249,
+          "wrus": 7997,
+          "s3_puts": 402,
+          "s3_gets": 401,
+          "response_bytes": 882610,
+          "upload_bytes": 710439
+        },
+        "assumptions": {
+          "billedMs": 100,
+          "ingestedLogBytesPerRequest": 1024,
+          "storedLogBytesPerRequest": 512,
+          "storageMonths": 1,
+          "secretReads": 2
+        },
+        "components": {
+          "s3_puts": 0.00201,
+          "s3_gets": 0.00016040000000000002,
+          "s3_storage": 1.506470236927271e-05,
+          "dynamodb_writes": 0.004998125,
+          "dynamodb_reads": 0.000406125,
+          "dynamodb_storage_proxy": 0.00015453924424946308,
+          "lambda_requests": 0.00016160000000000002,
+          "lambda_compute_assumed": 0.00033666734,
+          "cloudfront_https": 0.000808,
+          "cloudfront_functions": 8.080000000000001e-05,
+          "cloudfront_viewer_egress": 6.986954249441624e-05,
+          "cloudfront_origin_upload": 1.323295757174492e-05,
+          "logs_ingest_assumed": 0.000385284423828125,
+          "logs_storage_assumed": 1.155853271484375e-05,
+          "secret_reads_assumed": 1e-05
+        },
+        "total_usd": 0.009621266743227865,
+        "includes_full_login_or_support": false
+      },
+      "1000": {
+        "currency": "USD",
+        "rate_date": "2026-11-04",
+        "kind": "illustrative_variable_cost_plus_full_month_storage",
+        "units": {
+          "requests": 808,
+          "rrus": 3249,
+          "wrus": 7997,
+          "s3_puts": 402,
+          "s3_gets": 401,
+          "response_bytes": 882610,
+          "upload_bytes": 710439
+        },
+        "assumptions": {
+          "billedMs": 1000,
+          "ingestedLogBytesPerRequest": 1024,
+          "storedLogBytesPerRequest": 512,
+          "storageMonths": 1,
+          "secretReads": 2
+        },
+        "components": {
+          "s3_puts": 0.00201,
+          "s3_gets": 0.00016040000000000002,
+          "s3_storage": 1.506470236927271e-05,
+          "dynamodb_writes": 0.004998125,
+          "dynamodb_reads": 0.000406125,
+          "dynamodb_storage_proxy": 0.00015453924424946308,
+          "lambda_requests": 0.00016160000000000002,
+          "lambda_compute_assumed": 0.0033666734000000003,
+          "cloudfront_https": 0.000808,
+          "cloudfront_functions": 8.080000000000001e-05,
+          "cloudfront_viewer_egress": 6.986954249441624e-05,
+          "cloudfront_origin_upload": 1.323295757174492e-05,
+          "logs_ingest_assumed": 0.000385284423828125,
+          "logs_storage_assumed": 1.155853271484375e-05,
+          "secret_reads_assumed": 1e-05
+        },
+        "total_usd": 0.012651272803227866,
+        "includes_full_login_or_support": false
+      },
+      "15000": {
+        "currency": "USD",
+        "rate_date": "2026-11-04",
+        "kind": "illustrative_variable_cost_plus_full_month_storage",
+        "units": {
+          "requests": 808,
+          "rrus": 3249,
+          "wrus": 7997,
+          "s3_puts": 402,
+          "s3_gets": 401,
+          "response_bytes": 882610,
+          "upload_bytes": 710439
+        },
+        "assumptions": {
+          "billedMs": 15000,
+          "ingestedLogBytesPerRequest": 1024,
+          "storedLogBytesPerRequest": 512,
+          "storageMonths": 1,
+          "secretReads": 2
+        },
+        "components": {
+          "s3_puts": 0.00201,
+          "s3_gets": 0.00016040000000000002,
+          "s3_storage": 1.506470236927271e-05,
+          "dynamodb_writes": 0.004998125,
+          "dynamodb_reads": 0.000406125,
+          "dynamodb_storage_proxy": 0.00015453924424946308,
+          "lambda_requests": 0.00016160000000000002,
+          "lambda_compute_assumed": 0.050500101000000006,
+          "cloudfront_https": 0.000808,
+          "cloudfront_functions": 8.080000000000001e-05,
+          "cloudfront_viewer_egress": 6.986954249441624e-05,
+          "cloudfront_origin_upload": 1.323295757174492e-05,
+          "logs_ingest_assumed": 0.000385284423828125,
+          "logs_storage_assumed": 1.155853271484375e-05,
+          "secret_reads_assumed": 1e-05
+        },
+        "total_usd": 0.05978470040322788,
+        "includes_full_login_or_support": false
+      }
+    },
+    "large": {
+      "100": {
+        "currency": "USD",
+        "rate_date": "2026-11-04",
+        "kind": "illustrative_variable_cost_plus_full_month_storage",
+        "units": {
+          "requests": 1608,
+          "rrus": 6471,
+          "wrus": 15937,
+          "s3_puts": 802,
+          "s3_gets": 801,
+          "response_bytes": 1762105,
+          "upload_bytes": 1411924
+        },
+        "assumptions": {
+          "billedMs": 100,
+          "ingestedLogBytesPerRequest": 1024,
+          "storedLogBytesPerRequest": 512,
+          "storageMonths": 1,
+          "secretReads": 2
+        },
+        "components": {
+          "s3_puts": 0.00401,
+          "s3_gets": 0.00032040000000000004,
+          "s3_storage": 3.0090805143117906e-05,
+          "dynamodb_writes": 0.009960625,
+          "dynamodb_reads": 0.000808875,
+          "dynamodb_storage_proxy": 0.000307716429233551,
+          "lambda_requests": 0.0003216,
+          "lambda_compute_assumed": 0.0006700013400000001,
+          "cloudfront_https": 0.0016080000000000003,
+          "cloudfront_functions": 0.0001608,
+          "cloudfront_viewer_egress": 0.00013949249405413868,
+          "cloudfront_origin_upload": 2.6299133896827697e-05,
+          "logs_ingest_assumed": 0.000766754150390625,
+          "logs_storage_assumed": 2.3002624511718748e-05,
+          "secret_reads_assumed": 1e-05
+        },
+        "total_usd": 0.019163656977229982,
+        "includes_full_login_or_support": false
+      },
+      "1000": {
+        "currency": "USD",
+        "rate_date": "2026-11-04",
+        "kind": "illustrative_variable_cost_plus_full_month_storage",
+        "units": {
+          "requests": 1608,
+          "rrus": 6471,
+          "wrus": 15937,
+          "s3_puts": 802,
+          "s3_gets": 801,
+          "response_bytes": 1762105,
+          "upload_bytes": 1411924
+        },
+        "assumptions": {
+          "billedMs": 1000,
+          "ingestedLogBytesPerRequest": 1024,
+          "storedLogBytesPerRequest": 512,
+          "storageMonths": 1,
+          "secretReads": 2
+        },
+        "components": {
+          "s3_puts": 0.00401,
+          "s3_gets": 0.00032040000000000004,
+          "s3_storage": 3.0090805143117906e-05,
+          "dynamodb_writes": 0.009960625,
+          "dynamodb_reads": 0.000808875,
+          "dynamodb_storage_proxy": 0.000307716429233551,
+          "lambda_requests": 0.0003216,
+          "lambda_compute_assumed": 0.0067000134000000005,
+          "cloudfront_https": 0.0016080000000000003,
+          "cloudfront_functions": 0.0001608,
+          "cloudfront_viewer_egress": 0.00013949249405413868,
+          "cloudfront_origin_upload": 2.6299133896827697e-05,
+          "logs_ingest_assumed": 0.000766754150390625,
+          "logs_storage_assumed": 2.3002624511718748e-05,
+          "secret_reads_assumed": 1e-05
+        },
+        "total_usd": 0.02519366903722998,
+        "includes_full_login_or_support": false
+      },
+      "15000": {
+        "currency": "USD",
+        "rate_date": "2026-11-04",
+        "kind": "illustrative_variable_cost_plus_full_month_storage",
+        "units": {
+          "requests": 1608,
+          "rrus": 6471,
+          "wrus": 15937,
+          "s3_puts": 802,
+          "s3_gets": 801,
+          "response_bytes": 1762105,
+          "upload_bytes": 1411924
+        },
+        "assumptions": {
+          "billedMs": 15000,
+          "ingestedLogBytesPerRequest": 1024,
+          "storedLogBytesPerRequest": 512,
+          "storageMonths": 1,
+          "secretReads": 2
+        },
+        "components": {
+          "s3_puts": 0.00401,
+          "s3_gets": 0.00032040000000000004,
+          "s3_storage": 3.0090805143117906e-05,
+          "dynamodb_writes": 0.009960625,
+          "dynamodb_reads": 0.000808875,
+          "dynamodb_storage_proxy": 0.000307716429233551,
+          "lambda_requests": 0.0003216,
+          "lambda_compute_assumed": 0.10050020100000001,
+          "cloudfront_https": 0.0016080000000000003,
+          "cloudfront_functions": 0.0001608,
+          "cloudfront_viewer_egress": 0.00013949249405413868,
+          "cloudfront_origin_upload": 2.6299133896827697e-05,
+          "logs_ingest_assumed": 0.000766754150390625,
+          "logs_storage_assumed": 2.3002624511718748e-05,
+          "secret_reads_assumed": 1e-05
+        },
+        "total_usd": 0.11899385663722999,
+        "includes_full_login_or_support": false
+      }
+    },
+    "unpaced": {
+      "100": {
+        "currency": "USD",
+        "rate_date": "2026-11-04",
+        "kind": "illustrative_variable_cost_plus_full_month_storage",
+        "units": {
+          "requests": 118,
+          "rrus": 299,
+          "wrus": 815,
+          "s3_puts": 32,
+          "s3_gets": 31,
+          "response_bytes": 74455,
+          "upload_bytes": 149251
+        },
+        "assumptions": {
+          "billedMs": 100,
+          "ingestedLogBytesPerRequest": 1024,
+          "storedLogBytesPerRequest": 512,
+          "storageMonths": 1,
+          "secretReads": 2
+        },
+        "components": {
+          "s3_puts": 0.00016,
+          "s3_gets": 1.2400000000000002e-05,
+          "s3_storage": 1.155545935034752e-06,
+          "dynamodb_writes": 0.000509375,
+          "dynamodb_reads": 3.7375e-05,
+          "dynamodb_storage_proxy": 1.3990793377161026e-05,
+          "lambda_requests": 2.36e-05,
+          "lambda_compute_assumed": 4.9166765e-05,
+          "cloudfront_https": 0.000118,
+          "cloudfront_functions": 1.18e-05,
+          "cloudfront_viewer_egress": 5.894037894904614e-06,
+          "cloudfront_origin_upload": 2.7800165116786957e-06,
+          "logs_ingest_assumed": 5.626678466796875e-05,
+          "logs_storage_assumed": 1.6880035400390625e-06,
+          "secret_reads_assumed": 1e-05
+        },
+        "total_usd": 0.0010134919469267868,
+        "includes_full_login_or_support": false
+      },
+      "1000": {
+        "currency": "USD",
+        "rate_date": "2026-11-04",
+        "kind": "illustrative_variable_cost_plus_full_month_storage",
+        "units": {
+          "requests": 118,
+          "rrus": 299,
+          "wrus": 815,
+          "s3_puts": 32,
+          "s3_gets": 31,
+          "response_bytes": 74455,
+          "upload_bytes": 149251
+        },
+        "assumptions": {
+          "billedMs": 1000,
+          "ingestedLogBytesPerRequest": 1024,
+          "storedLogBytesPerRequest": 512,
+          "storageMonths": 1,
+          "secretReads": 2
+        },
+        "components": {
+          "s3_puts": 0.00016,
+          "s3_gets": 1.2400000000000002e-05,
+          "s3_storage": 1.155545935034752e-06,
+          "dynamodb_writes": 0.000509375,
+          "dynamodb_reads": 3.7375e-05,
+          "dynamodb_storage_proxy": 1.3990793377161026e-05,
+          "lambda_requests": 2.36e-05,
+          "lambda_compute_assumed": 0.00049166765,
+          "cloudfront_https": 0.000118,
+          "cloudfront_functions": 1.18e-05,
+          "cloudfront_viewer_egress": 5.894037894904614e-06,
+          "cloudfront_origin_upload": 2.7800165116786957e-06,
+          "logs_ingest_assumed": 5.626678466796875e-05,
+          "logs_storage_assumed": 1.6880035400390625e-06,
+          "secret_reads_assumed": 1e-05
+        },
+        "total_usd": 0.001455992831926787,
+        "includes_full_login_or_support": false
+      },
+      "15000": {
+        "currency": "USD",
+        "rate_date": "2026-11-04",
+        "kind": "illustrative_variable_cost_plus_full_month_storage",
+        "units": {
+          "requests": 118,
+          "rrus": 299,
+          "wrus": 815,
+          "s3_puts": 32,
+          "s3_gets": 31,
+          "response_bytes": 74455,
+          "upload_bytes": 149251
+        },
+        "assumptions": {
+          "billedMs": 15000,
+          "ingestedLogBytesPerRequest": 1024,
+          "storedLogBytesPerRequest": 512,
+          "storageMonths": 1,
+          "secretReads": 2
+        },
+        "components": {
+          "s3_puts": 0.00016,
+          "s3_gets": 1.2400000000000002e-05,
+          "s3_storage": 1.155545935034752e-06,
+          "dynamodb_writes": 0.000509375,
+          "dynamodb_reads": 3.7375e-05,
+          "dynamodb_storage_proxy": 1.3990793377161026e-05,
+          "lambda_requests": 2.36e-05,
+          "lambda_compute_assumed": 0.0073750147500000005,
+          "cloudfront_https": 0.000118,
+          "cloudfront_functions": 1.18e-05,
+          "cloudfront_viewer_egress": 5.894037894904614e-06,
+          "cloudfront_origin_upload": 2.7800165116786957e-06,
+          "logs_ingest_assumed": 5.626678466796875e-05,
+          "logs_storage_assumed": 1.6880035400390625e-06,
+          "secret_reads_assumed": 1e-05
+        },
+        "total_usd": 0.008339339931926787,
+        "includes_full_login_or_support": false
+      }
+    }
+  },
+  "margins": [
+    {
+      "inputs": {
+        "workloadCostUsd": 0.012651272803227866,
+        "workloadsPerMonth": 30,
+        "revenueUsd": 9,
+        "supportMinutes": 0,
+        "supportHourlyUsd": 60,
+        "sharedInfraUsd": 0.008,
+        "authUsd": 0.01,
+        "paymentCount": 1,
+        "billingVolumeUsd": 9
+      },
+      "result": {
+        "currency": "USD",
+        "hypothetical_price_not_approved": true,
+        "revenue_usd": 9,
+        "costs": {
+          "workload": 0.379538184096836,
+          "support": 0,
+          "shared_infra": 0.008,
+          "authentication": 0.01,
+          "payments": 0.5609999999999999,
+          "billing": 0.063
+        },
+        "total_cost_usd": 1.0215381840968358,
+        "contribution_usd": 7.978461815903164,
+        "contribution_percent": 88.64957573225738,
+        "not_net_profit": true
+      }
+    },
+    {
+      "inputs": {
+        "workloadCostUsd": 0.012651272803227866,
+        "workloadsPerMonth": 30,
+        "revenueUsd": 9,
+        "supportMinutes": 10,
+        "supportHourlyUsd": 60,
+        "sharedInfraUsd": 0.008,
+        "authUsd": 0.01,
+        "paymentCount": 1,
+        "billingVolumeUsd": 9
+      },
+      "result": {
+        "currency": "USD",
+        "hypothetical_price_not_approved": true,
+        "revenue_usd": 9,
+        "costs": {
+          "workload": 0.379538184096836,
+          "support": 10,
+          "shared_infra": 0.008,
+          "authentication": 0.01,
+          "payments": 0.5609999999999999,
+          "billing": 0.063
+        },
+        "total_cost_usd": 11.021538184096835,
+        "contribution_usd": -2.021538184096835,
+        "contribution_percent": -22.461535378853725,
+        "not_net_profit": true
+      }
+    },
+    {
+      "inputs": {
+        "workloadCostUsd": 0.012651272803227866,
+        "workloadsPerMonth": 30,
+        "revenueUsd": 9,
+        "supportMinutes": 30,
+        "supportHourlyUsd": 60,
+        "sharedInfraUsd": 0.008,
+        "authUsd": 0.01,
+        "paymentCount": 1,
+        "billingVolumeUsd": 9
+      },
+      "result": {
+        "currency": "USD",
+        "hypothetical_price_not_approved": true,
+        "revenue_usd": 9,
+        "costs": {
+          "workload": 0.379538184096836,
+          "support": 30,
+          "shared_infra": 0.008,
+          "authentication": 0.01,
+          "payments": 0.5609999999999999,
+          "billing": 0.063
+        },
+        "total_cost_usd": 31.021538184096837,
+        "contribution_usd": -22.021538184096837,
+        "contribution_percent": -244.68375760107594,
+        "not_net_profit": true
+      }
+    },
+    {
+      "inputs": {
+        "workloadCostUsd": 0.012651272803227866,
+        "workloadsPerMonth": 30,
+        "revenueUsd": 19,
+        "supportMinutes": 0,
+        "supportHourlyUsd": 60,
+        "sharedInfraUsd": 0.008,
+        "authUsd": 0.01,
+        "paymentCount": 1,
+        "billingVolumeUsd": 19
+      },
+      "result": {
+        "currency": "USD",
+        "hypothetical_price_not_approved": true,
+        "revenue_usd": 19,
+        "costs": {
+          "workload": 0.379538184096836,
+          "support": 0,
+          "shared_infra": 0.008,
+          "authentication": 0.01,
+          "payments": 0.851,
+          "billing": 0.133
+        },
+        "total_cost_usd": 1.381538184096836,
+        "contribution_usd": 17.618461815903164,
+        "contribution_percent": 92.72874639949033,
+        "not_net_profit": true
+      }
+    },
+    {
+      "inputs": {
+        "workloadCostUsd": 0.012651272803227866,
+        "workloadsPerMonth": 30,
+        "revenueUsd": 19,
+        "supportMinutes": 10,
+        "supportHourlyUsd": 60,
+        "sharedInfraUsd": 0.008,
+        "authUsd": 0.01,
+        "paymentCount": 1,
+        "billingVolumeUsd": 19
+      },
+      "result": {
+        "currency": "USD",
+        "hypothetical_price_not_approved": true,
+        "revenue_usd": 19,
+        "costs": {
+          "workload": 0.379538184096836,
+          "support": 10,
+          "shared_infra": 0.008,
+          "authentication": 0.01,
+          "payments": 0.851,
+          "billing": 0.133
+        },
+        "total_cost_usd": 11.381538184096833,
+        "contribution_usd": 7.618461815903167,
+        "contribution_percent": 40.09716745212194,
+        "not_net_profit": true
+      }
+    },
+    {
+      "inputs": {
+        "workloadCostUsd": 0.012651272803227866,
+        "workloadsPerMonth": 30,
+        "revenueUsd": 19,
+        "supportMinutes": 30,
+        "supportHourlyUsd": 60,
+        "sharedInfraUsd": 0.008,
+        "authUsd": 0.01,
+        "paymentCount": 1,
+        "billingVolumeUsd": 19
+      },
+      "result": {
+        "currency": "USD",
+        "hypothetical_price_not_approved": true,
+        "revenue_usd": 19,
+        "costs": {
+          "workload": 0.379538184096836,
+          "support": 30,
+          "shared_infra": 0.008,
+          "authentication": 0.01,
+          "payments": 0.851,
+          "billing": 0.133
+        },
+        "total_cost_usd": 31.381538184096836,
+        "contribution_usd": -12.381538184096836,
+        "contribution_percent": -65.16599044261493,
+        "not_net_profit": true
+      }
+    },
+    {
+      "inputs": {
+        "workloadCostUsd": 0.012651272803227866,
+        "workloadsPerMonth": 30,
+        "revenueUsd": 49,
+        "supportMinutes": 0,
+        "supportHourlyUsd": 60,
+        "sharedInfraUsd": 0.008,
+        "authUsd": 0.01,
+        "paymentCount": 1,
+        "billingVolumeUsd": 49
+      },
+      "result": {
+        "currency": "USD",
+        "hypothetical_price_not_approved": true,
+        "revenue_usd": 49,
+        "costs": {
+          "workload": 0.379538184096836,
+          "support": 0,
+          "shared_infra": 0.008,
+          "authentication": 0.01,
+          "payments": 1.721,
+          "billing": 0.343
+        },
+        "total_cost_usd": 2.461538184096836,
+        "contribution_usd": 46.53846181590316,
+        "contribution_percent": 94.97645268551666,
+        "not_net_profit": true
+      }
+    },
+    {
+      "inputs": {
+        "workloadCostUsd": 0.012651272803227866,
+        "workloadsPerMonth": 30,
+        "revenueUsd": 49,
+        "supportMinutes": 10,
+        "supportHourlyUsd": 60,
+        "sharedInfraUsd": 0.008,
+        "authUsd": 0.01,
+        "paymentCount": 1,
+        "billingVolumeUsd": 49
+      },
+      "result": {
+        "currency": "USD",
+        "hypothetical_price_not_approved": true,
+        "revenue_usd": 49,
+        "costs": {
+          "workload": 0.379538184096836,
+          "support": 10,
+          "shared_infra": 0.008,
+          "authentication": 0.01,
+          "payments": 1.721,
+          "billing": 0.343
+        },
+        "total_cost_usd": 12.461538184096835,
+        "contribution_usd": 36.53846181590316,
+        "contribution_percent": 74.56828942021053,
+        "not_net_profit": true
+      }
+    },
+    {
+      "inputs": {
+        "workloadCostUsd": 0.012651272803227866,
+        "workloadsPerMonth": 30,
+        "revenueUsd": 49,
+        "supportMinutes": 30,
+        "supportHourlyUsd": 60,
+        "sharedInfraUsd": 0.008,
+        "authUsd": 0.01,
+        "paymentCount": 1,
+        "billingVolumeUsd": 49
+      },
+      "result": {
+        "currency": "USD",
+        "hypothetical_price_not_approved": true,
+        "revenue_usd": 49,
+        "costs": {
+          "workload": 0.379538184096836,
+          "support": 30,
+          "shared_infra": 0.008,
+          "authentication": 0.01,
+          "payments": 1.721,
+          "billing": 0.343
+        },
+        "total_cost_usd": 32.46153818409684,
+        "contribution_usd": 16.538461815903162,
+        "contribution_percent": 33.75196288959829,
+        "not_net_profit": true
+      }
+    }
+  ]
+}

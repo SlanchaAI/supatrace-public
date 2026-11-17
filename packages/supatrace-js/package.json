@@ -1,0 +1,70 @@
+{
+  "name": "supatrace",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Alpha JavaScript client for SupaTrace.",
+  "main": "./index.mjs",
+  "exports": {
+    ".": "./index.mjs"
+  },
+  "bin": {
+    "supatrace": "./cli.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "trace.mjs",
+    "instrument.mjs",
+    "cli.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test 'tests/*.test.mjs'"
+  },
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@opentelemetry/api": "1.9.0",
+    "@opentelemetry/exporter-trace-otlp-http": "0.223.2",
+    "@opentelemetry/resources": "2.12.1",
+    "@opentelemetry/sdk-trace-base": "2.12.1"
+  },
+  "homepage": "https://supatrace.dev",
+  "keywords": [
+    "supatrace",
+    "tracing",
+    "observability",
+    "opentelemetry",
+    "agents"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": "Slancha, Inc.",
+  "bugs": {
+    "url": "mailto:support@supatrace.dev"
+  },
+  "peerDependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.223.2",
+    "@opentelemetry/resources": "^2.12.1",
+    "@opentelemetry/sdk-trace-base": "^2.12.1"
+  },
+  "peerDependenciesMeta": {
+    "@opentelemetry/api": {
+      "optional": true
+    },
+    "@opentelemetry/exporter-trace-otlp-http": {
+      "optional": true
+    },
+    "@opentelemetry/resources": {
+      "optional": true
+    },
+    "@opentelemetry/sdk-trace-base": {
+      "optional": true
+    }
+  },
+  "documentation": "https://supatrace.dev/docs/"
+}

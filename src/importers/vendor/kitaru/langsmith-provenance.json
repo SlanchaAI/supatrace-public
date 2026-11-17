@@ -1,0 +1,43 @@
+{
+  "repository": "https://github.com/zenml-io/kitaru",
+  "commit": "82fd53d16f406fff92eb19a68f088dfa68488af3",
+  "package": "kitaru-langsmith-importer",
+  "package_version": "0.4.0",
+  "license": "Apache-2.0",
+  "source_path": "plugins/packages/langsmith-importer/src/kitaru_langsmith_importer/api.py",
+  "source_git_blob": "5a49fd70f5bedebc3dda6449a6f5e7918499f751",
+  "source_sha256": "dde42cd66f2eec2b11b3d3bfdc585a03230f300243c7dd4301884946b91ba189",
+  "license_git_blob": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+  "notice": "No upstream NOTICE exists in the pinned recursive tree; copyright and Apache license retained.",
+  "adaptation": "langsmith-query.mjs",
+  "adaptation_sha256": "fd72b8f76583303352bc80132c661c80189ef2f3368ef23cc0a0cb3daca4f867",
+  "changes": [
+    "Port _trace_has_ended and reuse explicit per-trace pagination/completion approach; do not adopt environment credentials, polling, session merging, discovery or concurrency.",
+    "Replace legacy SDK list_runs with current v2 REST query contract. Query builder is SupaTrace code; no LangSmith SDK runtime/code is vendored.",
+    "Add explicit region/workspace/project, 1-25 UUID traces and required bounded start-time window. Metadata fields are selected and projected before disk.",
+    "Validate returned completed roots, ordered ancestry, returned-run timing, duplicates, budgets and private checkpoint resume. Pagination completion does not verify whole-trace membership or a snapshot."
+  ],
+  "contract_reference": {
+    "repository": "https://github.com/langchain-ai/langsmith-javascript",
+    "commit": "c888239c8e790b2a48727def5b11533b1cf7280f",
+    "version": "0.11.8",
+    "license": "MIT",
+    "files": [
+      {
+        "path": "src/resources/runs/runs.ts",
+        "git_blob": "1e07855db272343922bcb74f6da61f6289232897"
+      },
+      {
+        "path": "src/core/pagination.ts",
+        "sha256": "c296819cbe506d713a56af80f51e156a9567b11eb19f4fd944f7f58e9f3d2a49"
+      },
+      {
+        "path": "src/resources/sessions.ts",
+        "sha256": "e2a5b7efd4973076bae1a56a55956fbdbdd7d0e0cc4cec00cce863f84075032a"
+      }
+    ],
+    "query_docs": "https://docs.langchain.com/langsmith/export-traces",
+    "migration_docs": "https://docs.langchain.com/langsmith/smithdb-sdk-migration-query-runs",
+    "verified_date": "2026-11-05"
+  }
+}

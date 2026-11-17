@@ -1,0 +1,20 @@
+{
+  "name": "supatrace-example-nextjs-ai-sdk",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "next dev -H 127.0.0.1",
+    "build": "next build",
+    "start": "next start -H 127.0.0.1",
+    "smoke": "node smoke.mjs"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^2.0.0",
+    "@supatrace/client": "file:../../packages/supatrace-js",
+    "ai": "^5.0.0",
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

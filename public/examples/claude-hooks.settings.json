@@ -1,0 +1,7 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [{"hooks": [{"type": "command", "command": "\"/ABSOLUTE/PATH/python3\" \"/ABSOLUTE/PATH/claude_hook.py\" capture --spool \"/ABSOLUTE/PRIVATE/SPOOL\"", "timeout": 12}]}],
+    "PostToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": "\"/ABSOLUTE/PATH/python3\" \"/ABSOLUTE/PATH/claude_hook.py\" capture --spool \"/ABSOLUTE/PRIVATE/SPOOL\"", "timeout": 12}]}],
+    "Stop": [{"hooks": [{"type": "command", "command": "\"/ABSOLUTE/PATH/python3\" \"/ABSOLUTE/PATH/claude_hook.py\" capture --spool \"/ABSOLUTE/PRIVATE/SPOOL\"", "timeout": 12}]}]
+  }
+}

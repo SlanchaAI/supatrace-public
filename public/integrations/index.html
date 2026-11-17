@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="SupaTrace integrations: frameworks, providers, importers and agent tools, each with an honest status: available, beta, preview or planned.">
+<meta name="theme-color" content="#f6f3e8">
+<title>Integrations · SupaTrace</title>
+<link rel="icon" href="/favicon.svg?v=classic-s-2" type="image/svg+xml">
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/remodel.css">
+<link rel="stylesheet" href="/site.css">
+<link rel="canonical" href="https://supatrace.dev/integrations/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SupaTrace">
+<meta property="og:title" content="Integrations · SupaTrace">
+<meta property="og:description" content="SupaTrace integrations: frameworks, providers, importers and agent tools, each with an honest status.">
+<meta property="og:url" content="https://supatrace.dev/integrations/">
+<meta property="og:image" content="https://supatrace.dev/og-image.png">
+</head>
+<body class="landing remodel page" data-page="integrations">
+<a class="skip" href="#content">Skip to content</a>
+<!-- site:header -->
+<header class="site-header">
+<a class="wordmark" href="/" aria-label="SupaTrace home"><img class="brand-mark" src="/brand-mark.svg" alt="" width="25" height="46">SupaTrace</a>
+<nav aria-label="Main"><a href="/docs/">Docs</a><a href="/integrations/" aria-current="page">Integrations</a><a href="/pricing/">Pricing</a><a href="/app/">Workspace</a></nav>
+</header>
+<!-- /site:header -->
+<main id="content">
+<div class="page-head">
+<p class="eyebrow">Integrations</p>
+<h1>What connects<br>to SupaTrace.</h1>
+<p class="lede">Frameworks, providers, importers and agent tools. Each one carries the status it has today, and links to the guide that shows exactly what it does.</p>
+</div>
+<!-- integrations:list -->
+<dl class="legend"><div><dt><span class="status available">available</span></dt><dd>Usable today on supatrace.dev or through public downloads.</dd></div><div><dt><span class="status beta">beta</span></dt><dd>Implemented with source tests; hosted or real-client acceptance is still open.</dd></div><div><dt><span class="status preview">preview</span></dt><dd>Private-checkout feature, unavailable to outside users. SDK packages are coming; not on PyPI or npm.</dd></div><div><dt><span class="status planned">planned</span></dt><dd>Not usable today.</dd></div></dl>
+<section aria-labelledby="group-frameworks"><h2 id="group-frameworks">Frameworks</h2>
+<ul class="tiles">
+<li class="tile" data-integration="langchain" data-status="preview"><h3>LangChain</h3><span class="status preview">preview</span><p>Record model calls as events with the Python SDK in source mode. SDK package coming. Stock OpenTelemetry exporters can send traces to supatrace.dev today.</p><a href="/docs/frameworks/langchain/">Read the guide<span class="visually-hidden">: LangChain</span></a></li>
+<li class="tile" data-integration="llamaindex" data-status="preview"><h3>LlamaIndex</h3><span class="status preview">preview</span><p>Record model calls as events with the Python SDK in source mode. SDK package coming. Stock OpenTelemetry exporters can send traces to supatrace.dev today.</p><a href="/docs/frameworks/llamaindex/">Read the guide<span class="visually-hidden">: LlamaIndex</span></a></li>
+<li class="tile" data-integration="vercel-ai-sdk" data-status="preview"><h3>Vercel AI SDK</h3><span class="status preview">preview</span><p>Record generateText calls as events with the JavaScript SDK in source mode. SDK package coming. AI SDK telemetry can send traces to the hosted OTLP/HTTP receiver today.</p><a href="/docs/frameworks/vercel-ai-sdk/">Read the guide<span class="visually-hidden">: Vercel AI SDK</span></a></li>
+</ul></section>
+<section aria-labelledby="group-providers"><h2 id="group-providers">Providers</h2>
+<ul class="tiles">
+<li class="tile" data-integration="openai" data-status="preview"><h3>OpenAI</h3><span class="status preview">preview</span><p>Record chat completions as events from Python or Node in source mode.</p><a href="/docs/frameworks/openai/">Read the guide<span class="visually-hidden">: OpenAI</span></a></li>
+<li class="tile" data-integration="anthropic" data-status="preview"><h3>Anthropic</h3><span class="status preview">preview</span><p>Record Messages API calls as events from Python in source mode.</p><a href="/docs/frameworks/anthropic/">Read the guide<span class="visually-hidden">: Anthropic</span></a></li>
+</ul></section>
+<section aria-labelledby="group-standards"><h2 id="group-standards">Standards</h2>
+<ul class="tiles">
+<li class="tile" data-integration="otlp-ingest" data-status="available"><h3>OpenTelemetry (OTLP ingest)</h3><span class="status available">available</span><p>OTLP/HTTP receiver for any OpenTelemetry exporter, protobuf or JSON. Available on supatrace.dev for traces only; no gRPC, metrics or logs.</p><a href="/docs/frameworks/opentelemetry/#otlp">Read the guide<span class="visually-hidden">: OpenTelemetry (OTLP ingest)</span></a></li>
+<li class="tile" data-integration="langfuse-sdk" data-status="beta"><h3>Langfuse SDKs</h3><span class="status beta">beta</span><p>Point an app that uses a Langfuse SDK at SupaTrace by changing the host and keys. Ingest only. Hosted routes answer; SDK acceptance is local only, so this remains beta.</p><a href="/docs/frameworks/opentelemetry/#langfuse-sdk">Read the guide<span class="visually-hidden">: Langfuse SDKs</span></a></li>
+<li class="tile" data-integration="otlp" data-status="preview"><h3>OTLP JSON file</h3><span class="status preview">preview</span><p>OTLP HTTP JSON export files (not protobuf or gzip). Checkout-only converter, unavailable to outside users while the repository is private. Use Home snippets or hosted OTLP today.</p><a href="/docs/importers/#files">Read the guide<span class="visually-hidden">: OTLP JSON file</span></a></li>
+</ul></section>
+<section aria-labelledby="group-import-from"><h2 id="group-import-from">Import from</h2>
+<ul class="tiles">
+<li class="tile" data-integration="langfuse" data-status="beta"><h3>Langfuse</h3><span class="status beta">beta</span><p>Import one exact trace scope from the workspace with your Langfuse read keys, in bounded steps. Runs only where the server has it enabled.</p><a href="/docs/importers/#langfuse">Read the guide<span class="visually-hidden">: Langfuse</span></a></li>
+<li class="tile" data-integration="langsmith" data-status="preview"><h3>LangSmith</h3><span class="status preview">preview</span><p>LangSmith run exports. Checkout-only converter, unavailable to outside users while the repository is private. Use Home snippets or hosted OTLP today.</p><a href="/docs/importers/#files">Read the guide<span class="visually-hidden">: LangSmith</span></a></li>
+<li class="tile" data-integration="langsmith-api" data-status="preview"><h3>LangSmith API</h3><span class="status preview">preview</span><p>Private-checkout importer, unavailable to outside users. Reads 1 to 25 completed traces you name from the LangSmith API with your own key.</p><a href="/docs/importers/#api">Read the guide<span class="visually-hidden">: LangSmith API</span></a></li>
+<li class="tile" data-integration="braintrust" data-status="preview"><h3>Braintrust</h3><span class="status preview">preview</span><p>Braintrust span logs. Checkout-only converter, unavailable to outside users while the repository is private. Use Home snippets or hosted OTLP today.</p><a href="/docs/importers/#files">Read the guide<span class="visually-hidden">: Braintrust</span></a></li>
+<li class="tile" data-integration="braintrust-api" data-status="preview"><h3>Braintrust API</h3><span class="status preview">preview</span><p>Private-checkout importer, unavailable to outside users. Reads 1 to 25 completed traces you name from the Braintrust API with your own key.</p><a href="/docs/importers/#api">Read the guide<span class="visually-hidden">: Braintrust API</span></a></li>
+<li class="tile" data-integration="weave" data-status="preview"><h3>Weave</h3><span class="status preview">preview</span><p>Weave call exports. Checkout-only converter, unavailable to outside users while the repository is private. Use Home snippets or hosted OTLP today.</p><a href="/docs/importers/#files">Read the guide<span class="visually-hidden">: Weave</span></a></li>
+<li class="tile" data-integration="opik" data-status="preview"><h3>Opik</h3><span class="status preview">preview</span><p>Opik span exports. Checkout-only converter, unavailable to outside users while the repository is private. Use Home snippets or hosted OTLP today.</p><a href="/docs/importers/#files">Read the guide<span class="visually-hidden">: Opik</span></a></li>
+<li class="tile" data-integration="datadog" data-status="preview"><h3>Datadog LLM Observability</h3><span class="status preview">preview</span><p>Datadog LLMObs JSON exports. Checkout-only converter, unavailable to outside users while the repository is private. Use Home snippets or hosted OTLP today.</p><a href="/docs/importers/#files">Read the guide<span class="visually-hidden">: Datadog LLM Observability</span></a></li>
+<li class="tile" data-integration="mlflow" data-status="preview"><h3>MLflow</h3><span class="status preview">preview</span><p>MLflow trace exports. Checkout-only converter, unavailable to outside users while the repository is private. Use Home snippets or hosted OTLP today.</p><a href="/docs/importers/#files">Read the guide<span class="visually-hidden">: MLflow</span></a></li>
+<li class="tile" data-integration="helicone" data-status="preview"><h3>Helicone</h3><span class="status preview">preview</span><p>Helicone request logs. Checkout-only converter, unavailable to outside users while the repository is private. Use Home snippets or hosted OTLP today.</p><a href="/docs/importers/#files">Read the guide<span class="visually-hidden">: Helicone</span></a></li>
+</ul></section>
+<section aria-labelledby="group-agents-and-tools"><h2 id="group-agents-and-tools">Agents and tools</h2>
+<ul class="tiles">
+<li class="tile" data-integration="claude-snapshot" data-status="available"><h3>Claude Code snapshot</h3><span class="status available">available</span><p>Convert one finished Claude Code transcript you select into reviewed batches. Not a live tailer.</p><a href="/docs/importers/#claude">Read the guide<span class="visually-hidden">: Claude Code snapshot</span></a></li>
+<li class="tile" data-integration="claude-hooks" data-status="beta"><h3>Claude Code hooks</h3><span class="status beta">beta</span><p>Opt-in command hook that records prompt, tool and completion events into a private spool. Metadata only by default.</p><a href="/docs/importers/#claude">Read the guide<span class="visually-hidden">: Claude Code hooks</span></a></li>
+<li class="tile" data-integration="mcp" data-status="preview"><h3>MCP reader</h3><span class="status preview">preview</span><p>Private-checkout MCP reader, unavailable to outside users. Lets an agent list, search, inspect and export traces within a scope you review. Not a hosted MCP endpoint.</p><a href="/docs/export/#mcp">Read the guide<span class="visually-hidden">: MCP reader</span></a></li>
+</ul></section>
+<!-- /integrations:list -->
+<section class="cta" aria-labelledby="cta-title">
+<h2 id="cta-title">Start with a first trace.</h2>
+<p>The quickstart works today with three Python scripts and a free sign-in.</p>
+<div class="actions"><a class="button" href="/docs/quickstart/">Open the quickstart</a><a class="setup-link" href="/#signin">Sign in free</a></div>
+</section>
+</main>
+<footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/integrations/" aria-current="page">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/">Security</a><a href="/changelog/">Changelog</a><a href="/status/">Status</a><a href="/agent-setup.html">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a><span id="build" class="build" hidden></span></nav><script type="module" src="/build.js"></script><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>
+</body>
+</html>

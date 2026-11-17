@@ -1,0 +1,223 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SupaTrace mail receiving and operational alerts. Only SupaTrace resources.
+Parameters:
+  AlertEmailAddress:
+    Type: String
+    Description: Confirmed alert recipient. Preserve the existing stack value on updates.
+Resources:
+  MailIdentity:
+    Type: AWS::SES::EmailIdentity
+    Properties:
+      EmailIdentity: supatrace.dev
+  Inbox:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub 'supatrace-support-${AWS::AccountId}-${AWS::Region}'
+      VersioningConfiguration: {Status: Enabled}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}
+  InboxPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref Inbox
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: ses.amazonaws.com}
+            Action: s3:PutObject
+            Resource: !Sub '${Inbox.Arn}/mail/*'
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId
+              ArnEquals:
+                AWS:SourceArn: !Sub 'arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:receipt-rule-set/supatrace-support:receipt-rule/support'
+          - Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: [!GetAtt Inbox.Arn, !Sub '${Inbox.Arn}/*']
+            Condition:
+              Bool: {aws:SecureTransport: 'false'}
+  MailRules:
+    Type: AWS::SES::ReceiptRuleSet
+    Properties: {RuleSetName: supatrace-support}
+  SupportRule:
+    Type: AWS::SES::ReceiptRule
+    DependsOn: InboxPolicy
+    Properties:
+      RuleSetName: !Ref MailRules
+      Rule:
+        Name: support
+        Enabled: true
+        ScanEnabled: true
+        TlsPolicy: Require
+        Recipients: [support@supatrace.dev, security@supatrace.dev, readiness@supatrace.dev]
+        Actions:
+          - S3Action: {BucketName: !Ref Inbox, ObjectKeyPrefix: mail/}
+  AlertKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: SupaTrace alarm notification encryption
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'}
+            Action: kms:*
+            Resource: '*'
+          - Effect: Allow
+            Principal: {Service: cloudwatch.amazonaws.com}
+            Action: [kms:Decrypt, kms:GenerateDataKey*]
+            Resource: '*'
+            Condition:
+              StringEquals: {aws:SourceAccount: !Ref AWS::AccountId}
+  Alerts:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: supatrace-production-alerts
+      KmsMasterKeyId: !GetAtt AlertKey.Arn
+  AlertsPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics: [!Ref Alerts]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: cloudwatch.amazonaws.com}
+            Action: sns:Publish
+            Resource: !Ref Alerts
+            Condition:
+              StringEquals: {aws:SourceAccount: !Ref AWS::AccountId}
+              ArnLike: {aws:SourceArn: !Sub 'arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:supatrace-*'}
+  AlertQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: supatrace-production-alerts
+      SqsManagedSseEnabled: true
+      MessageRetentionPeriod: 1209600
+  AlertQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref AlertQueue]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: sns.amazonaws.com}
+            Action: sqs:SendMessage
+            Resource: !GetAtt AlertQueue.Arn
+            Condition:
+              ArnEquals: {aws:SourceArn: !Ref Alerts}
+  QueueSubscription:
+    Type: AWS::SNS::Subscription
+    Properties: {TopicArn: !Ref Alerts, Protocol: sqs, Endpoint: !GetAtt AlertQueue.Arn}
+  EmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties: {TopicArn: !Ref Alerts, Protocol: email, Endpoint: !Ref AlertEmailAddress}
+  SecurityEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties: {TopicArn: !Ref Alerts, Protocol: email, Endpoint: security@supatrace.dev}
+  HealthProbe:
+    Type: AWS::Route53::HealthCheck
+    Properties:
+      HealthCheckConfig:
+        Type: HTTPS
+        FullyQualifiedDomainName: supatrace.dev
+        Port: 443
+        ResourcePath: /api/public/health
+        RequestInterval: 30
+        FailureThreshold: 3
+        EnableSNI: true
+      HealthCheckTags: [{Key: Name, Value: supatrace-production-api}]
+  HealthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: supatrace-api-unhealthy
+      Namespace: AWS/Route53
+      MetricName: HealthCheckStatus
+      Dimensions: [{Name: HealthCheckId, Value: !Ref HealthProbe}]
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: breaching
+      AlarmActions: [!Ref Alerts]
+      OKActions: [!Ref Alerts]
+  ErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: supatrace-api-errors
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions: [{Name: FunctionName, Value: supatrace-alpha-api}]
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 3
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Alerts]
+      OKActions: [!Ref Alerts]
+  ThrottlesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: supatrace-api-throttles
+      Namespace: AWS/Lambda
+      MetricName: Throttles
+      Dimensions: [{Name: FunctionName, Value: supatrace-alpha-api}]
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Alerts]
+      OKActions: [!Ref Alerts]
+  ApiErrorMetric:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: /aws/lambda/supatrace-alpha-api
+      FilterPattern: '{ $.event = "api_unexpected_error" }'
+      MetricTransformations:
+        - MetricNamespace: SupaTrace/Production
+          MetricName: UnexpectedApiErrors
+          MetricValue: '1'
+          DefaultValue: 0
+  ApiErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: supatrace-api-unexpected-errors
+      Namespace: SupaTrace/Production
+      MetricName: UnexpectedApiErrors
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 3
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Alerts]
+      OKActions: [!Ref Alerts]
+Outputs:
+  InboxBucket: {Value: !Ref Inbox}
+  AlertQueueUrl: {Value: !Ref AlertQueue}
+  AlertTopicArn: {Value: !Ref Alerts}
+  HealthCheckId: {Value: !Ref HealthProbe}
+  DkimName1: {Value: !GetAtt MailIdentity.DkimDNSTokenName1}
+  DkimValue1: {Value: !GetAtt MailIdentity.DkimDNSTokenValue1}
+  DkimName2: {Value: !GetAtt MailIdentity.DkimDNSTokenName2}
+  DkimValue2: {Value: !GetAtt MailIdentity.DkimDNSTokenValue2}
+  DkimName3: {Value: !GetAtt MailIdentity.DkimDNSTokenName3}
+  DkimValue3: {Value: !GetAtt MailIdentity.DkimDNSTokenValue3}

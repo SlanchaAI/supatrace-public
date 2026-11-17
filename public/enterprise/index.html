@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="SupaTrace Enterprise: custom pricing by contract, SAML single sign-on, SCIM, audit log export and custom retention. What is available today and what is still pending.">
+<meta name="theme-color" content="#f6f3e8">
+<title>Enterprise · SupaTrace</title>
+<link rel="icon" href="/favicon.svg?v=classic-s-2" type="image/svg+xml">
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/remodel.css">
+<link rel="stylesheet" href="/site.css">
+<link rel="canonical" href="https://supatrace.dev/enterprise/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SupaTrace">
+<meta property="og:title" content="Enterprise · SupaTrace">
+<meta property="og:description" content="What SupaTrace Enterprise includes, what exists today, and what is still pending. No SLA is offered yet.">
+<meta property="og:url" content="https://supatrace.dev/enterprise/">
+<meta property="og:image" content="https://supatrace.dev/og-image.png">
+</head>
+<body class="landing remodel page" data-page="enterprise">
+<a class="skip" href="#content">Skip to content</a>
+<!-- site:header -->
+<header class="site-header">
+<a class="wordmark" href="/" aria-label="SupaTrace home"><img class="brand-mark" src="/brand-mark.svg" alt="" width="25" height="46">SupaTrace</a>
+<nav aria-label="Main"><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/app/">Workspace</a></nav>
+</header>
+<!-- /site:header -->
+<main id="content">
+<div class="page-head">
+<p class="eyebrow">Enterprise</p>
+<h1>Enterprise,<br>stated plainly.</h1>
+<p class="lede">Enterprise is priced by contract, like the plan it is modelled on. There is no self-serve checkout: you talk to sales and an operator assigns the plan to your organization. This page separates what the plan includes today from what is still by contract or not built.</p>
+</div>
+<p class="preview-note"><strong>No SLA document or support commitment is published yet.</strong> The features marked available below are built and are switched on for an organization on the Enterprise plan. <a href="/pricing/">Compare all plans.</a></p>
+<section aria-labelledby="included"><h2 id="included">What Enterprise adds</h2>
+<ul class="facts">
+<li><strong>SAML single sign-on</strong> for your organization, with verified email domains and an option to require it.</li>
+<li><strong>SCIM</strong> user provisioning.</li>
+<li><strong>Audit log export</strong> as JSON or CSV.</li>
+<li><strong>Custom roles</strong> and a rule that requires two-factor authentication.</li>
+<li><strong>Custom retention</strong> and volume set per contract.</li>
+<li><strong>An uptime SLA and priority support.</strong> Terms are pending: no uptime percentage, service credit or response time has been decided. Until terms are published, SupaTrace makes no availability or support commitment.</li>
+</ul></section>
+<section aria-labelledby="today"><h2 id="today">Where each requirement stands today</h2>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Enterprise requirements and their status"><table class="compare"><thead><tr><th scope="col">Requirement</th><th scope="col">Status</th><th scope="col">Today</th></tr></thead><tbody>
+<tr><th scope="row">Single sign-on (SAML)</th><td><span class="status available">available</span></td><td>An organization's owner sets the identity provider, verifies email domains by DNS and can require SSO for members. Enterprise plan.</td></tr>
+<tr><th scope="row">SCIM provisioning</th><td><span class="status available">available</span></td><td>SCIM 2.0 Users with a bearer token, up to 20 users. Enterprise plan.</td></tr>
+<tr><th scope="row">Audit log</th><td><span class="status available">available</span></td><td>Who changed keys, members, settings and billing. Viewing is in Pro; export is in Enterprise. Events are kept 90 days.</td></tr>
+<tr><th scope="row">Roles</th><td><span class="status available">available</span></td><td>Owner and Admin on every plan. Developer and Read-only roles, and limits to listed environments, from Pro.</td></tr>
+<tr><th scope="row">Retention</th><td><span class="status available">by plan</span></td><td>7 days on Free, 30 on Base, 90 on Pro, 1 year on Enterprise. Expired data is hidden immediately and erased by the enabled scheduled worker; data stored before retention existed does not expire.</td></tr>
+<tr><th scope="row">Data residency</th><td><span class="status planned">single region</span></td><td>Data is stored in AWS us-east-1. There is no region choice.</td></tr>
+<tr><th scope="row">Private networking (VPC, PrivateLink)</th><td><span class="status planned">not available</span></td><td>Not built.</td></tr>
+<tr><th scope="row">Uptime SLA</th><td><span class="status planned">terms pending</span></td><td>No SLA is offered.</td></tr>
+<tr><th scope="row">Support SLA</th><td><span class="status planned">terms pending</span></td><td>No support commitment is offered.</td></tr>
+<tr><th scope="row">Data export</th><td><span class="status available">available</span></td><td>Export a trace, an environment or a workspace as JSON on every plan. See <a href="/docs/export/">Export</a>. Streaming export to your own endpoint (trace drains) is in Pro.</td></tr>
+<tr><th scope="row">Security review</th><td><span class="status beta">partial</span></td><td>The <a href="/security/">security page</a> lists verifiable facts and what is not in place. There is no SOC 2 report, DPA or completed questionnaire.</td></tr>
+</tbody></table></div></section>
+<section aria-labelledby="contact">
+<!-- contact:sales -->
+<div class="contact" id="contact" data-contact="open">
+<h2>Contact sales</h2>
+<p>Sales and support share <a href="mailto:support@supatrace.dev">support@supatrace.dev</a>.</p>
+<p>This form sends nothing to SupaTrace by itself. It opens a draft in your own mail client, addressed to <a href="mailto:support@supatrace.dev">support@supatrace.dev</a>, for you to review and send. The button works once this page's script has loaded; without JavaScript, use the address above.</p>
+<form id="sales-form" data-to="support@supatrace.dev">
+<label for="sales-name">Name</label><input id="sales-name" name="name" autocomplete="name" required maxlength="120">
+<label for="sales-email">Work email</label><input id="sales-email" name="email" type="email" autocomplete="email" required maxlength="200">
+<label for="sales-company">Company</label><input id="sales-company" name="company" autocomplete="organization" required maxlength="160">
+<label for="sales-size">Team size</label><input id="sales-size" name="size" inputmode="numeric" maxlength="20">
+<label for="sales-message">What do you need?</label><textarea id="sales-message" name="message" rows="5" maxlength="2000"></textarea>
+<button class="button" type="submit" disabled>Open email draft</button>
+<p class="plan-note" id="sales-status" role="status"></p>
+</form>
+</div>
+<script type="module" src="/enterprise/contact.js"></script>
+<!-- /contact:sales -->
+</section>
+</main>
+<footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/" aria-current="page">Enterprise</a><a href="/security/">Security</a><a href="/changelog/">Changelog</a><a href="/status/">Status</a><a href="/agent-setup.html">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a><span id="build" class="build" hidden></span></nav><script type="module" src="/build.js"></script><!-- /site:footer --><span>Enterprise is available by contract. SLA and support terms require agreement.</span></footer>
+</body>
+</html>

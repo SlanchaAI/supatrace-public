@@ -1,0 +1,22 @@
+.DS_Store
+.env
+.env.*
+node_modules/
+.wrangler/
+
+__pycache__/
+*.pyc
+*access.json
+.env*
+
+node_modules/
+*.zip
+test-artifacts/
+
+# Local scratch files.
+.scratch/
+__supatrace_temp_root__/
+# A symlinked node_modules (the rule above matches directories only).
+node_modules
+
+!.env.example

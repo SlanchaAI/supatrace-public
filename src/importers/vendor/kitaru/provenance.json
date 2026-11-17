@@ -1,0 +1,28 @@
+{
+  "repository": "https://github.com/zenml-io/kitaru",
+  "commit": "82fd53d16f406fff92eb19a68f088dfa68488af3",
+  "package": "kitaru-braintrust-importer",
+  "package_version": "0.4.0",
+  "license": "Apache-2.0",
+  "source_path": "plugins/packages/braintrust-importer/src/kitaru_braintrust_importer/api.py",
+  "source_git_blob": "cdbdef7a72bf9f836ad6ce185041ac5e69928e00",
+  "source_sha256": "d1c2791d193a80aa41e76ab4f2bc0675648cfcc85d91b7ecdaa3302d2bef2a76",
+  "license_git_blob": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+  "notice": "No upstream NOTICE exists in the pinned recursive tree; copyright and Apache license retained.",
+  "adaptation": "braintrust-query.mjs",
+  "adaptation_sha256": "693eb50824e60b87142367f40e5abba5de323457a1f92e40d940b83d274eccf0",
+  "changes": [
+    "Port _query_spans_batch/_query_rows query construction to pure JavaScript.",
+    "Explicit max 25 roots and bounded page size; no time-window scan, active trace polling, environment keys, custom hosts, session merging or concurrency.",
+    "Metadata projection by default; content requires explicit opt-in.",
+    "Current header cursor support plus legacy body cursor; conflicting cursors rejected.",
+    "Supatrace secure transport validates source project per page, binds temporary credential lease and destination, refuses redirects and bounds all wire actions."
+  ],
+  "contract_reference": {
+    "openapi_commit": "d6592894a918c7f393b81f91b1196059bd3f8a47",
+    "project_schema": "https://github.com/braintrustdata/braintrust-openapi/blob/d6592894a918c7f393b81f91b1196059bd3f8a47/openapi/spec.json",
+    "query_docs": "https://docs.braintrust.dev/api-reference/query",
+    "syntax_docs": "https://www.braintrust.dev/docs/reference/sql",
+    "verified_date": "2026-11-05"
+  }
+}

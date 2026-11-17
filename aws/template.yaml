@@ -1,0 +1,714 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Supatrace bounded AWS alpha. Preparation only; deploy requires approval.
+Parameters:
+  RetentionErasureMode:
+    Type: String
+    Default: dry-run
+    AllowedValues: [dry-run, execute]
+    Description: Enable physical expiry only after dry-run inspection and verified restore.
+  ApiConcurrency:
+    Type: Number
+    Default: 1
+    MinValue: 1
+    MaxValue: 20
+    Description: Reserved API execution slots. Production uses five; no provisioned concurrency.
+  ArtifactBucket:
+    Type: String
+    Description: Approved private deployment artifact bucket
+  ArtifactKey:
+    Type: String
+    Default: releases/a4026cfef528c618ff408de106101819a5b04875a8272646dc780eb7f4dad76e/supatrace-lambda.zip
+    Description: Lambda zip key containing aws/handler.mjs, src and pinned node_modules
+  GitHubClientId:
+    Type: String
+  GitHubSecretArn:
+    Type: String
+    Description: Approved Secrets Manager secret containing only the OAuth client secret
+  GitHubTechClientId:
+    Type: String
+    Default: ''
+    Description: Client id of the second GitHub OAuth app whose callback is https://supatrace.tech/api/auth/callback. GitHub allows one callback per app. Leave empty to keep GitHub sign-in off on supatrace.tech.
+  GitHubTechSecretArn:
+    Type: String
+    Default: ''
+    Description: Secrets Manager secret containing only the second GitHub OAuth app's client secret. Leave empty to keep GitHub sign-in off on supatrace.tech.
+  GoogleClientId:
+    Type: String
+    Default: ''
+    Description: Public Google OAuth client id. Leave empty to keep Google sign-in off.
+  GoogleSecretArn:
+    Type: String
+    Default: ''
+    Description: Secrets Manager secret containing only the Google OAuth client secret. Leave empty to keep Google sign-in off.
+  ChatGptClientId:
+    Type: String
+    Default: ''
+    Description: Public ChatGPT OAuth client id. Leave empty to keep Continue with ChatGPT off.
+  ChatGptSecretArn:
+    Type: String
+    Default: ''
+    Description: Secrets Manager secret containing only the ChatGPT OAuth client secret. Leave empty to keep Continue with ChatGPT off.
+  ChatGptAuthorizeUrl:
+    Type: String
+    Default: ''
+    Description: ChatGPT authorize URL. Leave empty until the real endpoint is known.
+  ChatGptTokenUrl:
+    Type: String
+    Default: ''
+    Description: ChatGPT token URL. Leave empty until the real endpoint is known.
+  ChatGptUserinfoUrl:
+    Type: String
+    Default: ''
+    Description: ChatGPT userinfo URL. Leave empty until the real endpoint is known.
+  SsoEmailDomains:
+    Type: String
+    Default: ''
+    Description: Comma-separated email domains allowed to start SSO. Leave empty to keep SSO off.
+  SsoIdpSsoUrl:
+    Type: String
+    Default: ''
+    Description: SAML identity provider SSO URL. Leave empty to keep SSO off.
+  SsoIdpIssuer:
+    Type: String
+    Default: ''
+    Description: SAML identity provider issuer. Leave empty to keep SSO off.
+  SsoIdpCertSecretArn:
+    Type: String
+    Default: ''
+    Description: Secrets Manager secret containing the IdP certificate PEM. Not the certificate itself. Leave empty to keep SSO off.
+  EmailFrom:
+    Type: String
+    Default: ''
+    Description: From address for signup and password-reset mail. Leave empty to keep email sign-in off. Move SES out of the sandbox before setting this.
+  PlanBillingSecretArn:
+    Type: String
+    Default: ''
+    Description: Secrets Manager secret holding the Stripe TEST secret key for plan billing (docs/plan-billing.md). Leave empty to keep plan billing off. A live key is refused by the function.
+  PlanBillingWebhookSecretArn:
+    Type: String
+    Default: ''
+    Description: Secrets Manager secret holding the signing secret of the Stripe test webhook endpoint. Leave empty until the endpoint exists; plans then change only when the owner returns from Stripe or opens Billing.
+  McpBridgeEnabled:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['false', 'true']
+    Description: Enable explicitly consented five-minute MCP read capabilities. Keep false until exact release and account/client scope approval.
+  ImportPolicyConfig:
+    Type: String
+    NoEcho: true
+    Default: ''
+    Description: Private import policy configuration. Leave empty to keep the policy unset.
+  ServerPullConfig:
+    Type: String
+    Default: '{"mode":"bounded-server-pull-v1","origin":"https://supatrace.dev"}'
+    Description: Origin-wide bounded server-pull controller configuration for eligible signed-in owners. This is not a secret. The default is the approved .dev setting. Subsequent guarded deploys preserve the live value. Leave empty only if the controller should be unset.
+  IngestEdgeToken:
+    Type: String
+    NoEcho: true
+    Default: ''
+    AllowedPattern: '^$|^[A-Za-z0-9]{32,128}$'
+    Description: Shared value the distribution sends to the ingest HTTP API on every origin request. Trace ingest through /v1/traces and /api/public/* stays off while this is empty. Set a random value of 32 to 128 letters and digits in an operator change set. Subsequent guarded deploys preserve the live value.
+  MfaEnabled:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['false', 'true']
+    Description: Turn on two-factor authentication. Leave false so it is not on for every account.
+  CertificateArn:
+    Type: String
+    Description: Approved us-east-1 ACM certificate covering every name in Domains
+  Domains:
+    Type: CommaDelimitedList
+    Default: 'supatrace.dev'
+    Description: Hostnames served by this distribution and accepted by the API. Only supatrace.dev and supatrace.tech are valid. The first is the primary host. Every name must be on the certificate.
+  Enabled:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['false', 'true']
+Conditions:
+  GitHubTechSecretConfigured: !Not [!Equals [!Ref GitHubTechSecretArn, '']]
+  GoogleSecretConfigured: !Not [!Equals [!Ref GoogleSecretArn, '']]
+  ChatGptSecretConfigured: !Not [!Equals [!Ref ChatGptSecretArn, '']]
+  SsoCertConfigured: !Not [!Equals [!Ref SsoIdpCertSecretArn, '']]
+  EmailFromConfigured: !Not [!Equals [!Ref EmailFrom, '']]
+  IngestEdgeConfigured: !Not [!Equals [!Ref IngestEdgeToken, '']]
+  PlanBillingConfigured: !Not [!Equals [!Ref PlanBillingSecretArn, '']]
+  PlanBillingWebhookConfigured: !And [!Not [!Equals [!Ref PlanBillingSecretArn, '']], !Not [!Equals [!Ref PlanBillingWebhookSecretArn, '']]]
+Resources:
+  Payloads:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub 'supatrace-alpha-payloads-${AWS::AccountId}-us-east-1'
+      VersioningConfiguration: {Status: Enabled}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}
+  Static:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub 'supatrace-alpha-static-${AWS::AccountId}-us-east-1'
+      VersioningConfiguration: {Status: Enabled}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}
+  Metadata:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: supatrace-alpha-metadata
+      PointInTimeRecoverySpecification: {PointInTimeRecoveryEnabled: true}
+      BillingMode: PAY_PER_REQUEST
+      OnDemandThroughput: {MaxReadRequestUnits: 128, MaxWriteRequestUnits: 64}
+      AttributeDefinitions:
+        - {AttributeName: pk, AttributeType: S}
+        - {AttributeName: sk, AttributeType: S}
+      KeySchema:
+        - {AttributeName: pk, KeyType: HASH}
+        - {AttributeName: sk, KeyType: RANGE}
+      TimeToLiveSpecification: {AttributeName: ttl, Enabled: true}
+      SSESpecification: {SSEEnabled: true}
+  Logs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/supatrace-alpha-api
+      RetentionInDays: 7
+  ApiRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: supatrace-alpha-api
+      PermissionsBoundary: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/supatrace-alpha-api-boundary
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: lambda.amazonaws.com}
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: SupatraceBoundedDataAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:DeleteItem, dynamodb:UpdateItem, dynamodb:Query, dynamodb:Scan, dynamodb:ConditionCheckItem]
+                Resource: !GetAtt Metadata.Arn
+              - Effect: Allow
+                Action: [s3:PutObject, s3:GetObject, s3:DeleteObjectVersion]
+                Resource: !Sub '${Payloads.Arn}/v1/*'
+              - Effect: Allow
+                Action: s3:ListBucketVersions
+                Resource: !GetAtt Payloads.Arn
+                Condition: {StringLike: {'s3:prefix': 'v1/*'}}
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Ref GitHubSecretArn
+              - !If
+                - GitHubTechSecretConfigured
+                - Effect: Allow
+                  Action: secretsmanager:GetSecretValue
+                  Resource: !Ref GitHubTechSecretArn
+                - !Ref AWS::NoValue
+              - !If
+                - GoogleSecretConfigured
+                - Effect: Allow
+                  Action: secretsmanager:GetSecretValue
+                  Resource: !Ref GoogleSecretArn
+                - !Ref AWS::NoValue
+              - !If
+                - ChatGptSecretConfigured
+                - Effect: Allow
+                  Action: secretsmanager:GetSecretValue
+                  Resource: !Ref ChatGptSecretArn
+                - !Ref AWS::NoValue
+              - !If
+                - SsoCertConfigured
+                - Effect: Allow
+                  Action: secretsmanager:GetSecretValue
+                  Resource: !Ref SsoIdpCertSecretArn
+                - !Ref AWS::NoValue
+              - !If
+                - PlanBillingConfigured
+                - Effect: Allow
+                  Action: secretsmanager:GetSecretValue
+                  Resource: !Ref PlanBillingSecretArn
+                - !Ref AWS::NoValue
+              - !If
+                - PlanBillingWebhookConfigured
+                - Effect: Allow
+                  Action: secretsmanager:GetSecretValue
+                  Resource: !Ref PlanBillingWebhookSecretArn
+                - !Ref AWS::NoValue
+              - !If
+                - EmailFromConfigured
+                - Effect: Allow
+                  Action: ses:SendEmail
+                  Resource: !Sub 'arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/*'
+                - !Ref AWS::NoValue
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/supatrace-alpha-api:log-stream:*'
+  AccountErasureSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: supatrace-account-erasure
+      ScheduleExpression: rate(5 minutes)
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt Api.Arn
+          Id: AccountErasure
+          RetryPolicy: {MaximumEventAgeInSeconds: 300, MaximumRetryAttempts: 2}
+  AccountErasurePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref Api
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt AccountErasureSchedule.Arn
+      SourceAccount: !Ref AWS::AccountId
+  PlanOverageSchedule:
+    Type: AWS::Events::Rule
+    Condition: PlanBillingConfigured
+    Properties:
+      Name: supatrace-plan-overage
+      ScheduleExpression: rate(5 minutes)
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt Api.Arn
+          Id: PlanOverage
+          RetryPolicy: {MaximumEventAgeInSeconds: 300, MaximumRetryAttempts: 2}
+  PlanOveragePermission:
+    Type: AWS::Lambda::Permission
+    Condition: PlanBillingConfigured
+    Properties:
+      FunctionName: !Ref Api
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt PlanOverageSchedule.Arn
+      SourceAccount: !Ref AWS::AccountId
+  Api:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: supatrace-alpha-api
+      Runtime: nodejs22.x
+      Handler: aws/handler.handler
+      Role: !GetAtt ApiRole.Arn
+      Code: {S3Bucket: !Ref ArtifactBucket, S3Key: !Ref ArtifactKey}
+      Timeout: 15
+      MemorySize: 256
+      ReservedConcurrentExecutions: !Ref ApiConcurrency
+      LoggingConfig: {LogGroup: !Ref Logs}
+      Environment:
+        Variables:
+          SUPATRACE_ENABLED: !Ref Enabled
+          TABLE_NAME: !Ref Metadata
+          PAYLOAD_BUCKET: !Ref Payloads
+          RETENTION_ERASURE_MODE: !Ref RetentionErasureMode
+          ACCOUNT_ERASURE_RULE_ARN: !Sub 'arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/supatrace-account-erasure'
+          PLAN_OVERAGE_RULE_ARN: !If [PlanBillingConfigured, !Sub 'arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/supatrace-plan-overage', '']
+          GITHUB_CLIENT_ID: !Ref GitHubClientId
+          GITHUB_SECRET_ARN: !Ref GitHubSecretArn
+          GITHUB_TECH_CLIENT_ID: !Ref GitHubTechClientId
+          GITHUB_TECH_SECRET_ARN: !Ref GitHubTechSecretArn
+          APP_HOSTS: !Join [',', !Ref Domains]
+          GOOGLE_CLIENT_ID: !Ref GoogleClientId
+          GOOGLE_SECRET_ARN: !Ref GoogleSecretArn
+          CHATGPT_CLIENT_ID: !Ref ChatGptClientId
+          CHATGPT_SECRET_ARN: !Ref ChatGptSecretArn
+          CHATGPT_AUTHORIZE_URL: !Ref ChatGptAuthorizeUrl
+          CHATGPT_TOKEN_URL: !Ref ChatGptTokenUrl
+          CHATGPT_USERINFO_URL: !Ref ChatGptUserinfoUrl
+          SSO_EMAIL_DOMAINS: !Ref SsoEmailDomains
+          SSO_IDP_SSO_URL: !Ref SsoIdpSsoUrl
+          SSO_IDP_ISSUER: !Ref SsoIdpIssuer
+          SSO_IDP_CERT_SECRET_ARN: !Ref SsoIdpCertSecretArn
+          EMAIL_FROM: !Ref EmailFrom
+          MCP_BRIDGE_ENABLED: !Ref McpBridgeEnabled
+          IMPORT_POLICY_CONFIG: !Ref ImportPolicyConfig
+          SERVER_PULL_CONFIG: !Ref ServerPullConfig
+          MFA_ENABLED: !Ref MfaEnabled
+          INGEST_API_ID: !Ref IngestApi
+          INGEST_EDGE_TOKEN: !Ref IngestEdgeToken
+          PLAN_BILLING_SECRET_ARN: !Ref PlanBillingSecretArn
+          PLAN_BILLING_WEBHOOK_SECRET_ARN: !If [PlanBillingWebhookConfigured, !Ref PlanBillingWebhookSecretArn, '']
+          BILLING_INGRESS_API_ID: !If [PlanBillingConfigured, !Ref BillingIngressApi, '']
+          BILLING_INGRESS_ACCOUNT_ID: !Ref AWS::AccountId
+  ApiUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      TargetFunctionArn: !Ref Api
+      AuthType: AWS_IAM
+  StaticOac:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${AWS::StackName}-static'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+  ApiOac:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${AWS::StackName}-api'
+        OriginAccessControlOriginType: lambda
+        SigningBehavior: always
+        SigningProtocol: sigv4
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Aliases: !Ref Domains
+        DefaultRootObject: index.html
+        HttpVersion: http2and3
+        PriceClass: PriceClass_100
+        ViewerCertificate:
+          AcmCertificateArn: !Ref CertificateArn
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2021
+        Origins:
+          - Id: static
+            DomainName: !GetAtt Static.RegionalDomainName
+            OriginAccessControlId: !GetAtt StaticOac.Id
+            S3OriginConfig: {OriginAccessIdentity: ''}
+          - Id: api
+            DomainName: !Select [2, !Split ['/', !GetAtt ApiUrl.FunctionUrl]]
+            OriginAccessControlId: !GetAtt ApiOac.Id
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols: [TLSv1.2]
+          - Id: ingest
+            DomainName: !Sub '${IngestApi}.execute-api.${AWS::Region}.amazonaws.com'
+            OriginCustomHeaders:
+              - HeaderName: X-Supatrace-Edge
+                HeaderValue: !If [IngestEdgeConfigured, !Ref IngestEdgeToken, disabled]
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols: [TLSv1.2]
+        DefaultCacheBehavior:
+          TargetOriginId: static
+          ViewerProtocolPolicy: redirect-to-https
+          Compress: true
+          ResponseHeadersPolicyId: !Ref SecurityHeaders
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt DirectoryIndex.FunctionARN
+        CacheBehaviors:
+          - PathPattern: '/v1/traces'
+            TargetOriginId: ingest
+            ResponseHeadersPolicyId: !Ref SecurityHeaders
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt DirectoryIndex.FunctionARN
+          - PathPattern: '/api/public/*'
+            TargetOriginId: ingest
+            ResponseHeadersPolicyId: !Ref SecurityHeaders
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt DirectoryIndex.FunctionARN
+          - PathPattern: '/api/auth/sso/callback'
+            TargetOriginId: ingest
+            ResponseHeadersPolicyId: !Ref SecurityHeaders
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt DirectoryIndex.FunctionARN
+          - PathPattern: '/api/scim/v2'
+            TargetOriginId: ingest
+            ResponseHeadersPolicyId: !Ref SecurityHeaders
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt DirectoryIndex.FunctionARN
+          - PathPattern: '/api/scim/v2/*'
+            TargetOriginId: ingest
+            ResponseHeadersPolicyId: !Ref SecurityHeaders
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt DirectoryIndex.FunctionARN
+          - PathPattern: '/api/*'
+            TargetOriginId: api
+            ResponseHeadersPolicyId: !Ref SecurityHeaders
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: !Ref ApiRequestPolicy
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt DirectoryIndex.FunctionARN
+  SecurityHeaders:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub '${AWS::StackName}-security'
+        SecurityHeadersConfig:
+          ContentTypeOptions: {Override: true}
+          FrameOptions: {FrameOption: DENY, Override: true}
+          ReferrerPolicy: {ReferrerPolicy: no-referrer, Override: true}
+          StrictTransportSecurity: {AccessControlMaxAgeSec: 31536000, IncludeSubdomains: false, Preload: false, Override: true}
+          ContentSecurityPolicy:
+            ContentSecurityPolicy: "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+            Override: true
+  ApiRequestPolicy:
+    Type: AWS::CloudFront::OriginRequestPolicy
+    Properties:
+      OriginRequestPolicyConfig:
+        Name: !Sub '${AWS::StackName}-api-request'
+        CookiesConfig: {CookieBehavior: all}
+        QueryStringsConfig: {QueryStringBehavior: all}
+        HeadersConfig:
+          HeaderBehavior: whitelist
+          Headers: [CloudFront-Viewer-Address, Content-Type, Content-Encoding, X-Supatrace-Key, X-Supatrace-Host, Origin, Accept]
+  DirectoryIndex:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub '${AWS::StackName}-directory-index'
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Static paths get a slash and index.html. API and ingest paths get the viewer host and address headers.
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+          var request = event.request;
+          var uri = request.uri;
+          if (uri.indexOf('/api/') === 0 || uri === '/v1/traces') {
+            var viewer = request.headers.host && request.headers.host.value;
+            if (viewer) request.headers['x-supatrace-host'] = {value: viewer.toLowerCase()};
+            else delete request.headers['x-supatrace-host'];
+            // The ingest origin trusts these two only from the distribution: the address is the viewer
+            // connection's, and the edge value is added as an origin header after this function runs.
+            if (event.viewer && event.viewer.ip) request.headers['x-supatrace-viewer-ip'] = {value: event.viewer.ip};
+            else delete request.headers['x-supatrace-viewer-ip'];
+            delete request.headers['x-supatrace-edge'];
+            return request;
+          }
+          if (uri.endsWith('/')) {
+            request.uri += 'index.html';
+            return request;
+          }
+          if (uri.slice(uri.lastIndexOf('/') + 1).indexOf('.') !== -1) return request;
+          var host = request.headers.host && request.headers.host.value;
+          var query = request.querystring || {};
+          var parts = [];
+          var keys = Object.keys(query);
+          for (var i = 0; i < keys.length; i++) {
+            var item = query[keys[i]];
+            var values = item.multiValue || [item];
+            for (var j = 0; j < values.length; j++) {
+              if (values[j] && values[j].value !== undefined) parts.push(encodeURIComponent(keys[i]) + '=' + encodeURIComponent(values[j].value));
+            }
+          }
+          var location = (host ? 'https://' + host : '') + uri + '/';
+          if (parts.length) location += '?' + parts.join('&');
+          return {
+            statusCode: 301,
+            statusDescription: 'Moved Permanently',
+            headers: {
+              location: {value: location},
+              'cache-control': {value: 'no-store'}
+            }
+          };
+        }
+  IngestApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: supatrace-alpha-ingest
+      ProtocolType: HTTP
+      Description: Trace ingest and identity protocol routes without caller-computed body hashes. Reached through the guarded distribution.
+  IngestIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref IngestApi
+      IntegrationType: AWS_PROXY
+      # A literal ARN rather than an attribute of the function resource: an attribute reference would be re-evaluated
+      # on every artifact release and turn an artifact-only change set into one that also touches this integration.
+      IntegrationUri: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:supatrace-alpha-api'
+      PayloadFormatVersion: '2.0'
+  IngestRouteOtlp:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref IngestApi
+      RouteKey: 'POST /v1/traces'
+      Target: !Sub 'integrations/${IngestIntegration}'
+  IngestRouteLangfuseOtel:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref IngestApi
+      RouteKey: 'POST /api/public/otel/v1/traces'
+      Target: !Sub 'integrations/${IngestIntegration}'
+  IngestRouteLangfuseIngestion:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref IngestApi
+      RouteKey: 'POST /api/public/ingestion'
+      Target: !Sub 'integrations/${IngestIntegration}'
+  IngestRouteLangfuseProjects:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref IngestApi
+      RouteKey: 'GET /api/public/projects'
+      Target: !Sub 'integrations/${IngestIntegration}'
+  IngestRouteLangfuseHealth:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref IngestApi
+      RouteKey: 'GET /api/public/health'
+      Target: !Sub 'integrations/${IngestIntegration}'
+  IdentityRouteSamlCallback:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref IngestApi
+      RouteKey: 'POST /api/auth/sso/callback'
+      Target: !Sub 'integrations/${IngestIntegration}'
+  IdentityRouteScimRoot:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref IngestApi
+      RouteKey: 'GET /api/scim/v2'
+      Target: !Sub 'integrations/${IngestIntegration}'
+  IdentityRouteScim:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref IngestApi
+      RouteKey: 'ANY /api/scim/v2/{proxy+}'
+      Target: !Sub 'integrations/${IngestIntegration}'
+  IngestStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref IngestApi
+      StageName: $default
+      AutoDeploy: true
+      DefaultRouteSettings: {ThrottlingRateLimit: 50, ThrottlingBurstLimit: 100}
+  InvokeIngest:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref Api
+      Principal: apigateway.amazonaws.com
+      Action: lambda:InvokeFunction
+      SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${IngestApi}/*'
+  # Stripe webhook ingress for plan billing. Stripe cannot send the body hash the function URL's origin access control
+  # needs, so its events arrive through this HTTP API: one route, straight to the function. The application verifies the
+  # Stripe signature (src/plan-billing.mjs) and the adapter (src/stripe-ingress.mjs) accepts only this API, account, stage
+  # and route. Created with the billing key, before the signing secret exists, so its URL can be registered with Stripe;
+  # until the signing secret is set the application refuses every event.
+  BillingIngressApi:
+    Type: AWS::ApiGatewayV2::Api
+    Condition: PlanBillingConfigured
+    Properties:
+      Name: supatrace-alpha-billing-ingress
+      ProtocolType: HTTP
+      DisableExecuteApiEndpoint: false
+  BillingIngressIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Condition: PlanBillingConfigured
+    Properties:
+      ApiId: !Ref BillingIngressApi
+      IntegrationType: AWS_PROXY
+      # A literal ARN, for the same reason as the ingest integration: an attribute reference would turn every artifact release into a change to this resource.
+      IntegrationUri: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:supatrace-alpha-api'
+      PayloadFormatVersion: '2.0'
+  BillingIngressRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Condition: PlanBillingConfigured
+    Properties:
+      ApiId: !Ref BillingIngressApi
+      RouteKey: 'POST /api/billing/webhook'
+      Target: !Sub 'integrations/${BillingIngressIntegration}'
+  BillingIngressStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Condition: PlanBillingConfigured
+    Properties:
+      ApiId: !Ref BillingIngressApi
+      StageName: $default
+      AutoDeploy: true
+      DefaultRouteSettings: {ThrottlingRateLimit: 10, ThrottlingBurstLimit: 20}
+  InvokeBillingIngress:
+    Type: AWS::Lambda::Permission
+    Condition: PlanBillingConfigured
+    Properties:
+      FunctionName: !Ref Api
+      Principal: apigateway.amazonaws.com
+      Action: lambda:InvokeFunction
+      SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${BillingIngressApi}/*/POST/api/billing/webhook'
+  StaticPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref Static
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: cloudfront.amazonaws.com}
+            Action: s3:GetObject
+            Resource: !Sub '${Static.Arn}/*'
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
+  InvokeUrl:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref Api
+      Principal: cloudfront.amazonaws.com
+      Action: lambda:InvokeFunctionUrl
+      FunctionUrlAuthType: AWS_IAM
+      SourceArn: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
+  InvokeFunction:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref Api
+      Principal: cloudfront.amazonaws.com
+      Action: lambda:InvokeFunction
+      InvokedViaFunctionUrl: true
+      SourceArn: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
+
+Outputs:
+  ApiArn: {Value: !GetAtt Api.Arn}
+  ApiUrl: {Value: !GetAtt ApiUrl.FunctionUrl}
+  PayloadBucket: {Value: !Ref Payloads}
+  StaticBucket: {Value: !Ref Static}
+  MetadataTable: {Value: !Ref Metadata}
+
+  DistributionDomain: {Value: !GetAtt Distribution.DomainName}
+  BillingWebhookUrl:
+    Condition: PlanBillingConfigured
+    Description: Register this URL as the Stripe TEST webhook endpoint (docs/plan-billing.md).
+    Value: !Sub 'https://${BillingIngressApi}.execute-api.${AWS::Region}.amazonaws.com/api/billing/webhook'
+

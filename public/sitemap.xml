@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://supatrace.dev/</loc></url>
+  <url><loc>https://supatrace.dev/agent-setup.html</loc></url>
+  <url><loc>https://supatrace.dev/pricing/</loc></url>
+  <url><loc>https://supatrace.dev/docs/</loc></url>
+  <url><loc>https://supatrace.dev/docs/quickstart/</loc></url>
+  <url><loc>https://supatrace.dev/docs/frameworks/openai/</loc></url>
+  <url><loc>https://supatrace.dev/docs/frameworks/anthropic/</loc></url>
+  <url><loc>https://supatrace.dev/docs/frameworks/langchain/</loc></url>
+  <url><loc>https://supatrace.dev/docs/frameworks/llamaindex/</loc></url>
+  <url><loc>https://supatrace.dev/docs/frameworks/vercel-ai-sdk/</loc></url>
+  <url><loc>https://supatrace.dev/docs/frameworks/opentelemetry/</loc></url>
+  <url><loc>https://supatrace.dev/docs/keys/</loc></url>
+  <url><loc>https://supatrace.dev/docs/management-api/</loc></url>
+  <url><loc>https://supatrace.dev/docs/limits/</loc></url>
+  <url><loc>https://supatrace.dev/docs/export/</loc></url>
+  <url><loc>https://supatrace.dev/docs/importers/</loc></url>
+  <url><loc>https://supatrace.dev/integrations/</loc></url>
+  <url><loc>https://supatrace.dev/changelog/</loc></url>
+  <url><loc>https://supatrace.dev/enterprise/</loc></url>
+  <url><loc>https://supatrace.dev/security/</loc></url>
+  <url><loc>https://supatrace.dev/status/</loc></url>
+  <url><loc>https://supatrace.dev/terms.html</loc></url>
+  <url><loc>https://supatrace.dev/privacy.html</loc></url>
+  <url><loc>https://supatrace.dev/aup.html</loc></url>
+  <url><loc>https://supatrace.dev/subprocessors.html</loc></url>
+</urlset>

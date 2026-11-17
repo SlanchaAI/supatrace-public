@@ -1,0 +1,117 @@
+/* Public content pages (pricing and later pages) on the landing's warm-paper system.
+   Pages use <body class="landing remodel page">; the landing itself only uses .site-links. */
+.landing.remodel .site-header nav{flex-wrap:wrap;justify-content:flex-end;row-gap:4px}
+.landing.remodel .site-header nav a[aria-current=page]{color:#232922;text-decoration:underline;text-underline-offset:5px}
+.landing.remodel .site-links{display:flex;flex-wrap:wrap;gap:6px 18px;flex-basis:100%;padding-bottom:10px}
+.landing.remodel .site-links a{text-decoration:underline;text-underline-offset:3px}
+.landing.remodel .site-links .build{margin-left:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.landing.remodel.page main{padding-bottom:30px}
+.landing.remodel.page .page-head{padding:64px 0 40px;max-width:780px}
+.landing.remodel.page .page-head h1{font-size:clamp(38px,5vw,58px);font-weight:750;line-height:1.06;letter-spacing:-2.6px;margin:0 0 20px;color:#232922}
+.landing.remodel.page .lede{font-size:17px;color:#4f5749;max-width:620px;margin-bottom:22px}
+.landing.remodel.page .preview-note{border:1px solid #c9b77c;background:#fbf3d6;color:#4d4215;border-radius:4px;padding:14px 16px;font-size:13px;margin:0}
+.landing.remodel.page .preview-note a,.landing.remodel.page main section a:not(.button){color:#3f5330;text-decoration:underline;text-underline-offset:3px}
+.landing.remodel.page main section{border-top:1px solid var(--line);padding:34px 0 38px}
+.landing.remodel.page main h2{font-size:23px;font-weight:700;letter-spacing:-.7px;margin:0 0 14px;color:#232922}
+.landing.remodel.page main h3{font-size:15px;font-weight:700;margin:22px 0 8px;color:#232922}
+.landing.remodel.page main section>p{font-size:13px;max-width:720px}
+.landing.remodel.page .plans{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.landing.remodel.page .plan{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:22px 20px;display:flex;flex-direction:column;min-width:0}
+.landing.remodel.page .plan h3{font-size:17px;margin:0 0 10px}
+.landing.remodel.page .plan .price{margin:0 0 16px;color:var(--muted);font-size:11px;display:flex;flex-direction:column;gap:2px;min-height:62px}
+.landing.remodel.page .plan .price strong{font-size:36px;font-weight:750;letter-spacing:-1.6px;line-height:1.1;color:#232922}
+.landing.remodel.page .plan ul{list-style:none;margin:0 0 20px;padding:0;font-size:12px;color:#3d4438;flex:1}
+.landing.remodel.page .plan ul li{padding:6px 0;border-top:1px solid var(--line)}
+.landing.remodel.page .plan .button{width:100%}
+.landing.remodel.page .plan-note{font-size:11px;margin:9px 0 0}
+.landing.remodel.page .unavailable{border:1px dashed #aeb7a2;border-radius:4px;min-height:44px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:650;color:#4f5749;margin:0}
+.landing.remodel.page .table-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--panel);margin:16px 0}
+.landing.remodel.page .compare{border-collapse:collapse;width:100%;min-width:640px;font-size:12px}
+.landing.remodel.page .compare th,.landing.remodel.page .compare td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top;color:#3d4438}
+.landing.remodel.page .compare thead th{font-size:13px;color:#232922}
+.landing.remodel.page .compare tbody th{font-weight:650;color:#232922;white-space:nowrap}
+.landing.remodel.page .compare tbody tr:last-child th,.landing.remodel.page .compare tbody tr:last-child td{border-bottom:0}
+.landing.remodel.page .facts{margin:0 0 14px;padding-left:18px;font-size:13px;color:#3d4438;max-width:720px}
+.landing.remodel.page .facts li{margin-bottom:6px}
+.landing.remodel.page .faq details{border-bottom:1px solid var(--line);max-width:760px}
+.landing.remodel.page .faq summary{cursor:pointer;padding:14px 0;font-size:14px;font-weight:650;color:#232922}
+.landing.remodel.page .faq details p{font-size:13px;margin:0 0 16px;max-width:680px}
+.landing.remodel.page .cta{padding-bottom:46px}
+@media(max-width:1000px){.landing.remodel.page .plans{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:800px){.landing.remodel.page .page-head{padding:44px 0 30px}.landing.remodel.page .page-head h1{letter-spacing:-1.8px}}
+@media(max-width:560px){.landing.remodel.page .plans{grid-template-columns:1fr}.landing.remodel.page .plan .price{min-height:0}}
+/* Docs: sidebar layout, code blocks, status labels. */
+.landing.remodel.docs .docs-layout{width:min(1160px,100%);margin:auto;padding:0 48px;display:grid;grid-template-columns:190px minmax(0,1fr);gap:64px;align-items:start}
+.landing.remodel.docs .docs-layout main{width:auto;padding:0 0 30px;margin:0;min-width:0}
+.landing.remodel.docs .docs-nav{position:sticky;top:0;padding:60px 0 30px;font-size:13px}
+.landing.remodel.docs .docs-nav h2{font:700 10px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.landing.remodel.docs .docs-nav ul{list-style:none;margin:0 0 24px;padding:0}
+.landing.remodel.docs .docs-nav a{display:block;padding:5px 0;color:#4f5749}
+.landing.remodel.docs .docs-nav a[aria-current=page]{color:#232922;font-weight:700}
+.landing.remodel.docs .page-head{padding:60px 0 22px}
+.landing.remodel.docs .page-head h1{font-size:clamp(34px,4vw,46px);letter-spacing:-1.8px;margin-bottom:0}
+.landing.remodel.docs main>.lede{margin-bottom:26px}
+.landing.remodel.docs main>.preview-note{margin-bottom:34px;max-width:760px}
+.landing.remodel.docs main section .preview-note{margin:0 0 20px;max-width:760px}
+.landing.remodel.docs main section>p,.landing.remodel.docs main section li{font-size:14px;color:#3d4438}
+.landing.remodel.docs main code{font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:#232922;overflow-wrap:anywhere}
+.landing.remodel.docs main :not(pre)>code{background:#ebe7d6;border-radius:3px;padding:1px 5px}
+.landing.remodel.docs .snippet{position:relative;margin:14px 0 18px;max-width:820px}
+.landing.remodel.docs main pre{margin:14px 0 18px;max-width:820px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px 18px;overflow-x:auto}
+.landing.remodel.docs .snippet pre{margin:0;padding-top:34px}
+.landing.remodel.docs main pre code{white-space:pre;overflow-wrap:normal}
+.landing.remodel.docs .copy{position:absolute;top:7px;right:8px;font:650 11px/1 Inter,Arial,sans-serif;color:#232922;background:#f6f3e8;border:1px solid #aeb7a2;border-radius:4px;padding:6px 9px;cursor:pointer;min-height:24px}
+.landing.remodel.docs .copy:hover{background:#ebe7d6}
+.landing.remodel .status{display:inline-block;font:700 10px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.6px;text-transform:uppercase;border:1px solid;border-radius:999px;padding:2px 8px;vertical-align:middle;white-space:nowrap}
+.landing.remodel .status.available{color:#2f5a1d;border-color:#8fae78;background:#e9f1dc}
+.landing.remodel .status.beta,.landing.remodel .status.preview{color:#5d4a0c;border-color:#c9b77c;background:#fbf3d6}
+.landing.remodel .status.planned{color:#4f5749;border-color:#aeb7a2;background:#efece0}
+.landing.remodel.docs .steps-list{padding-left:20px;max-width:820px}
+.landing.remodel.docs .steps-list li{margin-bottom:10px}
+.landing.remodel.docs .cards{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.landing.remodel.docs .cards a{display:flex;flex-direction:column;gap:6px;height:100%;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:18px;text-decoration:none!important;color:#3d4438!important;font-size:13px}
+.landing.remodel.docs .cards a:hover{border-color:#8f9a80}
+.landing.remodel.docs .cards strong{font-size:15px;color:#232922}
+.landing.remodel.docs .compare{min-width:520px}
+.landing.remodel.docs .compare tbody th{white-space:normal}
+@media(max-width:900px){.landing.remodel.docs .docs-layout{grid-template-columns:1fr;gap:0}.landing.remodel.docs .docs-nav{position:static;padding:22px 0 4px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:4px 22px;align-items:baseline}.landing.remodel.docs .docs-nav h2{margin:0}.landing.remodel.docs .docs-nav ul{display:flex;flex-wrap:wrap;gap:0 14px;margin:0 0 10px;flex-basis:100%}.landing.remodel.docs .page-head{padding-top:36px}.landing.remodel.docs .cards{grid-template-columns:1fr}}
+@media(max-width:800px){.landing.remodel.docs .docs-layout{padding:0 25px}}
+@media(max-width:360px){.landing.remodel.docs .docs-layout{padding:0 21px}}
+/* Integrations directory. */
+.landing.remodel .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.landing.remodel.page .legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 28px;margin:0 0 34px;font-size:12px;color:#3d4438;max-width:900px}
+.landing.remodel.page .legend div{display:flex;gap:10px;align-items:baseline}
+.landing.remodel.page .legend dt{flex:none;min-width:86px}
+.landing.remodel.page .legend dd{margin:0}
+.landing.remodel.page .tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.landing.remodel.page .tile{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:18px;display:flex;flex-direction:column;align-items:flex-start;gap:9px;min-width:0}
+.landing.remodel.page .tile h3{font-size:15px;margin:0}
+.landing.remodel.page .tile p{font-size:12px;margin:0;flex:1;color:#3d4438}
+.landing.remodel.page .tile a{font-size:12px}
+@media(max-width:900px){.landing.remodel.page .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.landing.remodel.page .tiles,.landing.remodel.page .legend{grid-template-columns:1fr}}
+/* Changelog. */
+.landing.remodel.page .deploy-note{font-size:12px;margin:0 0 22px}
+.landing.remodel.page .changes{list-style:none;margin:0;padding:0;max-width:860px}
+.landing.remodel.page .change{display:grid;grid-template-columns:150px minmax(0,1fr);gap:24px;padding:20px 0;border-top:1px solid var(--line)}
+.landing.remodel.page .change time{font:700 11px/1.9 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+.landing.remodel.page .change h2{font-size:17px;letter-spacing:-.3px;margin:0 0 6px}
+.landing.remodel.page .change p{font-size:13px;margin:0 0 8px;color:#3d4438}
+.landing.remodel.page .change .change-meta{font-size:11px;color:var(--muted);margin:0}
+@media(max-width:560px){.landing.remodel.page .change{grid-template-columns:1fr;gap:4px}}
+/* Enterprise contact. */
+.landing.remodel.page .contact{max-width:560px}
+.landing.remodel.page .contact p{font-size:13px}
+.landing.remodel.page .contact form{display:grid;gap:6px;margin-top:16px}
+.landing.remodel.page .contact label{font-size:12px;font-weight:650;color:#232922;margin-top:8px}
+.landing.remodel.page .contact input,.landing.remodel.page .contact textarea{font:inherit;color:#232922;background:var(--panel);border:1px solid #aeb7a2;border-radius:4px;padding:9px 10px;min-height:40px;width:100%}
+.landing.remodel.page .contact .button{margin-top:14px;justify-self:start;cursor:pointer}
+/* Status page. */
+.landing.remodel .status.down{color:#7e2929;border-color:#c99a9a;background:#f7e3e0}
+.landing.remodel.page .components{list-style:none;margin:0 0 14px;padding:0;max-width:760px;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+.landing.remodel.page .components li{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;padding:13px 16px;border-bottom:1px solid var(--line);font-size:13px}
+.landing.remodel.page .components li:last-child{border-bottom:0}
+.landing.remodel.page .components strong{min-width:120px;color:#232922}
+.landing.remodel.page .components .note{color:var(--muted);font-size:12px}
+.landing.remodel.page .components p{flex-basis:100%;margin:0;font-size:12px}
+.landing.remodel.page .feed-head{font-size:13px}

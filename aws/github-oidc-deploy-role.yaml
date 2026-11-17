@@ -1,0 +1,340 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  One-time GitHub Actions deploy role for the existing Supatrace alpha.
+  Do not put secrets in this template. Deploy it once, then set the repository
+  variable AWS_DEPLOY_ROLE_ARN to the role ARN it prints.
+
+Parameters:
+  ExistingOidcProviderArn:
+    Type: String
+    Default: ''
+    Description: Leave empty to create the GitHub OIDC provider. If token.actions.githubusercontent.com already exists, pass its ARN instead.
+  GitHubSecretArn:
+    Type: String
+    Description: Live GitHub OAuth secret ARN. The function boundary can read this secret and no other, unless an optional ARN below is set.
+  GitHubTechSecretArn:
+    Type: String
+    Default: ''
+    Description: Optional secret ARN for the second GitHub OAuth app (supatrace.tech callback). Leave empty until that app exists.
+  GoogleSecretArn:
+    Type: String
+    Default: ''
+    Description: Optional Google OAuth secret ARN. Leave empty while Google sign-in is off.
+  ChatGptSecretArn:
+    Type: String
+    Default: ''
+    Description: Optional ChatGPT OAuth secret ARN. Leave empty until that sign-in is configured.
+  SsoCertSecretArn:
+    Type: String
+    Default: ''
+    Description: Optional Secrets Manager ARN of the SAML IdP certificate. Leave empty until SSO is configured.
+  PlanBillingSecretArn:
+    Type: String
+    Default: ''
+    Description: Optional Secrets Manager ARN of the Stripe TEST secret key for plan billing. Leave empty while plan billing is off.
+  PlanBillingWebhookSecretArn:
+    Type: String
+    Default: ''
+    Description: Optional Secrets Manager ARN of the Stripe test webhook signing secret. Leave empty until the webhook endpoint exists.
+
+Conditions:
+  CreateOidcProvider: !Equals [!Ref ExistingOidcProviderArn, '']
+  GitHubTechSecretSet: !Not [!Equals [!Ref GitHubTechSecretArn, '']]
+  GoogleSecretSet: !Not [!Equals [!Ref GoogleSecretArn, '']]
+  ChatGptSecretSet: !Not [!Equals [!Ref ChatGptSecretArn, '']]
+  SsoCertSecretSet: !Not [!Equals [!Ref SsoCertSecretArn, '']]
+  PlanBillingSecretSet: !Not [!Equals [!Ref PlanBillingSecretArn, '']]
+  PlanBillingWebhookSecretSet: !Not [!Equals [!Ref PlanBillingWebhookSecretArn, '']]
+
+Resources:
+  GitHubOidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Condition: CreateOidcProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList: [sts.amazonaws.com]
+      ThumbprintList:
+        - 6938fd4d98bab03faadb97b34396831e3780aea1
+  DeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: supatrace-github-deploy
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If [CreateOidcProvider, !Ref GitHubOidcProvider, !Ref ExistingOidcProviderArn]
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                "token.actions.githubusercontent.com:aud": sts.amazonaws.com
+                # Repo created after 15 July 2026, so sub includes the owner and repository ids.
+                # The deploy job uses environment production, so sub is the environment form and does not contain the git ref.
+                "token.actions.githubusercontent.com:sub": "repo:SlanchaAI@273274206/supatrace@1427733390:environment:production"
+      Policies:
+        - PolicyName: SupatraceGitHubDeploy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: UpdateThisStack
+                Effect: Allow
+                Action:
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:ExecuteChangeSet
+                  - cloudformation:DeleteChangeSet
+                  - cloudformation:DescribeStacks
+                  - cloudformation:GetTemplate
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:DescribeStackResources
+                  - cloudformation:ListStackResources
+                  - cloudformation:CancelUpdateStack
+                  - cloudformation:ContinueUpdateRollback
+                Resource: !Sub arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/supatrace-alpha-retry-20261024/*
+              - Sid: PassExistingFunctionRole
+                Effect: Allow
+                Action: iam:PassRole
+                Resource: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/supatrace-alpha-api
+                Condition:
+                  StringEquals:
+                    iam:PassedToService: lambda.amazonaws.com
+              - Sid: ReadAndUpdateFunctionRole
+                Effect: Allow
+                Action:
+                  - iam:GetRole
+                  - iam:GetRolePolicy
+                  - iam:ListRolePolicies
+                  - iam:ListAttachedRolePolicies
+                  - iam:ListRoleTags
+                  - iam:PutRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:TagRole
+                  - iam:UntagRole
+                  - iam:UpdateRole
+                Resource: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/supatrace-alpha-api
+              - Sid: UploadArtifacts
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:AbortMultipartUpload
+                  - s3:ListMultipartUploadParts
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::supatrace-alpha-artifacts-${AWS::AccountId}-us-east-1/*'
+                Condition:
+                  StringEquals:
+                    s3:x-amz-server-side-encryption: AES256
+              - Sid: ReadArtifacts
+                Effect: Allow
+                Action: [s3:GetObject, s3:GetObjectVersion, s3:GetBucketLocation, s3:ListBucket]
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::supatrace-alpha-artifacts-${AWS::AccountId}-us-east-1'
+                  - !Sub 'arn:${AWS::Partition}:s3:::supatrace-alpha-artifacts-${AWS::AccountId}-us-east-1/*'
+              - Sid: SyncStatic
+                Effect: Allow
+                Action: [s3:PutObject, s3:AbortMultipartUpload]
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::supatrace-alpha-static-${AWS::AccountId}-us-east-1/*'
+                Condition:
+                  StringEquals:
+                    s3:x-amz-server-side-encryption: AES256
+              - Sid: ReadStatic
+                Effect: Allow
+                Action: [s3:GetObject, s3:GetBucketLocation, s3:ListBucket]
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::supatrace-alpha-static-${AWS::AccountId}-us-east-1'
+                  - !Sub 'arn:${AWS::Partition}:s3:::supatrace-alpha-static-${AWS::AccountId}-us-east-1/*'
+              - Sid: RestoreStatic
+                Effect: Allow
+                Action: s3:DeleteObject
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::supatrace-alpha-static-${AWS::AccountId}-us-east-1/*'
+              - Sid: StaticBucketPolicy
+                Effect: Allow
+                Action: [s3:GetBucketPolicy, s3:PutBucketPolicy]
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::supatrace-alpha-static-${AWS::AccountId}-us-east-1'
+              - Sid: ReadPayloadBucket
+                Effect: Allow
+                Action: [s3:GetBucketLocation, s3:ListBucket, s3:GetEncryptionConfiguration, s3:PutEncryptionConfiguration, s3:GetBucketPublicAccessBlock, s3:PutBucketPublicAccessBlock]
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::supatrace-alpha-payloads-${AWS::AccountId}-us-east-1'
+                  - !Sub 'arn:${AWS::Partition}:s3:::supatrace-alpha-static-${AWS::AccountId}-us-east-1'
+              - Sid: AccountErasureSchedule
+                Effect: Allow
+                Action: [events:PutRule, events:DescribeRule, events:PutTargets, events:ListTargetsByRule, events:RemoveTargets, events:DeleteRule, events:TagResource, events:UntagResource, events:ListTagsForResource]
+                Resource:
+                  - !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/supatrace-account-erasure
+                  - !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/supatrace-plan-overage
+              - Sid: AccountErasureInvocation
+                Effect: Allow
+                Action: lambda:AddPermission
+                Resource: !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:supatrace-alpha-api
+                Condition: {StringEquals: {'lambda:Principal': 'events.amazonaws.com'}}
+              - Sid: RemoveAccountErasureInvocation
+                Effect: Allow
+                Action: lambda:RemovePermission
+                Resource: !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:supatrace-alpha-api
+              - Sid: UpdateFunction
+                Effect: Allow
+                Action:
+                  - lambda:GetFunction
+                  - lambda:GetFunctionConfiguration
+                  - lambda:GetFunctionUrlConfig
+                  - lambda:GetPolicy
+                  - lambda:GetRuntimeManagementConfig
+                  - lambda:GetFunctionCodeSigningConfig
+                  - lambda:GetFunctionRecursionConfig
+                  - lambda:GetFunctionScalingConfig
+                  - lambda:ListTags
+                  - lambda:UpdateFunctionCode
+                  - lambda:UpdateFunctionConfiguration
+                  - lambda:UpdateFunctionUrlConfig
+                  - lambda:PutFunctionConcurrency
+                  - lambda:DeleteFunctionConcurrency
+                  - lambda:TagResource
+                  - lambda:UntagResource
+                Resource: !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:supatrace-alpha-api
+              - Sid: ReadTable
+                Effect: Allow
+                Action:
+                  - dynamodb:DescribeTable
+                  - dynamodb:DescribeTimeToLive
+                  - dynamodb:DescribeContinuousBackups
+                  - dynamodb:ListTagsOfResource
+                  - dynamodb:UpdateTable
+                  - dynamodb:UpdateTimeToLive
+                  - dynamodb:TagResource
+                  - dynamodb:UntagResource
+                Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/supatrace-alpha-metadata
+              - Sid: ReadLogGroup
+                Effect: Allow
+                Action: [logs:DescribeLogGroups, logs:ListTagsForResource, logs:PutRetentionPolicy, logs:TagResource, logs:UntagResource]
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/supatrace-alpha-api:*
+              - Sid: UpdateDistribution
+                Effect: Allow
+                Action:
+                  - cloudfront:GetDistribution
+                  - cloudfront:GetDistributionConfig
+                  - cloudfront:UpdateDistribution
+                  - cloudfront:UpdateDistributionWithStagingConfig
+                  - cloudfront:ListTagsForResource
+                  - cloudfront:TagResource
+                  - cloudfront:UntagResource
+                  - cloudfront:CreateInvalidation
+                  - cloudfront:GetInvalidation
+                Resource: !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/E3CMMF7W62KWCJ
+              - Sid: ReadVpcOrigins
+                Effect: Allow
+                Action: cloudfront:GetVpcOrigin
+                Resource: !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:vpcorigin/*
+              - Sid: UpdateSecurityHeaders
+                Effect: Allow
+                Action: [cloudfront:GetResponseHeadersPolicy, cloudfront:GetResponseHeadersPolicyConfig, cloudfront:UpdateResponseHeadersPolicy]
+                Resource: !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:response-headers-policy/33bb4299-7f2a-47a4-be96-fd31ecbeb7ac
+              - Sid: ReadOriginRequestPolicy
+                Effect: Allow
+                Action: [cloudfront:GetOriginRequestPolicy, cloudfront:GetOriginRequestPolicyConfig, cloudfront:UpdateOriginRequestPolicy]
+                Resource: !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:origin-request-policy/2402ad42-a7aa-44e0-ab7a-70600f683d91
+              - Sid: ReadOriginAccessControls
+                Effect: Allow
+                Action: [cloudfront:GetOriginAccessControl, cloudfront:GetOriginAccessControlConfig, cloudfront:UpdateOriginAccessControl]
+                Resource:
+                  - !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:origin-access-control/E261S3VL7YB9HV
+                  - !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:origin-access-control/E14OGKEKOK50K2
+              - Sid: UpdateDirectoryIndex
+                Effect: Allow
+                Action: [cloudfront:DescribeFunction, cloudfront:GetFunction, cloudfront:UpdateFunction, cloudfront:PublishFunction, cloudfront:ListTagsForResource]
+                Resource: !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:function/supatrace-alpha-retry-20261024-directory-index
+              - Sid: AttachFixedBoundary
+                Effect: Allow
+                Action: iam:PutRolePermissionsBoundary
+                Resource: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/supatrace-alpha-api
+                Condition:
+                  StringEquals:
+                    iam:PermissionsBoundary: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/supatrace-alpha-api-boundary
+              - Sid: DenyBoundaryChanges
+                Effect: Deny
+                Action:
+                  - iam:DeleteRolePermissionsBoundary
+                  - iam:CreatePolicy
+                  - iam:DeletePolicy
+                  - iam:CreatePolicyVersion
+                  - iam:DeletePolicyVersion
+                  - iam:SetDefaultPolicyVersion
+                Resource: '*'
+  ApiBoundary:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: supatrace-alpha-api-boundary
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Metadata
+            Effect: Allow
+            Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:DeleteItem, dynamodb:UpdateItem, dynamodb:Query, dynamodb:Scan, dynamodb:ConditionCheckItem]
+            Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/supatrace-alpha-metadata
+          - Sid: Payloads
+            Effect: Allow
+            Action: [s3:GetObject, s3:PutObject, s3:DeleteObjectVersion]
+            Resource: !Sub 'arn:${AWS::Partition}:s3:::supatrace-alpha-payloads-${AWS::AccountId}-us-east-1/v1/*'
+          - Sid: PayloadVersions
+            Effect: Allow
+            Action: s3:ListBucketVersions
+            Resource: !Sub 'arn:${AWS::Partition}:s3:::supatrace-alpha-payloads-${AWS::AccountId}-us-east-1'
+            Condition: {StringLike: {'s3:prefix': 'v1/*'}}
+          - Sid: Logs
+            Effect: Allow
+            Action: [logs:CreateLogStream, logs:PutLogEvents]
+            Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/supatrace-alpha-api:log-stream:*
+          - Sid: GitHubSecret
+            Effect: Allow
+            Action: secretsmanager:GetSecretValue
+            Resource: !Ref GitHubSecretArn
+          - !If
+            - GitHubTechSecretSet
+            - Sid: GitHubTechSecret
+              Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref GitHubTechSecretArn
+            - !Ref AWS::NoValue
+          - !If
+            - GoogleSecretSet
+            - Sid: GoogleSecret
+              Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref GoogleSecretArn
+            - !Ref AWS::NoValue
+          - !If
+            - ChatGptSecretSet
+            - Sid: ChatGptSecret
+              Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref ChatGptSecretArn
+            - !Ref AWS::NoValue
+          - !If
+            - SsoCertSecretSet
+            - Sid: SsoCertSecret
+              Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref SsoCertSecretArn
+            - !Ref AWS::NoValue
+          - !If
+            - PlanBillingSecretSet
+            - Sid: PlanBillingSecret
+              Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref PlanBillingSecretArn
+            - !Ref AWS::NoValue
+          - !If
+            - PlanBillingWebhookSecretSet
+            - Sid: PlanBillingWebhookSecret
+              Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref PlanBillingWebhookSecretArn
+            - !Ref AWS::NoValue
+          - Sid: Mail
+            Effect: Allow
+            Action: ses:SendEmail
+            Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/*
+
+Outputs:
+  DeployRoleArn:
+    Description: Put this ARN in the GitHub repository variable AWS_DEPLOY_ROLE_ARN.
+    Value: !GetAtt DeployRole.Arn

@@ -1,0 +1,64 @@
+# Per-trace streaming export
+
+The actual Export JSON control uses showSaveFilePicker when available, opening the picker directly from the click before network waits. The user chooses a file; no handle is persisted and no general directory access is requested. Existing authenticated event pagination supplies each page. The JSON envelope remains version 1, run_id, events with original fields unchanged. A page is released after its events are written; the full event array is not retained. The aggregate 20 MiB/100,000-event in-memory limits do not apply to this disk path.
+
+Only complete, well-formed cursor traversal can close/commit the file. Cursor cycles, malformed completion, fetch errors, rate-limit exhaustion and cancellation abort the temporary writable. No Blob fallback follows picker rejection. A new empty placeholder may remain after cancellation; a failed close is reported as unconfirmed rather than success. Cancel is disabled once final close/commit begins. Replacing an existing file is a browser-mediated explicit picker choice, not an automatic overwrite.
+
+Supported browser semantics: https://developer.chrome.com/docs/capabilities/web-apis/file-system-access and https://fs.spec.whatwg.org/ . The browser stages writes until close. No permission is requested at page load and no permission was accepted in these tests.
+
+Per-trace export is not unlimited; the separate account archive control is described below. A trace traversal still fails closed at 100,000 pages; unsupported browsers retain the bounded 20 MiB/100,000-event Blob fallback and show this limitation. Existing event data can change during traversal: this is not a transactionally frozen account snapshot. There is no reload/resume file handle persistence, backend export job, signed URL or new AWS resource. Export metadata remains under existing tenant/auth gates.
+
+Local VM tests exercise the real UI handler, streaming beyond 20 MiB, exact fields/counts, bounded individual writes, failure/abort/picker denial and fallback safety. Synthetic Chromium tests also cover the rendered control and actual standard downloads. Native picker/disk and authenticated hosted customer acceptance remain separate; an injected writable handle is not an operating-system save test.
+
+## Account archive control
+
+The Traces screen has Export account. It pins the signed-in project, opens the user-mediated save picker when supported, obtains a fresh complete catalog (not the filtered table/cache), and streams each indexed run plus all its event pages into a version 2 account archive. Each run's event and nonempty accepted-batch page counts (empty terminal Dynamo pages do not count as a batch) must reconcile to its initial catalog metadata. A second fresh complete catalog must match IDs and metadata before commit. Any mismatch aborts the entire temporary file; pausing uploads is recommended. An empty account is represented explicitly with complete=true and zero counts.
+
+This is an observed stable-before/after read, NOT a transactional snapshot, point-in-time backup or proof against transient concurrent changes. The file explicitly labels that consistency model. It exports the event objects returned by the existing integrity-checked API and run metadata. It does not preserve original raw batch envelopes or the exact bytes of uploaded batches.
+
+**Account archives are not redacted.** Original event fields and run metadata are preserved and may contain captured secrets, prompts, personal information or other sensitive content. There is no automatic secret removal. Review the complete archive before sharing it; the separate per-trace redacted-copy tool does not redact account archives. This warning applies to both streaming saves and standard account downloads.
+
+No new credential, signed URL, background job, permission grant or AWS resource is introduced by exporting an archive. That does not mean captured credentials are removed from its contents. Existing read authorization/rate limits remain in force.
+
+Bounds remain explicit: at most 100,000 runs and 20 MiB catalog metadata per fresh scan, each scan at most five minutes, and at most 100,000 pages per run. Browsers without Save File support use the bounded preparation flow below. Native picker/disk and genuine hosted account verification remain separate acceptance gates. Neither path creates a durable immutable snapshot.
+
+### Catalog cancellation and deadline recovery
+
+The catalog loader now settles on cancellation or its existing five-minute scan deadline even when fetch, asynchronous JSON-body parsing or an injected rate-limit wait ignores AbortSignal. This covers both the initial inventory and the final consistency scan used by Export account, as well as dashboard reads through the same loader. A late result or rejection cannot advance the stopped scan, produce a partial catalog or commit an archive. Explicit retry starts fresh scans and preserves original data. The parent operation signal is not aborted merely because a child scan reaches its deadline. Catalog bounds, project validation, six-request/five-wait rate-limit cap and immediate request registration are unchanged.
+
+Synthetic tests cover ignored aborts, both archive scans, fetch and body hangs, backoff cancellation, listener cleanup, late resolution/rejection, and fresh retry.
+
+This is a scan deadline, not a whole-account export deadline. Parsed catalog bounds do not cap transport buffering or preempt synchronous parsing. Per-trace native file waits remain unchanged; account file waits are bounded as described below. An abort failure or uncertain final close still prevents a success claim. Rendered Chromium tests do not establish native file behavior, actual device behavior, or authenticated hosted isolation. Verify those separately for the released revision.
+
+
+## Standard account download without Save File support
+
+When `showSaveFilePicker` is absent, Export account uses the same archive writer, initial/final complete catalog checks, project pinning and per-run event/batch reconciliation. Its in-memory UTF-8 output is limited to **20 MiB including metadata, separators and the final envelope**, and **100,000 events across all runs**. Individually small runs do not bypass aggregate limits. Oversize, drift, cancellation or failure discards preparation; no partial file is offered. An empty stable account produces an explicit complete archive with zero counts.
+
+After preparation, the user must click **Download prepared archive**. This new user gesture creates the local Blob URL and starts a normal browser download; it does not ask for filesystem access. The app says **download started**, not saved, because it cannot confirm the browser/disk result. The URL is revoked after 60 seconds; the prepared Blob is cleared after dispatch, discard, navigation away from Traces, pagehide, sign-out, identity invalidation or the next preparation. Prepared bytes are not persisted or sent to another service. Browser download history/files are outside that cleanup.
+
+This fallback is selected only when the picker API is absent. A denied or canceled native picker never switches silently to a standard download. No new endpoint, credential, persistent permission, server job or resource is used. Original data, per-trace export and the streaming archive format remain unchanged.
+
+Tests cover byte-identical streaming/download archives, UTF-8 and complete-envelope bounds, aggregate event limits, empty accounts, original preservation, catalog drift, cancellation, allocation/URL/dispatch failure, disposal and fresh retries. Rendered synthetic desktop/mobile tests exercise the actual two-click downloaded file, export beyond table filters, original nested data, rate-limit cancellation, navigation/Back and final-catalog drift. Browser support outside the tested Chromium path and genuine signed-in production acceptance must be recorded separately; do not infer Safari/native-device acceptance from a narrow viewport.
+
+
+## Account save interruption recovery
+
+Native account saves now stop waiting on each writable creation, write, abort or final close after two minutes. Cancel or navigation interrupts picker/creation/write waits immediately; abort cleanup may take up to two additional minutes. The picker still opens directly in the user gesture and has no selection deadline. No handle is persisted.
+
+Late file results cannot resume archive traversal, append another event or start a final close. A writable created after cancellation or timeout gets a bounded abort attempt and is never written. Abort failure or timeout reports an unconfirmed export, even after Cancel. Once close starts, cancellation does not assert rollback: close failure or timeout reports unconfirmed completion, and late close completion cannot replace that result with success. Retry always opens a new picker; the message directs the user to a new file. These are application wait bounds, not a promise to terminate an OS operation or remove a placeholder.
+
+Both save paths keep the existing archive format, complete initial/final catalog reconciliation and original event ordering. Synthetic tests cover interrupted creation/header/event/footer writes, late resolutions and rejections, hanging/failed abort, close uncertainty, repeated exports and listener cleanup. The rendered loopback tests cover Cancel, deadline recovery and a fresh save at 1280/390/320 CSS pixels using injected native streams. A standard browser download traverses two catalog pages for 802 runs / 1,002 events, including a 201-event trace with tied timestamps and parent links, rate-limit recovery, repeat equality and a separate synthetic tenant. These checks do not establish real native picker/disk, other-browser/device, or hosted account acceptance.
+
+
+## Explicit workspace archive (source candidate)
+
+The dashboard offers **Export selected environment** (the existing version 2 archive) and a separate **Export workspace**. The latter requires checking the listed environment scope before each attempt. It exports one selected workspace, not every workspace or linked provider account. Original captured content and metadata may contain secrets; no automatic redaction applies. The authenticated existing workspace membership determines read access. No new server permission or endpoint is added.
+
+The version 3 `supatrace_workspace_observed_export` envelope contains `workspace_id`, `project_id`, timestamps, `consistency`, and an `environments` array. Each item has the exact environment `{id,name,legacy}` metadata and the existing version 2 archive in `archive`. Thus identical run IDs in different environments remain separate; their original event fields, parent IDs and accepted event order are preserved. The final envelope carries aggregate environment/run/event counts and `complete:true` only after reconciliation. It does not preserve raw uploaded batch bytes.
+
+Every request pins the workspace, project and environment captured at the start. The initial authenticated environment inventory must match the reviewed IDs before any trace read. Each environment uses complete before/after catalog scans and run event/batch-count checks. A final scan checks **all** catalogs and the complete environment inventory again, catching changes to an earlier environment while later ones export. Added/removed/renamed environments, access loss, catalog drift or count mismatch abort the whole archive. Stable comparisons cannot establish an atomic snapshot or detect a change that is reverted between reads. The visible consistency model remains an observed read, not a point-in-time backup.
+
+Bounds apply to the combined workspace: at most 20 environments, 100,000 catalog runs and 20 MiB of canonical catalog metadata. Standard download preparation is additionally capped at 20 MiB of complete UTF-8 output including the outer envelope and 100,000 events. Streaming keeps the existing per-run read/page bounds and file operation deadlines. Save File requires explicit picker consent; denial never falls back to an unexpected download. Cancellation aborts the temporary stream before commit. A failed or timed-out final close is unconfirmed, never reported as saved or rolled back. Standard download still requires its separate Download click and reports only that download started.
+
+Synthetic loopback tests cover owner/admin/viewer roles, desktop/mobile widths, duplicate run IDs, large catalogs, preserved fields/parents/order, rate-limit behavior, drift, access failure, cancellation, and uncertain close. Native picker/disk behavior and authenticated hosted export need separate verification. The export covers one selected workspace. It does not establish completeness across linked provider accounts or multiple workspaces.

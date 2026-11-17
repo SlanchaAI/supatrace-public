@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="How to send, inspect, export and import agent traces with SupaTrace, and what is live today.">
+<meta name="theme-color" content="#f6f3e8">
+<title>SupaTrace docs</title>
+<link rel="icon" href="/favicon.svg?v=classic-s-2" type="image/svg+xml">
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/remodel.css">
+<link rel="stylesheet" href="/site.css">
+<link rel="canonical" href="https://supatrace.dev/docs/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="SupaTrace">
+<meta property="og:title" content="SupaTrace docs">
+<meta property="og:description" content="How to send, inspect, export and import agent traces with SupaTrace, and what is live today.">
+<meta property="og:url" content="https://supatrace.dev/docs/">
+<meta property="og:image" content="https://supatrace.dev/og-image.png">
+</head>
+<body class="landing remodel page docs" data-page="docs">
+<a class="skip" href="#content">Skip to content</a>
+<!-- site:header -->
+<header class="site-header">
+<a class="wordmark" href="/" aria-label="SupaTrace home"><img class="brand-mark" src="/brand-mark.svg" alt="" width="25" height="46">SupaTrace</a>
+<nav aria-label="Main"><a href="/docs/" aria-current="page">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/app/">Workspace</a></nav>
+</header>
+<!-- /site:header -->
+<div class="docs-layout">
+<!-- docs:nav -->
+<nav class="docs-nav" aria-label="Docs">
+<h2>Start</h2><ul><li><a href="/docs/" aria-current="page">Overview</a></li><li><a href="/docs/quickstart/">Quickstart</a></li></ul>
+<h2>Frameworks</h2><ul><li><a href="/docs/frameworks/openai/">OpenAI</a></li><li><a href="/docs/frameworks/anthropic/">Anthropic</a></li><li><a href="/docs/frameworks/langchain/">LangChain</a></li><li><a href="/docs/frameworks/llamaindex/">LlamaIndex</a></li><li><a href="/docs/frameworks/vercel-ai-sdk/">Vercel AI SDK</a></li><li><a href="/docs/frameworks/opentelemetry/">OpenTelemetry</a></li></ul>
+<h2>Reference</h2><ul><li><a href="/docs/keys/">Keys</a></li><li><a href="/docs/management-api/">Management API</a></li><li><a href="/docs/limits/">Limits</a></li><li><a href="/docs/export/">Export</a></li><li><a href="/docs/importers/">Importers</a></li></ul>
+</nav>
+<!-- /docs:nav -->
+<main id="content">
+<div class="page-head">
+<p class="eyebrow">Docs</p>
+<h1>Send a trace.<br>Read it back.</h1>
+</div>
+<p class="lede">SupaTrace stores agent traces you review before upload. These pages say what works today and mark everything else as preview or planned.</p>
+<section aria-labelledby="start"><h2 id="start">Start here</h2>
+<ul class="cards">
+<li><a href="/docs/quickstart/"><strong>Quickstart</strong><span>Home key and snippet first, then OpenTelemetry, then reviewed scripts.</span></a></li>
+<li><a href="/docs/frameworks/openai/"><strong>Framework guides</strong><span>OpenAI, Anthropic, LangChain, LlamaIndex, Vercel AI SDK and OpenTelemetry with stock OpenTelemetry exporters and checkout-only SDK previews.</span></a></li>
+<li><a href="/docs/importers/"><strong>Importers</strong><span>Langfuse import beta; file converters need private repository access.</span></a></li>
+</ul></section>
+<section aria-labelledby="status"><h2 id="status">What is live today</h2>
+<div class="table-scroll" tabindex="0" role="region" aria-label="What is live today"><table class="compare"><thead><tr><th scope="col">Capability</th><th scope="col">Status</th><th scope="col">Where</th></tr></thead><tbody>
+<tr><th scope="row">Upload reviewed JSON batches with a write-only key</th><td><span class="status available">available</span></td><td><a href="/docs/quickstart/">Quickstart</a></td></tr>
+<tr><th scope="row">Inspect traces and export original JSON</th><td><span class="status available">available</span></td><td><a href="/docs/export/">Export</a></td></tr>
+<tr><th scope="row">Convert a finished Claude Code transcript you select</th><td><span class="status available">available</span></td><td><a href="/agent-setup.html">Setup guide</a></td></tr>
+<tr><th scope="row">Claude Code hooks</th><td><span class="status beta">beta</span></td><td><a href="/agent-setup.html#claude-hooks">Setup guide</a></td></tr>
+<tr><th scope="row">Provider file imports, private checkout only</th><td><span class="status preview">preview</span></td><td><a href="/docs/importers/">Importers</a></td></tr>
+<tr><th scope="row">Python and JavaScript SDKs</th><td><span class="status preview">preview</span></td><td>Private checkout only; unavailable to outside users. Package coming; not on PyPI or npm</td></tr>
+<tr><th scope="row">OTLP/HTTP receiver for OpenTelemetry exporters</th><td><span class="status available">available</span></td><td><a href="/docs/frameworks/opentelemetry/#otlp">Available on supatrace.dev for traces (protobuf and JSON)</a>; no gRPC, metrics or logs</td></tr>
+<tr><th scope="row">Ingest from apps on a Langfuse SDK</th><td><span class="status beta">beta</span></td><td><a href="/docs/frameworks/opentelemetry/#langfuse-sdk">Hosted routes answer</a>; SDK acceptance is local only</td></tr>
+<tr><th scope="row">Free allowance: 50,000 spans per UTC month, 1 GB stored, 2 projects</th><td><span class="status available">enforced</span></td><td><a href="/docs/limits/">Limits</a></td></tr>
+<tr><th scope="row">Paid plans</th><td><span class="status planned">TEST mode</span></td><td><a href="/pricing/">Approved pricing and limits</a></td></tr>
+</tbody></table></div>
+<p>Traces can contain prompts, tool output, personal information and secrets. Review what you upload and what you export.</p></section>
+</main>
+</div>
+<footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/">Home</a><a href="/docs/" aria-current="page">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/">Security</a><a href="/changelog/">Changelog</a><a href="/status/">Status</a><a href="/agent-setup.html">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a><span id="build" class="build" hidden></span></nav><script type="module" src="/build.js"></script><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>
+<script type="module" src="/docs/docs.js"></script>
+</body>
+</html>

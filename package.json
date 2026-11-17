@@ -1,0 +1,38 @@
+{
+  "name": "supatrace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test:portable": "node --test tests/trace.test.mjs tests/http.test.mjs tests/s3-objects.test.mjs",
+    "test": "node scripts/run-unit-tests.mjs && node scripts/run-python-tests.mjs",
+    "test:aws-local": "node --test tests/aws-local.test.mjs",
+    "test:commercial-ui": "node --test tests/commercial-controls.test.mjs tests/commercial-ui.test.mjs",
+    "test:ui": "node scripts/run-ui-tests.mjs",
+    "screenshots": "node tests/screens.mjs after",
+    "test:importer": "node --test tests/langfuse-capture.test.mjs tests/langfuse-transport.test.mjs tests/langfuse-workflow.test.mjs tests/langfuse-import.test.mjs tests/private-langfuse-runtime.test.mjs tests/langfuse-environment.test.mjs && python3 -m unittest tests/test_private_upload_runtime.py",
+    "test:import-jobs": "node --test tests/private-import-host.test.mjs tests/hosted-langfuse-upload.test.mjs tests/private-braintrust-jobs.test.mjs tests/connector-roundtrip.test.mjs",
+    "test:connectors": "node --test tests/langsmith-api.test.mjs tests/braintrust-api.test.mjs tests/connector-files.test.mjs tests/connector-roundtrip.test.mjs",
+    "test:mcp": "npm --prefix mcp test",
+    "dev": "node scripts/dev.mjs",
+    "test:integrated": "node --test --test-concurrency=1 tests/local-billing.test.mjs tests/stripe-entitlement-runtime.test.mjs tests/local-billing-browser.test.mjs tests/workspaces.test.mjs tests/local-development.test.mjs tests/workspace-browser.test.mjs && python3 -m unittest tests/test_environment_upload.py",
+    "test:ui:live": "node --test --test-concurrency=1 tests/live-traces-recovery-browser.test.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "3.1154.0",
+    "@aws-sdk/client-s3": "3.1154.0",
+    "@aws-sdk/client-secrets-manager": "3.1154.0",
+    "@aws-sdk/client-ses": "3.1154.0",
+    "@aws-sdk/lib-dynamodb": "3.1154.0",
+    "@node-saml/node-saml": "5.1.0",
+    "stripe": "23.0.0"
+  },
+  "devDependencies": {
+    "playwright-core": "1.56.1",
+    "xml-crypto": "6.4.0"
+  },
+  "license": "Apache-2.0"
+}

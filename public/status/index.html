@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Live reachability of the SupaTrace site and API from your browser, and the monitored status feed when one is published.">
+<meta name="theme-color" content="#f6f3e8">
+<title>Status · SupaTrace</title>
+<link rel="icon" href="/favicon.svg?v=classic-s-2" type="image/svg+xml">
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/remodel.css">
+<link rel="stylesheet" href="/site.css">
+<link rel="canonical" href="https://supatrace.dev/status/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SupaTrace">
+<meta property="og:title" content="Status · SupaTrace">
+<meta property="og:description" content="Live reachability of the SupaTrace site and API from your browser, and the monitored status feed when one is published.">
+<meta property="og:url" content="https://supatrace.dev/status/">
+<meta property="og:image" content="https://supatrace.dev/og-image.png">
+</head>
+<body class="landing remodel page" data-page="status">
+<a class="skip" href="#content">Skip to content</a>
+<!-- site:header -->
+<header class="site-header">
+<a class="wordmark" href="/" aria-label="SupaTrace home"><img class="brand-mark" src="/brand-mark.svg" alt="" width="25" height="46">SupaTrace</a>
+<nav aria-label="Main"><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/app/">Workspace</a></nav>
+</header>
+<!-- /site:header -->
+<main id="content">
+<div class="page-head">
+<p class="eyebrow">Status</p>
+<h1>Is SupaTrace up?</h1>
+<p class="lede">Two checks run from your browser when this page loads. A monitored status feed and incident history appear here when one is published.</p>
+</div>
+<section aria-labelledby="live-title">
+<h2 id="live-title">Live checks from your browser</h2>
+<ul class="components" id="live">
+<li id="check-site"><strong>Website</strong><span class="state"><span class="status planned">checking</span></span><span class="note">Requesting the build marker.</span></li>
+<li id="check-api"><strong>API</strong><span class="state"><span class="status planned">checking</span></span><span class="note">Requesting a public API route.</span></li>
+</ul>
+<p id="checked-at" role="status">These checks need JavaScript.</p>
+<p>These two checks show what your browser can reach right now. They do not test sign-in, uploads or export, and they are not a record of past availability.</p>
+</section>
+<section aria-labelledby="feed-title">
+<h2 id="feed-title">Monitored status</h2>
+<div id="feed"><p><strong>No monitoring feed is published yet.</strong> Nothing probes SupaTrace on a schedule today, so this page cannot report component health or uptime. There is no hosted status page and no uptime commitment.</p></div>
+</section>
+<section aria-labelledby="incidents-title">
+<h2 id="incidents-title">Incidents</h2>
+<ul class="components" id="incidents"><li><span class="note">No incident history is published.</span></li></ul>
+</section>
+</main>
+<footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/">Security</a><a href="/changelog/">Changelog</a><a href="/status/" aria-current="page">Status</a><a href="/agent-setup.html">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a><span id="build" class="build" hidden></span></nav><script type="module" src="/build.js"></script><!-- /site:footer --><span>Live checks run in your browser. Monitored status is shown only while a published feed is fresh.</span></footer>
+<script type="module" src="/status/status.js"></script>
+</body>
+</html>

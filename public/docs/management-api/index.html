@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="SupaTrace management API: read-only personal access tokens, the /api/v1 endpoints for workspaces, keys, usage, traces and the ingest log, and the OpenAPI document.">
+<meta name="theme-color" content="#f6f3e8">
+<title>Management API · SupaTrace docs</title>
+<link rel="icon" href="/favicon.svg?v=classic-s-2" type="image/svg+xml">
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/remodel.css">
+<link rel="stylesheet" href="/site.css">
+<link rel="canonical" href="https://supatrace.dev/docs/management-api/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="SupaTrace">
+<meta property="og:title" content="Management API · SupaTrace docs">
+<meta property="og:description" content="SupaTrace management API: read-only personal access tokens, the /api/v1 endpoints for workspaces, keys, usage, traces and the ingest log, and the OpenAPI document.">
+<meta property="og:url" content="https://supatrace.dev/docs/management-api/">
+<meta property="og:image" content="https://supatrace.dev/og-image.png">
+</head>
+<body class="landing remodel page docs" data-page="docs">
+<a class="skip" href="#content">Skip to content</a>
+<!-- site:header -->
+<header class="site-header">
+<a class="wordmark" href="/" aria-label="SupaTrace home"><img class="brand-mark" src="/brand-mark.svg" alt="" width="25" height="46">SupaTrace</a>
+<nav aria-label="Main"><a href="/docs/" aria-current="page">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/app/">Workspace</a></nav>
+</header>
+<!-- /site:header -->
+<div class="docs-layout">
+<!-- docs:nav -->
+<nav class="docs-nav" aria-label="Docs">
+<h2>Start</h2><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quickstart/">Quickstart</a></li></ul>
+<h2>Frameworks</h2><ul><li><a href="/docs/frameworks/openai/">OpenAI</a></li><li><a href="/docs/frameworks/anthropic/">Anthropic</a></li><li><a href="/docs/frameworks/langchain/">LangChain</a></li><li><a href="/docs/frameworks/llamaindex/">LlamaIndex</a></li><li><a href="/docs/frameworks/vercel-ai-sdk/">Vercel AI SDK</a></li><li><a href="/docs/frameworks/opentelemetry/">OpenTelemetry</a></li></ul>
+<h2>Reference</h2><ul><li><a href="/docs/keys/">Keys</a></li><li><a href="/docs/management-api/" aria-current="page">Management API</a></li><li><a href="/docs/limits/">Limits</a></li><li><a href="/docs/export/">Export</a></li><li><a href="/docs/importers/">Importers</a></li></ul>
+</nav>
+<!-- /docs:nav -->
+<main id="content">
+<div class="page-head">
+<p class="eyebrow">Reference</p>
+<h1>Management API</h1>
+</div>
+<p class="lede">Read what your workspace shows from a script: workspaces, projects, keys, usage, traces and the ingest log. The API is read-only and lives under <code>/api/v1</code>.</p>
+<section aria-labelledby="token"><h2 id="token">Create a personal access token</h2>
+<p>Open <strong>Settings</strong> in your workspace, name a token and choose when it expires (1 to 365 days, 30 by default). Your browser makes the token (<code>stpat_…</code>) and sends the server only its SHA-256, so the token is shown once and cannot be recovered.</p>
+<ul class="facts">
+<li><strong>Read-only.</strong> A token can call the <code>GET</code> endpoints below. It cannot upload, create or revoke keys, change billing or manage tokens.</li>
+<li><strong>Account-scoped.</strong> A token sees what your account can open, with your current role in each workspace. Removing the account from a workspace removes the token's access to it.</li>
+<li><strong>Revocable.</strong> Revoke a token in Settings. It stops working at once.</li>
+<li><strong>Up to 20 tokens</strong> for an account.</li>
+</ul></section>
+<section aria-labelledby="call"><h2 id="call">Call the API</h2>
+<p>Send the token in the <code>X-Supatrace-Key</code> header:</p>
+<pre data-lang="sh"><code>curl -H "X-Supatrace-Key: $TOKEN" https://supatrace.dev/api/v1/projects</code></pre>
+<p>A server you run yourself also accepts <code>Authorization: Bearer $TOKEN</code>. On supatrace.dev the edge replaces the <code>Authorization</code> header before it reaches the API, so use <code>X-Supatrace-Key</code> there.</p>
+<p>Errors are JSON of the form <code>{"error": "code"}</code>. A missing, expired or revoked token is <code>401</code>. A workspace the account cannot open, or a route its role may not call, is <code>403</code>. Each token may make 120 requests a minute; <code>429</code> carries <code>Retry-After</code>.</p></section>
+<section aria-labelledby="endpoints"><h2 id="endpoints">Endpoints</h2>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Management API endpoints"><table class="compare">
+<thead><tr><th scope="col">Request</th><th scope="col">Returns</th></tr></thead>
+<tbody>
+<tr><th scope="row"><code>GET /api/v1/me</code></th><td>The account and the token making the request</td></tr>
+<tr><th scope="row"><code>GET /api/v1/workspaces</code></th><td>Workspaces the account can open, with its role in each</td></tr>
+<tr><th scope="row"><code>GET /api/v1/projects</code></th><td>Projects. A workspace has one project</td></tr>
+<tr><th scope="row"><code>GET /api/v1/keys</code></th><td>Keys of a workspace environment: id, type, expiry, revoked. Needs a role that may manage keys. Key values are never returned. Up to 100 keys a page; follow <code>next</code> with <code>after</code></td></tr>
+<tr><th scope="row"><code>GET /api/v1/usage</code></th><td>Stored bytes, limit and plan state of a workspace</td></tr>
+<tr><th scope="row"><code>GET /api/v1/logs</code></th><td>Recorded upload attempts of a workspace environment, newest first, with the reason when one was refused. <code>stream</code> (<code>issues</code> or <code>accepted</code>), <code>route</code>, <code>reason</code>, <code>from</code>, <code>to</code>, <code>limit</code>, <code>after</code></td></tr>
+<tr><th scope="row"><code>GET /api/v1/traces</code></th><td>Traces. <code>limit</code>, <code>offset</code>, <code>sort</code>, <code>dir</code>, <code>q</code>, <code>from</code>, <code>to</code></td></tr>
+<tr><th scope="row"><code>GET /api/v1/traces/{trace_id}/events</code></th><td>The events of one trace, one stored batch per page. Follow <code>next</code> with <code>after</code></td></tr>
+</tbody></table></div>
+<p>Workspace endpoints take <code>workspace</code> (defaults to the account's own) and, except usage, <code>environment</code> (defaults to <code>default</code>). A parameter that is not listed for an endpoint is refused with <code>400</code>.</p></section>
+<section aria-labelledby="secret"><h2 id="secret">Secret keys</h2>
+<p>A secret key (<code>st_sec_…</code>, created under <strong>API keys</strong>) is also accepted on <code>GET /api/v1/traces</code> and <code>GET /api/v1/traces/{trace_id}/events</code>. It reads only the workspace and environment it belongs to. A <code>workspace</code> or <code>environment</code> parameter naming another one, and every other <code>/api/v1</code> endpoint in the table above, returns <code>403 key_scope_denied</code>. The OpenAPI document needs no credential. Ingest keys (<code>st_pub_…</code>) and setup-code keys cannot read. See <a href="/docs/keys/">Keys</a>.</p></section>
+<section aria-labelledby="openapi"><h2 id="openapi">OpenAPI document</h2>
+<p><a href="/api/v1/openapi.json"><code>GET /api/v1/openapi.json</code></a> serves the OpenAPI 3.1 description of these endpoints. It needs no token. The repository's tests call every operation in it and check each response against its schema.</p></section>
+<section aria-labelledby="not-yet"><h2 id="not-yet">Not available yet</h2>
+<ul class="facts">
+<li>Write operations: creating or revoking keys, changing workspaces, billing.</li>
+<li>Token scopes narrower than the whole account, and OAuth apps.</li>
+<li>Rate limits that vary by plan.</li>
+<li>Rendered reference pages for each endpoint. The OpenAPI document is the reference.</li>
+</ul></section>
+</main>
+</div>
+<footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/">Security</a><a href="/changelog/">Changelog</a><a href="/status/">Status</a><a href="/agent-setup.html">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a><span id="build" class="build" hidden></span></nav><script type="module" src="/build.js"></script><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>
+<script type="module" src="/docs/docs.js"></script>
+</body>
+</html>

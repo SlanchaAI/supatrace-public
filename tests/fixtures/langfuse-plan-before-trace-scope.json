@@ -1,0 +1,47 @@
+{
+  "baseline": "7bf443ae543d12e98f87210b2375fd2de3cf5083",
+  "spec": {
+    "origin": "https://cloud.langfuse.com",
+    "sourceProject": "synthetic-source",
+    "destinationProject": "proj_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "environment": "synthetic",
+    "namespace": "legacy-trace-scope-proof",
+    "from": "2026-10-01T00:00:00Z",
+    "to": "2026-10-02T00:00:00Z",
+    "maxRows": 10,
+    "maxPages": 2,
+    "pageSize": 5,
+    "maxBytes": 100000,
+    "maxRetries": 0
+  },
+  "plan": {
+    "schema_version": 1,
+    "kind": "langfuse-read-only-capture",
+    "scope": {
+      "origin": "https://cloud.langfuse.com",
+      "sourceProject": "synthetic-source",
+      "destinationProject": "proj_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "environment": "synthetic",
+      "namespace": "legacy-trace-scope-proof",
+      "from": "2026-10-01T00:00:00Z",
+      "to": "2026-10-02T00:00:00Z",
+      "maxRows": 10,
+      "maxPages": 2,
+      "pageSize": 5,
+      "maxBytes": 100000,
+      "maxRetries": 0
+    },
+    "fields": "core,basic,time,io,metadata,model,usage,prompt,metrics,trace_context",
+    "fingerprint": "1f937118e546bf1894e108976d6e8528bde1665ad2fdebf387cb92ddd89db601",
+    "approvalRequired": [
+      "read-source",
+      "stage-destination"
+    ],
+    "warnings": [
+      "Observation rows only; no scores API, trace objects or attachment fetching.",
+      "Metadata values may be truncated by provider; no completeness claim.",
+      "Window is startTime inclusive/exclusive; live data may change and late arrivals require overlap reconciliation.",
+      "Destination is a declared binding only; this module never uploads or stages."
+    ]
+  }
+}

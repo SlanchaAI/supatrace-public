@@ -1,0 +1,262 @@
+name: Deploy
+
+concurrency:
+  group: supatrace-production
+  cancel-in-progress: false
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      mcp_bridge_enabled:
+        description: 'Reviewed MCP consent activation (preserve leaves the current/default setting)'
+        type: choice
+        required: true
+        default: preserve
+        options: [preserve, 'true', 'false']
+
+permissions:
+  contents: read
+
+jobs:
+  # A local reusable workflow is resolved at this workflow's exact commit.
+  # Failed or cancelled verification never reaches AWS credentials or publish.
+  verify:
+    uses: ./.github/workflows/ci.yml
+
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.role.outputs.ready }}
+    steps:
+      - id: role
+        env:
+          AWS_DEPLOY_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+        run: |
+          if [ -z "${AWS_DEPLOY_ROLE_ARN}" ]; then
+            echo "AWS_DEPLOY_ROLE_ARN is not set. Skipping deploy."
+            echo "Set that repository variable to the role ARN from the supatrace-github-oidc stack, and create the production environment, before this workflow will update https://supatrace.dev."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          elif [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "Deploy only runs from refs/heads/main (this ref is ${GITHUB_REF})."
+            exit 1
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    needs: [gate, verify]
+    if: needs.gate.outputs.ready == 'true' && needs.verify.result == 'success' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: us-east-1
+      STACK_NAME: supatrace-alpha-retry-20261024
+      DISTRIBUTION_ID: E3CMMF7W62KWCJ
+      MCP_BRIDGE_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mcp_bridge_enabled || 'preserve' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Refuse a different release revision
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Derive deployment account and bucket names
+        run: |
+          set -euo pipefail
+          account=$(aws sts get-caller-identity --query Account --output text)
+          [[ "$account" =~ ^[0-9]{12}$ ]] || exit 1
+          echo "::add-mask::$account"
+          echo "AWS_ACCOUNT_ID=$account" >> "$GITHUB_ENV"
+          echo "ARTIFACT_BUCKET=supatrace-alpha-artifacts-${account}-${AWS_REGION}" >> "$GITHUB_ENV"
+          echo "STATIC_BUCKET=supatrace-alpha-static-${account}-${AWS_REGION}" >> "$GITHUB_ENV"
+      - name: Refuse to update until the deployed template and the function role have the boundary
+        run: |
+          set -euo pipefail
+          arn=$(aws iam get-role --role-name supatrace-alpha-api --query 'Role.PermissionsBoundary.PermissionsBoundaryArn' --output text)
+          expected="arn:aws:iam::${AWS_ACCOUNT_ID}:policy/supatrace-alpha-api-boundary"
+          if [ "$arn" != "$expected" ]; then
+            echo "supatrace-alpha-api does not have the required permissions boundary."
+            echo "The first stack update has to be run by hand with an admin's credentials. See aws/DEPLOYMENT.md."
+            exit 1
+          fi
+          template=$(aws cloudformation get-template --stack-name "$STACK_NAME" --output json)
+          case "$template" in
+            *supatrace-alpha-api-boundary*) ;;
+            *)
+              echo "The deployed template does not reference supatrace-alpha-api-boundary."
+              echo "A boundary attached to the role by hand is not enough. The first deploy would still add it and can stick in rollback. See aws/DEPLOYMENT.md."
+              exit 1
+              ;;
+          esac
+      - run: npm ci --omit=dev --ignore-scripts
+      - run: python3 aws/package.py
+      - name: Snapshot the static bucket and upload the Lambda zip
+        run: |
+          set -euo pipefail
+          mkdir -p static-snapshot
+          aws s3 sync "s3://${STATIC_BUCKET}/" static-snapshot/ --only-show-errors
+          HASH=$(sha256sum supatrace-lambda.zip | awk '{print $1}')
+          KEY="releases/${HASH}/supatrace-lambda.zip"
+          echo "ARTIFACT_KEY=${KEY}" >> "$GITHUB_ENV"
+          aws s3 cp supatrace-lambda.zip "s3://${ARTIFACT_BUCKET}/${KEY}" --sse AES256 --only-show-errors
+      - name: Create and review an update change set
+        id: change
+        run: |
+          set -euo pipefail
+          aws cloudformation describe-stacks --stack-name "$STACK_NAME" --output json > current-stack.json
+          node --input-type=module -e 'import {readFileSync,writeFileSync} from "node:fs"; const stacks=JSON.parse(readFileSync("current-stack.json")).Stacks; if(stacks?.length!==1) throw new Error("Expected one stack"); writeFileSync("current-parameters.json", JSON.stringify(stacks[0].Parameters));'
+          PREV=$(node --input-type=module -e 'import {readFileSync} from "node:fs"; const p=JSON.parse(readFileSync("current-parameters.json")).filter(p=>p.ParameterKey==="ArtifactKey"); if(p.length!==1) throw new Error("ArtifactKey missing"); console.log(p[0].ParameterValue);')
+          echo "PREVIOUS_ARTIFACT_KEY=${PREV}" >> "$GITHUB_ENV"
+          node aws/deploy-parameters.mjs aws/template.yaml current-parameters.json "$ARTIFACT_KEY" "$MCP_BRIDGE_MODE" > parameters.json
+          EXPECTED=$(node --input-type=module -e 'import {readFileSync} from "node:fs"; import {expectedMcpBridgeValue} from "./aws/deploy-parameters.mjs"; console.log(expectedMcpBridgeValue(JSON.parse(readFileSync("parameters.json")), JSON.parse(readFileSync("current-parameters.json"))));')
+          echo "MCP_BRIDGE_EXPECTED=${EXPECTED}" >> "$GITHUB_ENV"
+          NAME="supatrace${GITHUB_RUN_ID}"
+          CHANGE_SET_ID=$(aws cloudformation create-change-set \
+            --stack-name "$STACK_NAME" \
+            --change-set-name "$NAME" \
+            --change-set-type UPDATE \
+            --template-body file://aws/template.yaml \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --parameters file://parameters.json --query Id --output text)
+          # The waiter is advisory: only the full description can authorize execution
+          # or positively identify a no-change proposal. Never infer approval from text alone.
+          aws cloudformation wait change-set-create-complete --stack-name "$STACK_NAME" --change-set-name "$CHANGE_SET_ID" || true
+          if ! REVIEWED_ID=$(node aws/review-artifact-change-set.mjs current-stack.json "$CHANGE_SET_ID" "$ARTIFACT_KEY" change-set.json parameters.json); then
+            aws cloudformation delete-change-set --stack-name "$STACK_NAME" --change-set-name "$CHANGE_SET_ID" || true
+            echo "Artifact-only review failed. The stack was not updated."
+            exit 1
+          fi
+          if [ "$REVIEWED_ID" = "NO_CHANGES" ]; then
+            aws cloudformation delete-change-set --stack-name "$STACK_NAME" --change-set-name "$CHANGE_SET_ID"
+            echo "executed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          [ "$REVIEWED_ID" = "$CHANGE_SET_ID" ]
+          aws cloudformation execute-change-set --stack-name "$STACK_NAME" --change-set-name "$REVIEWED_ID"
+          aws cloudformation wait stack-update-complete --stack-name "$STACK_NAME"
+          node --input-type=module -e 'console.error(JSON.stringify({ChangeSetId:process.argv[1],outcome:"stack-update-complete"}))' "$REVIEWED_ID"
+          echo "executed=true" >> "$GITHUB_OUTPUT"
+      - name: Publish static files after the stack update
+        run: |
+          set -euo pipefail
+          # Stamp the released commit into public/build.json so the served build is identifiable.
+          node scripts/build-marker.mjs
+          # Browsers must revalidate every static file. The file names carry no content hash, so a cached page
+          # from one release must never be paired with a script from another. A recursive copy, not a sync:
+          # sync skips a file it considers unchanged, and a skipped object would keep its old metadata.
+          aws s3 cp public/ "s3://${STATIC_BUCKET}/" --recursive --exclude "_headers" --exclude "*/_headers" --sse AES256 --cache-control "no-cache" --only-show-errors
+          aws s3 cp agent/ "s3://${STATIC_BUCKET}/agent/" --recursive --exclude "*" --include "*.py" --sse AES256 --cache-control "no-cache" --only-show-errors
+          aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths "/*" >/dev/null
+      - name: Smoke check, then restore the previous artifact and static files if it fails
+        run: |
+          set -euo pipefail
+          HOSTS=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Parameters[?ParameterKey=='Domains'].ParameterValue" --output text | tr ',' ' ')
+          [ -n "$HOSTS" ] && [ "$HOSTS" != "None" ] || HOSTS="supatrace.dev"
+          echo "Smoke-checking: $HOSTS"
+          smoke_host() {
+            host=$1
+            code=$(curl -sS -L -o /tmp/site.html -D /tmp/site.hdr -w '%{http_code}' "https://${host}/") || return 1
+            [ "$code" = "200" ] || return 1
+            api=$(curl -sS -o /tmp/api.json -D /tmp/api.hdr -w '%{http_code}' "https://${host}/api/me") || return 1
+            [ "$api" = "401" ] || return 1
+            python3 -c 'import json; assert json.load(open("/tmp/api.json"))=={"error":"sign_in_required"}' || return 1
+            app=$(curl -sS -o /dev/null -D /tmp/app-redirect.hdr -w '%{http_code}' "https://${host}/app") || return 1
+            [ "$app" = "301" ] || return 1
+            python3 -c 'from pathlib import Path; from urllib.parse import urlsplit; headers=Path("/tmp/app-redirect.hdr").read_text().splitlines(); target=next(line.split(":",1)[1].strip() for line in headers if line.lower().startswith("location:")); u=urlsplit(target); assert u.path=="/app/" and u.hostname in (None,"'"${host}"'") and u.scheme in ("","https")' || return 1
+            for path in /app/ /app/app.js /app/app.css /signin.js /agent-setup.html /agent/connect.py /agent/upload.py /agent/claude_snapshot.py /examples/first-trace.json /terms.html /privacy.html /mcp/ /mcp/consent.js /mcp/consent.css; do
+              code=$(curl -sS -o /dev/null -w '%{http_code}' "https://${host}${path}") || return 1
+              [ "$code" = "200" ] || return 1
+            done
+            # No cookie, registration or grant: verify the selected route state.
+            expected_code=404
+            [ "$MCP_BRIDGE_EXPECTED" != "true" ] || expected_code=401
+            code=$(curl -sS -o /tmp/mcp-state.json -w '%{http_code}' "https://${host}/api/mcp/read/me") || return 1
+            [ "$code" = "$expected_code" ] || return 1
+            python3 -c 'import json,sys; expected="mcp_access_unavailable" if sys.argv[1]=="true" else "not_found"; assert json.load(open("/tmp/mcp-state.json"))=={"error":expected}' "$MCP_BRIDGE_EXPECTED" || return 1
+            # The dashboard page and its script must be revalidated on every request (no version skew).
+            for path in /app/ /app/app.js; do
+              curl -sS -o /dev/null -D /tmp/cache.hdr "https://${host}${path}" || return 1
+              grep -qi '^cache-control: no-cache' /tmp/cache.hdr || return 1
+            done
+            # The served static build must be this exact release.
+            code=$(curl -sS -o /tmp/build.json -w '%{http_code}' "https://${host}/build.json") || return 1
+            [ "$code" = "200" ] || return 1
+            python3 -c 'import json,os; assert json.load(open("/tmp/build.json")).get("commit")==os.environ["GITHUB_SHA"]' || return 1
+            code=$(curl -sS -o /tmp/providers.json -w '%{http_code}' "https://${host}/api/auth/providers") || return 1
+            [ "$code" = "200" ] || return 1
+            python3 -c 'import json; p=json.load(open("/tmp/providers.json")); assert p.get("github") is True and isinstance(p.get("google"), bool)' || return 1
+            python3 -c 'from pathlib import Path; import sys; required=("x-content-type-options: nosniff","x-frame-options: deny","referrer-policy: no-referrer","strict-transport-security:","content-security-policy:"); [sys.exit(name+" missing "+", ".join(missing)) for name in ("/tmp/site.hdr","/tmp/api.hdr") for missing in [[item for item in required if item not in Path(name).read_text(encoding="utf-8", errors="replace").lower()]] if missing]' || return 1
+          }
+          # Every hostname the stack serves is checked, so a .tech outage cannot hide behind a healthy .dev.
+          smoke() {
+            for host in $HOSTS; do smoke_host "$host" || return 1; done
+          }
+          ok=0
+          for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            if smoke; then ok=1; break; fi
+            sleep 15
+          done
+          if [ "$ok" = "1" ]; then
+            echo "Smoke checks passed."
+            exit 0
+          fi
+          echo "Smoke checks failed. Restoring the static bucket from the snapshot taken before this run."
+          aws s3 cp static-snapshot/ "s3://${STATIC_BUCKET}/" --recursive --sse AES256 --cache-control "no-cache" --only-show-errors
+          aws s3 sync static-snapshot/ "s3://${STATIC_BUCKET}/" --delete --sse AES256 --cache-control "no-cache" --only-show-errors
+          aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths "/*" >/dev/null
+          if [ "${{ steps.change.outputs.executed }}" != "true" ]; then
+            echo "The stack was not changed. Static files were restored."
+            exit 1
+          fi
+          echo "Restoring the previous Lambda artifact key and MCP consent setting."
+          if [ -z "${PREVIOUS_ARTIFACT_KEY:-}" ]; then
+            echo "There is no previous artifact key to restore."
+            exit 1
+          fi
+          STATUS=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query 'Stacks[0].StackStatus' --output text)
+          if [ "$STATUS" != "UPDATE_COMPLETE" ]; then
+            echo "Stack status is ${STATUS}. CloudFormation is already rolling the stack back."
+            exit 1
+          fi
+          node aws/deploy-parameters.mjs aws/template.yaml current-parameters.json "$PREVIOUS_ARTIFACT_KEY" restore > rollback-parameters.json
+          # Bind the reverse proposal to a fresh post-release snapshot. The original
+          # snapshot still supplies the desired rollback parameters; it cannot bless
+          # an intervening settings change.
+          aws cloudformation describe-stacks --stack-name "$STACK_NAME" --output json > rollback-stack.json
+          NAME="supatrace${GITHUB_RUN_ID}rb"
+          CHANGE_SET_ID=$(aws cloudformation create-change-set \
+            --stack-name "$STACK_NAME" \
+            --change-set-name "$NAME" \
+            --change-set-type UPDATE \
+            --template-body file://aws/template.yaml \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --parameters file://rollback-parameters.json --query Id --output text)
+          aws cloudformation wait change-set-create-complete --stack-name "$STACK_NAME" --change-set-name "$CHANGE_SET_ID" || true
+          if ! REVIEWED_ID=$(node aws/review-artifact-change-set.mjs rollback-stack.json "$CHANGE_SET_ID" "$PREVIOUS_ARTIFACT_KEY" rollback-change-set.json rollback-parameters.json); then
+            aws cloudformation delete-change-set --stack-name "$STACK_NAME" --change-set-name "$CHANGE_SET_ID" || true
+            echo "Rollback proposal failed artifact-only review. Static files were restored; the failed release may still be deployed."
+            exit 1
+          fi
+          if [ "$REVIEWED_ID" = "NO_CHANGES" ]; then
+            aws cloudformation delete-change-set --stack-name "$STACK_NAME" --change-set-name "$CHANGE_SET_ID"
+            echo "No Lambda change was needed; static files were restored. Smoke checks failed."
+            exit 1
+          fi
+          [ "$REVIEWED_ID" = "$CHANGE_SET_ID" ]
+          aws cloudformation execute-change-set --stack-name "$STACK_NAME" --change-set-name "$REVIEWED_ID"
+          aws cloudformation wait stack-update-complete --stack-name "$STACK_NAME"
+          node --input-type=module -e 'console.error(JSON.stringify({ChangeSetId:process.argv[1],outcome:"stack-update-complete"}))' "$REVIEWED_ID"
+          echo "Restored ArtifactKey ${PREVIOUS_ARTIFACT_KEY}. Smoke checks still failed, so this run failed."
+          exit 1

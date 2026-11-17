@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /app/
+Disallow: /mcp/
+
+Sitemap: https://supatrace.dev/sitemap.xml

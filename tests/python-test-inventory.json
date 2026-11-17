@@ -1,0 +1,17 @@
+[
+  "python3",
+  "-m",
+  "unittest",
+  "tests/test_upload_config.py",
+  "tests/test_private_import_package.py",
+  "tests/test_environment_upload.py",
+  "tests/test_import_status.py",
+  "tests/test_claude_hook.py",
+  "tests/test_private_upload_runtime.py",
+  "tests/test_ci_artifacts.py",
+  "tests/test_billing_package.py",
+  "tests/test_upload.py",
+  "tests/test_claude_snapshot.py",
+  "tests/test_profile_snapshot.py",
+  "tests/test_connect.py"
+]

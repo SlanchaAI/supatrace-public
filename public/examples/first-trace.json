@@ -1,0 +1,10 @@
+{
+  "version":1,
+  "batch_id":"first-trace-example-0001",
+  "run_id":"first-trace-example",
+  "events":[
+    {"id":"hello-request","time":"2026-11-16T00:00:00Z","kind":"request","name":"Review the build","data":{"synthetic":true,"text":"This is a reviewed example, not a real transcript."}},
+    {"id":"hello-tool","time":"2026-11-16T00:00:01Z","kind":"tool_result","name":"Read the test output","data":{"synthetic":true,"checks":12,"passed":12}},
+    {"id":"hello-response","time":"2026-11-16T00:00:02Z","kind":"response","name":"Ready for review","data":{"synthetic":true,"text":"Compare this trace with the original JSON."}}
+  ]
+}

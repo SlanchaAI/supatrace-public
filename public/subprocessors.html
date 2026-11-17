@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Subprocessors · SupaTrace</title>
+<meta name="description" content="SupaTrace Subprocessors, effective November 16, 2026.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/fonts.css"><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/remodel.css"><link rel="stylesheet" href="/site.css">
+<link rel="canonical" href="https://supatrace.dev/subprocessors.html">
+</head><body class="landing remodel page" data-page="subprocessors"><a class="skip-link" href="#content">Skip to content</a>
+<!-- site:header -->
+<header class="site-header">
+<a class="wordmark" href="/" aria-label="SupaTrace home"><img class="brand-mark" src="/brand-mark.svg" alt="" width="25" height="46">SupaTrace</a>
+<nav aria-label="Main"><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/app/">Workspace</a></nav>
+</header>
+<!-- /site:header -->
+<main id="content"><div class="page-head"><p class="eyebrow">Legal</p><h1>Subprocessors</h1></div>
+<p>Effective date: November 16, 2026.</p>
+<p>SupaTrace is provided by Slancha, Inc., 2930 Domingo Ave, Berkeley, CA 94705, USA. Contact for legal, privacy, sales and support: <a href="mailto:support@supatrace.dev">support@supatrace.dev</a>. Security reports: <a href="mailto:security@supatrace.dev">security@supatrace.dev</a>.</p>
+<h2>Providers used by SupaTrace</h2>
+<p>Slancha, Inc. uses the following providers for the stated service functions. Authentication, billing and DNS providers do not receive customer trace content from SupaTrace. Their role is limited to the function described; customer-selected import sources and export destinations are separate from this list.</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Service providers"><table class="compare"><thead><tr><th scope="col">Provider</th><th scope="col">Function and information</th></tr></thead><tbody>
+<tr><th scope="row">Amazon Web Services (AWS)</th><td>Hosting, delivery and storage through CloudFront, Lambda, S3 and DynamoDB; account/session metadata, trace payloads, diagnostics and backups. The deployment region is us-east-1, United States; CloudFront provides global delivery. AWS SES sends authentication and service email and receives support email, processing addresses and message content.</td></tr>
+<tr><th scope="row">Stripe</th><td>Checkout, subscriptions, invoices and payment processing; billing contact, organization/customer references, payment and usage information. Billing currently runs in TEST mode; live payments remain disabled. Trace content is not sent to Stripe.</td></tr>
+<tr><th scope="row">GitHub</th><td>GitHub OAuth authentication using user:email; account identity and verified email, authentication requests and associated provider metadata. No trace content is sent for sign-in.</td></tr>
+<tr><th scope="row">Google</th><td>Google OAuth authentication using openid email; account identity and verified email, authentication requests and associated provider metadata. No trace content is sent for sign-in.</td></tr>
+<tr><th scope="row">Cloudflare</th><td>DNS for SupaTrace domains. DNS query metadata; no customer trace payloads are sent for this function.</td></tr>
+</tbody></table></div>
+<h2>Customer-directed integrations</h2>
+<p>When you authorize a provider import, SupaTrace reads the exact source scope you select using the credentials you enter at runtime. Customer-selected trace providers are your sources, not general subprocessors appointed by Slancha. Likewise you choose destinations for exports and trace drains. Review those providers' terms before authorizing transfer.</p>
+<h2>Changes and questions</h2>
+<p>We will announce material changes to this list by email or site notice. Contact support@supatrace.dev for privacy or provider questions. See the <a href="/privacy.html">Privacy Policy</a> for retention, deletion and data rights.</p>
+</main><footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/">Security</a><a href="/changelog/">Changelog</a><a href="/status/">Status</a><a href="/agent-setup.html">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html" aria-current="page">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a><span id="build" class="build" hidden></span></nav><script type="module" src="/build.js"></script><!-- /site:footer --></footer>
+</body></html>

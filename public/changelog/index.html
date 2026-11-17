@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="What changed in SupaTrace, from merged pull requests, with the date each one merged and whether it is deployed.">
+<meta name="theme-color" content="#f6f3e8">
+<title>Changelog · SupaTrace</title>
+<link rel="icon" href="/favicon.svg?v=classic-s-2" type="image/svg+xml">
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/remodel.css">
+<link rel="stylesheet" href="/site.css">
+<link rel="canonical" href="https://supatrace.dev/changelog/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SupaTrace">
+<meta property="og:title" content="Changelog · SupaTrace">
+<meta property="og:description" content="What changed in SupaTrace, from merged pull requests, with the date each one merged and whether it is deployed.">
+<meta property="og:url" content="https://supatrace.dev/changelog/">
+<meta property="og:image" content="https://supatrace.dev/og-image.png">
+</head>
+<body class="landing remodel page" data-page="changelog">
+<a class="skip" href="#content">Skip to content</a>
+<!-- site:header -->
+<header class="site-header">
+<a class="wordmark" href="/" aria-label="SupaTrace home"><img class="brand-mark" src="/brand-mark.svg" alt="" width="25" height="46">SupaTrace</a>
+<nav aria-label="Main"><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/app/">Workspace</a></nav>
+</header>
+<!-- /site:header -->
+<main id="content">
+<div class="page-head">
+<p class="eyebrow">Changelog</p>
+<h1>What changed.</h1>
+<p class="lede">A curated list of user-visible changes, taken from merged pull requests. Dates are the UTC day each pull request merged. "Deployed" means the change is on the branch production deploys from; "merged, not deployed" means it is waiting for a release.</p>
+</div>
+<section aria-label="Changes">
+<!-- changelog:list -->
+<p class="deploy-note">Last production deploy recorded here: November 13, 2026 (commit <code>0a800c0</code>).</p>
+<ol class="changes">
+<li class="change" data-pr="157" data-state="merged"><time datetime="2026-11-14">November 14, 2026</time><div><h2>Per-plan retention</h2><p>Each batch is stamped with its plan retention when accepted (30 days on Free) and stops being listed, opened and exported after that. Expired data is hidden, not deleted.</p><p class="change-meta"><span class="status planned">merged, not deployed</span> Pull request #157</p></div></li>
+<li class="change" data-pr="150" data-state="merged"><time datetime="2026-11-14">November 14, 2026</time><div><h2>Security and Enterprise pages</h2><p>A /security page states storage, encryption and access facts and what is not in place (no SOC 2, DPA or HIPAA). An /enterprise page shows the proposal and marks SLA terms as pending.</p><p class="change-meta"><span class="status planned">merged, not deployed</span> Pull request #150</p></div></li>
+<li class="change" data-pr="147" data-state="merged"><time datetime="2026-11-14">November 14, 2026</time><div><h2>Build marker</h2><p>A release writes the served commit to /build.json and the footer shows it, so anyone can tell which build a site serves.</p><p class="change-meta"><span class="status planned">merged, not deployed</span> Pull request #147</p></div></li>
+<li class="change" data-pr="142" data-state="merged"><time datetime="2026-11-14">November 14, 2026</time><div><h2>Monthly Free allowance</h2><p>The lifetime 10 MiB cap is replaced by a Free allowance of 50,000 spans per UTC calendar month and 1 GB stored. The span count resets monthly; stored bytes do not.</p><p class="change-meta"><span class="status planned">merged, not deployed</span> Pull request #142</p></div></li>
+<li class="change" data-pr="152" data-state="merged"><time datetime="2026-11-14">November 14, 2026</time><div><h2>Ingest from Langfuse SDKs</h2><p>An app on a Langfuse SDK can send traces by changing the host and keys. Ingest only. Hosted routes answer; SDK compatibility remains beta with local acceptance only.</p><p class="change-meta"><span class="status planned">merged, not deployed</span> Pull request #152</p></div></li>
+<li class="change" data-pr="141" data-state="merged"><time datetime="2026-11-14">November 14, 2026</time><div><h2>OTLP/HTTP trace ingest</h2><p>A receiver at POST /v1/traces accepts OpenTelemetry traces as protobuf or JSON. Available on supatrace.dev for traces only; no gRPC, metrics or logs.</p><p class="change-meta"><span class="status planned">merged, not deployed</span> Pull request #141</p></div></li>
+<li class="change" data-pr="145" data-state="merged"><time datetime="2026-11-14">November 14, 2026</time><div><h2>Integrations directory</h2><p>An /integrations page lists frameworks, providers, importers and agent tools, each marked available, beta, preview or planned.</p><p class="change-meta"><span class="status planned">merged, not deployed</span> Pull request #145</p></div></li>
+<li class="change" data-pr="144" data-state="merged"><time datetime="2026-11-14">November 14, 2026</time><div><h2>Docs site</h2><p>A /docs site with a quickstart, framework guides and reference pages for keys, limits, export and importers. It marks the SDKs as unpublished.</p><p class="change-meta"><span class="status planned">merged, not deployed</span> Pull request #144</p></div></li>
+<li class="change" data-pr="138" data-state="merged"><time datetime="2026-11-14">November 14, 2026</time><div><h2>Proposed pricing page</h2><p>A /pricing page shows proposed Free, Pro, Team and Enterprise plans. It is labelled a proposal; no plan can be bought.</p><p class="change-meta"><span class="status planned">merged, not deployed</span> Pull request #138</p></div></li>
+<li class="change" data-pr="132" data-state="merged"><time datetime="2026-11-14">November 14, 2026</time><div><h2>Python and JavaScript SDK prototypes</h2><p>Source for a supatrace Python package and an @supatrace/client JavaScript package that validate and spool batches locally. Repository only; not on PyPI or npm.</p><p class="change-meta"><span class="status planned">merged, not deployed</span> Pull request #132</p></div></li>
+<li class="change" data-pr="79" data-state="deployed"><time datetime="2026-11-12">November 12, 2026</time><div><h2>Setup links and clearer key list</h2><p>A setup link opens Agents with the setup code filled in. The key list shows when each key was created and marks the newest one.</p><p class="change-meta"><span class="status available">deployed</span> Pull request #79</p></div></li>
+<li class="change" data-pr="63" data-state="deployed"><time datetime="2026-11-11">November 11, 2026</time><div><h2>Langfuse import from the workspace (beta)</h2><p>Import one exact Langfuse trace scope from Agents in bounded, resumable steps. It runs only where the server has it enabled; a verified import from a real account on the hosted site is still open.</p><p class="change-meta"><span class="status available">deployed</span> Pull request #63</p></div></li>
+<li class="change" data-pr="60" data-state="deployed"><time datetime="2026-11-09">November 9, 2026</time><div><h2>Crawl files, share tags and a 404 page</h2><p>robots.txt, sitemap.xml, llms.txt, canonical and social tags, and a real not-found page.</p><p class="change-meta"><span class="status available">deployed</span> Pull request #60</p></div></li>
+<li class="change" data-pr="57" data-state="deployed"><time datetime="2026-11-09">November 9, 2026</time><div><h2>Create a write key from the dashboard</h2><p>A signed-in owner can create a write key from the dashboard.</p><p class="change-meta"><span class="status available">deployed</span> Pull request #57</p></div></li>
+<li class="change" data-pr="43" data-state="deployed"><time datetime="2026-11-06">November 6, 2026</time><div><h2>Workspace and environment switching</h2><p>The workspace and environment switcher stays available across the dashboard.</p><p class="change-meta"><span class="status available">deployed</span> Pull request #43</p></div></li>
+<li class="change" data-pr="39" data-state="deployed"><time datetime="2026-11-06">November 6, 2026</time><div><h2>Workspace roles and environments</h2><p>Owners can invite existing accounts as Admin or Viewer and create environments that share the workspace quota.</p><p class="change-meta"><span class="status available">deployed</span> Pull request #39</p></div></li>
+<li class="change" data-pr="30" data-state="deployed"><time datetime="2026-11-05">November 5, 2026</time><div><h2>Braintrust and LangSmith import handoff</h2><p>Agents can prepare a reviewed import spec for the local Braintrust and LangSmith importers. Nothing is fetched or uploaded from the browser.</p><p class="change-meta"><span class="status available">deployed</span> Pull request #30</p></div></li>
+<li class="change" data-pr="23" data-state="deployed"><time datetime="2026-11-05">November 5, 2026</time><div><h2>Read-only MCP trace server</h2><p>A local stdio MCP server that lists, searches, inspects and exports traces within a reviewed scope. Requires a private checkout and is unavailable to outside users.</p><p class="change-meta"><span class="status available">deployed</span> Pull request #23</p></div></li>
+<li class="change" data-pr="21" data-state="deployed"><time datetime="2026-11-05">November 5, 2026</time><div><h2>Braintrust API import</h2><p>A local importer that reads 1 to 25 completed Braintrust traces you name and stages them for review.</p><p class="change-meta"><span class="status available">deployed</span> Pull request #21</p></div></li>
+<li class="change" data-pr="20" data-state="deployed"><time datetime="2026-11-05">November 5, 2026</time><div><h2>Provider file imports</h2><p>Convert export files from LangSmith, Braintrust, Weave, Opik, Datadog LLM Observability, MLflow, Helicone and OTLP JSON into reviewed batches on your machine.</p><p class="change-meta"><span class="status available">deployed</span> Pull request #20</p></div></li>
+<li class="change" data-pr="15" data-state="deployed"><time datetime="2026-11-05">November 5, 2026</time><div><h2>Clearer outcomes for interrupted archive exports</h2><p>Stalled account archive file operations now time out and can be retried. A save that could not be confirmed is reported as unconfirmed, not as success; an interrupted export is not resumed.</p><p class="change-meta"><span class="status available">deployed</span> Pull request #15</p></div></li>
+<li class="change" data-pr="9" data-state="deployed"><time datetime="2026-10-27">October 27, 2026</time><div><h2>supatrace.dev and supatrace.tech</h2><p>Both hostnames are served from one deployment.</p><p class="change-meta"><span class="status available">deployed</span> Pull request #9</p></div></li>
+<li class="change" data-pr="6" data-state="deployed"><time datetime="2026-10-25">October 25, 2026</time><div><h2>Signed-in dashboard</h2><p>The signed-in workspace is restored, and its address without the trailing slash redirects to it.</p><p class="change-meta"><span class="status available">deployed</span> Pull request #6</p></div></li>
+<li class="change" data-pr="3" data-state="deployed"><time datetime="2026-10-24">October 24, 2026</time><div><h2>Traces on one screen</h2><p>The trace view is one screen with no page scroll.</p><p class="change-meta"><span class="status available">deployed</span> Pull request #3</p></div></li>
+</ol>
+<!-- /changelog:list -->
+</section>
+</main>
+<footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/">Security</a><a href="/changelog/" aria-current="page">Changelog</a><a href="/status/">Status</a><a href="/agent-setup.html">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a><span id="build" class="build" hidden></span></nav><script type="module" src="/build.js"></script><!-- /site:footer --><span>Traces can contain prompts, tool output and secrets. Review before upload.</span></footer>
+</body>
+</html>

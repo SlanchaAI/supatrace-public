@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="SupaTrace pricing: Free, Base at $9.99 a month, Pro at $25.99 a month, and Enterprise with custom pricing. Payments run in test mode until launch.">
+<meta name="theme-color" content="#f6f3e8">
+<title>Pricing · SupaTrace</title>
+<link rel="icon" href="/favicon.svg?v=classic-s-2" type="image/svg+xml">
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/remodel.css">
+<link rel="stylesheet" href="/site.css">
+<link rel="canonical" href="https://supatrace.dev/pricing/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SupaTrace">
+<meta property="og:title" content="Pricing · SupaTrace">
+<meta property="og:description" content="Free, Base at $9.99 a month, Pro at $25.99 a month, and Enterprise with custom pricing.">
+<meta property="og:url" content="https://supatrace.dev/pricing/">
+<meta property="og:image" content="https://supatrace.dev/og-image.png">
+</head>
+<body class="landing remodel page" data-page="pricing">
+<a class="skip" href="#content">Skip to content</a>
+<!-- site:header -->
+<header class="site-header">
+<a class="wordmark" href="/" aria-label="SupaTrace home"><img class="brand-mark" src="/brand-mark.svg" alt="" width="25" height="46">SupaTrace</a>
+<nav aria-label="Main"><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/" aria-current="page">Pricing</a><a href="/app/">Workspace</a></nav>
+</header>
+<!-- /site:header -->
+<main id="content">
+<div class="page-head">
+<p class="eyebrow">Pricing</p>
+<h1>Free to start.<br>Priced by spans.</h1>
+<p class="lede">A free plan with no card, then two flat monthly plans that raise your spans, retention and seats. Billed per organization.</p>
+<p class="preview-note" id="preview-note"><strong>Payments are in test mode.</strong> Base and Pro checkout runs in Stripe test mode until launch: no real card is charged. The limits and features on this page are enforced by the service for the plan an organization is on. <a href="#today">See what applies today.</a></p>
+</div>
+<section aria-labelledby="plans-title">
+<h2 id="plans-title">Plans</h2>
+<!-- plans:cards -->
+<ul class="plans">
+<li class="plan" data-plan="free"><h3>Free</h3><p class="price"><strong data-field="price">$0</strong><span class="per">per organization / month</span></p><ul><li>50k spans per month</li><li>1 GB stored</li><li>7 days retention</li><li>2 members</li><li>2 environments</li><li>2 API keys</li></ul><div class="plan-cta"><a class="button" href="/#signin">Sign in free</a><p class="plan-note">No card.</p><p class="plan-note">Free plan traces may be used to train and improve models and for aggregate analytics. Paid plans: no training on your traces.</p></div></li>
+<li class="plan" data-plan="base"><h3>Base</h3><p class="price"><strong data-field="price">$9.99</strong><span class="per">per organization / month</span></p><ul><li>1M spans per month</li><li>10 GB stored</li><li>30 days retention</li><li>5 members</li><li>3 environments</li><li>10 API keys</li><li>Email support</li><li>Usage alert emails at 80% and 100%</li></ul><div class="plan-cta"><a class="button" href="/app/#billing">Choose Base</a><p class="plan-note">Sign in, then upgrade from Billing. Payments are in test mode: no real card is charged.</p></div></li>
+<li class="plan" data-plan="pro"><h3>Pro</h3><p class="price"><strong data-field="price">$25.99</strong><span class="per">per organization / month</span></p><ul><li>5M spans per month</li><li>50 GB stored</li><li>90 days retention</li><li>10 members</li><li>10 environments</li><li>25 API keys</li><li>Spend cap control (run past the allowance)</li><li>Data export to your systems (trace drains)</li><li>Audit log</li><li>Developer and read-only roles, environment limits</li><li>Priority support</li></ul><div class="plan-cta"><a class="button" href="/app/#billing">Choose Pro</a><p class="plan-note">Sign in, then upgrade from Billing. Payments are in test mode: no real card is charged.</p></div></li>
+<li class="plan" data-plan="enterprise"><h3>Enterprise</h3><p class="price"><strong data-field="price">Custom</strong></p><ul><li>Volume and retention set by contract</li><li>20 members</li><li>20 environments</li><li>100 API keys</li><li>SAML single sign-on</li><li>SCIM provisioning</li><li>Audit log export</li><li>Custom roles</li><li>Require two-factor authentication</li><li>Custom retention</li><li>Uptime SLA (terms by contract)</li></ul><div class="plan-cta"><a class="button" href="/enterprise/#contact">Contact sales</a><p class="plan-note">No self-serve checkout. <a href="/enterprise/">What Enterprise includes</a></p></div></li>
+</ul>
+<!-- /plans:cards -->
+</section>
+<section aria-labelledby="compare-title">
+<h2 id="compare-title">Compare plans</h2>
+<p>Each limit and feature below is checked by the service on every request. "Custom" means it is set in the Enterprise contract.</p>
+<!-- plans:compare -->
+<div class="table-scroll" tabindex="0" role="region" aria-label="Plan comparison"><table class="compare"><thead><tr><th scope="col">Plan</th><th scope="col">Free</th><th scope="col">Base</th><th scope="col">Pro</th><th scope="col">Enterprise</th></tr></thead><tbody>
+<tr><th scope="row">Price</th><td data-plan="free">$0 / month</td><td data-plan="base">$9.99 / month</td><td data-plan="pro">$25.99 / month</td><td data-plan="enterprise">Custom</td></tr>
+<tr><th scope="row">Card required</th><td data-plan="free">No</td><td data-plan="base">Yes</td><td data-plan="pro">Yes</td><td data-plan="enterprise">Custom</td></tr>
+<tr><th scope="row">Included spans per month</th><td data-plan="free">50k</td><td data-plan="base">1M</td><td data-plan="pro">5M</td><td data-plan="enterprise">Custom</td></tr>
+<tr><th scope="row">At the allowance</th><td data-plan="free">Uploads stop until next month</td><td data-plan="base">Uploads stop until next month</td><td data-plan="pro">Uploads stop (spend cap), or continue if you turn the cap off</td><td data-plan="enterprise">Custom</td></tr>
+<tr><th scope="row">Stored data</th><td data-plan="free">1 GB</td><td data-plan="base">10 GB</td><td data-plan="pro">50 GB</td><td data-plan="enterprise">Custom</td></tr>
+<tr><th scope="row">Retention</th><td data-plan="free">7 days</td><td data-plan="base">30 days</td><td data-plan="pro">90 days</td><td data-plan="enterprise">Custom</td></tr>
+<tr><th scope="row">Members</th><td data-plan="free">2</td><td data-plan="base">5</td><td data-plan="pro">10</td><td data-plan="enterprise">20</td></tr>
+<tr><th scope="row">Environments</th><td data-plan="free">2</td><td data-plan="base">3</td><td data-plan="pro">10</td><td data-plan="enterprise">20</td></tr>
+<tr><th scope="row">API keys</th><td data-plan="free">2</td><td data-plan="base">10</td><td data-plan="pro">25</td><td data-plan="enterprise">100</td></tr>
+<tr><th scope="row">Projects per organization</th><td data-plan="free">2</td><td data-plan="base">3</td><td data-plan="pro">10</td><td data-plan="enterprise">20</td></tr>
+<tr><th scope="row">Created workspaces per owner (highest owned plan)</th><td data-plan="free">1</td><td data-plan="base">3</td><td data-plan="pro">5</td><td data-plan="enterprise">10</td></tr>
+<tr><th scope="row">Email support</th><td data-plan="free">No</td><td data-plan="base">Yes</td><td data-plan="pro">Yes</td><td data-plan="enterprise">Yes</td></tr>
+<tr><th scope="row">Usage alert emails at 80% and 100%</th><td data-plan="free">No</td><td data-plan="base">Yes</td><td data-plan="pro">Yes</td><td data-plan="enterprise">Yes</td></tr>
+<tr><th scope="row">Spend cap control (run past the allowance)</th><td data-plan="free">No</td><td data-plan="base">No</td><td data-plan="pro">Yes</td><td data-plan="enterprise">Yes</td></tr>
+<tr><th scope="row">Data export to your systems (trace drains)</th><td data-plan="free">No</td><td data-plan="base">No</td><td data-plan="pro">Yes</td><td data-plan="enterprise">Yes</td></tr>
+<tr><th scope="row">Audit log</th><td data-plan="free">No</td><td data-plan="base">No</td><td data-plan="pro">Yes</td><td data-plan="enterprise">Yes</td></tr>
+<tr><th scope="row">Developer and read-only roles, environment limits</th><td data-plan="free">No</td><td data-plan="base">No</td><td data-plan="pro">Yes</td><td data-plan="enterprise">Yes</td></tr>
+<tr><th scope="row">Priority support</th><td data-plan="free">No</td><td data-plan="base">No</td><td data-plan="pro">Yes</td><td data-plan="enterprise">Yes</td></tr>
+<tr><th scope="row">SAML single sign-on</th><td data-plan="free">No</td><td data-plan="base">No</td><td data-plan="pro">No</td><td data-plan="enterprise">Yes</td></tr>
+<tr><th scope="row">SCIM provisioning</th><td data-plan="free">No</td><td data-plan="base">No</td><td data-plan="pro">No</td><td data-plan="enterprise">Yes</td></tr>
+<tr><th scope="row">Audit log export</th><td data-plan="free">No</td><td data-plan="base">No</td><td data-plan="pro">No</td><td data-plan="enterprise">Yes</td></tr>
+<tr><th scope="row">Custom roles</th><td data-plan="free">No</td><td data-plan="base">No</td><td data-plan="pro">No</td><td data-plan="enterprise">Yes</td></tr>
+<tr><th scope="row">Require two-factor authentication</th><td data-plan="free">No</td><td data-plan="base">No</td><td data-plan="pro">No</td><td data-plan="enterprise">Yes</td></tr>
+<tr><th scope="row">Custom retention</th><td data-plan="free">No</td><td data-plan="base">No</td><td data-plan="pro">No</td><td data-plan="enterprise">Yes</td></tr>
+<tr><th scope="row">Uptime SLA (terms by contract)</th><td data-plan="free">No</td><td data-plan="base">No</td><td data-plan="pro">No</td><td data-plan="enterprise">Yes</td></tr>
+</tbody></table></div>
+<!-- /plans:compare -->
+</section>
+<section aria-labelledby="overage-title">
+<h2 id="overage-title">Past the allowance</h2>
+<p>Free and Base stop at the monthly allowance until the next month. Pro has a spend cap that is on by default and does the same. A Pro owner can turn the cap off, and uploads then continue past the allowance at the rate below.</p>
+<!-- plans:overage -->
+<div class="table-scroll" tabindex="0" role="region" aria-label="Overage rates"><table class="compare"><thead><tr><th scope="col">Plan</th><th scope="col">Included each month</th><th scope="col">Past the allowance, cap off</th></tr></thead><tbody>
+<tr><th scope="row">Pro</th><td>5M spans</td><td>$5 per 1M spans</td></tr>
+</tbody></table></div>
+<!-- /plans:overage -->
+<p>Overage is counted and shown in Usage. It is not invoiced while payments are in test mode.</p>
+</section>
+<section aria-labelledby="today" class="today">
+<h2 id="today">What applies today</h2>
+<!-- plans:today -->
+<ul class="facts">
+<li><strong>Payments:</strong> not live. Checkout for Base and Pro runs in Stripe test mode, so no real card is charged and no real money moves. A plan bought in test mode still unlocks its limits and features.</li>
+<li><strong>Free allowance, enforced:</strong> 50k spans per UTC calendar month and 1 GB stored, per organization. A span is one accepted trace event. The span count resets on the first of the month; stored bytes do not reset. At either limit uploads are rejected with an error that names the limit and links to Billing. Nothing already stored is dropped.</li>
+<li><strong>Count limits, enforced:</strong> members, environments and API keys per organization. A create request over the limit is refused; existing items stay.</li>
+<li><strong>Service-wide cap:</strong> 1,000 accounts and 50 GiB across the whole service during the test-mode launch. It can stop an upload before an organization reaches its own allowance. These caps must be raised before live Stripe payments are activated; 50 GiB is below one Enterprise storage allowance.</li>
+<li><strong>Retention, enforced:</strong> 7 days on Free, counted from when a batch is accepted. After that it is no longer listed, opened or exported. Expired data is hidden immediately; the enabled scheduled worker erases payload versions and releases stored-byte capacity. Data stored before retention existed does not expire.</li>
+<li><strong>Projects:</strong> projects are isolated within each organization: Free 2, Base 3, Pro 10, Enterprise 20. Billing and usage are shared within the organization.</li>
+<li><strong>Batches:</strong> 100 events / 512 KiB per batch.</li>
+<li><strong>Keys:</strong> write-only ingest keys, revocable, with no expiry unless you set one. Keys made with a setup code expire after 30 days.</li>
+<li><strong>Export:</strong> you can export your original JSON from the workspace on every plan.</li>
+</ul>
+<!-- /plans:today -->
+<p><a href="/agent-setup.html#limits">All current limits and recovery notes</a></p>
+</section>
+<section aria-labelledby="faq-title" class="faq">
+<h2 id="faq-title">Questions</h2>
+<details><summary>Can I buy Base or Pro today?</summary><p>You can go through checkout in Stripe test mode. It unlocks the plan for your organization and charges no real card. Live payments are not on yet.</p></details>
+<details><summary>What happens at the allowance?</summary><p>New uploads are rejected with an error that names the limit and links to Billing, until the first of the next month (UTC) or until you upgrade. Nothing already stored is dropped.</p></details>
+<details><summary>What happens if I downgrade?</summary><p>Nothing is deleted. Members, environments and keys over the new limit stay, and you cannot add more until you are under it. Features of the higher plan are locked again.</p></details>
+<details><summary>What is a span?</summary><p>One recorded step in a trace, such as a model call or a tool call. The service counts one accepted trace event as one span.</p></details>
+<details><summary>Do you charge per member?</summary><p>No. Each plan includes a number of members per organization.</p></details>
+<details><summary>How is Enterprise priced?</summary><p>By contract. There is no self-serve checkout: contact sales and an operator assigns the plan to your organization.</p></details>
+<details><summary>Can I take my data with me?</summary><p>Yes, on every plan. You can export your original JSON from the workspace. Review exports before sharing: traces can contain prompts, tool output and secrets.</p></details>
+</section>
+<section class="cta" aria-labelledby="cta-title">
+<h2 id="cta-title">Start free.</h2>
+<p>Sign in with the provider you used to create your account. No card.</p>
+<div class="actions"><a class="button" href="/#signin">Sign in free</a><a class="setup-link" href="/agent-setup.html">Read the setup guide</a></div>
+</section>
+</main>
+<footer class="site-footer"><!-- site:footer --><nav class="site-links" aria-label="Site"><a href="/">Home</a><a href="/docs/">Docs</a><a href="/integrations/">Integrations</a><a href="/pricing/" aria-current="page">Pricing</a><a href="/enterprise/">Enterprise</a><a href="/security/">Security</a><a href="/changelog/">Changelog</a><a href="/status/">Status</a><a href="/agent-setup.html">Setup guide</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy Policy</a><a href="/aup.html">Acceptable Use</a><a href="/subprocessors.html">Subprocessors</a><a href="mailto:support@supatrace.dev">Support</a><span id="build" class="build" hidden></span></nav><script type="module" src="/build.js"></script><!-- /site:footer --><span>Payments are in test mode until launch.</span></footer>
+</body>
+</html>

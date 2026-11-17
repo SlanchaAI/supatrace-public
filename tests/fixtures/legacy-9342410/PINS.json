@@ -1,0 +1,8 @@
+{
+  "deployed_commit": "934241044326fbb204339524c587717df9ff2a80",
+  "sha256": {
+    "dynamodb-store.mjs": "7049533a4522e28492225b64349bc14aec5af4c4f6e87ff21afe5aadb80c85b1",
+    "alpha-projects.mjs": "c07c2d8efec076ef73ccb738ade4232b6bc6b44089e47bc8dce3c744e781f6cb",
+    "http.mjs": "fca6b47be60d0567c09a75366c3cc740209ed82472da6346ba93d4862cb9d0b2"
+  }
+}

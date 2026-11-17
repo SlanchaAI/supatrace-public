@@ -1,0 +1,10 @@
+{
+  "name": "supatrace-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {"node": ">=22"},
+  "scripts": {"test": "node --test tests/*.test.mjs", "start": "node cli.mjs"},
+  "dependencies": {"@modelcontextprotocol/server": "2.4.0", "zod": "4.6.7"},
+  "devDependencies": {"@modelcontextprotocol/client": "2.4.0"}
+}

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/SlanchaAI/supatrace/blob/main/SECURITY.md
+    about: Follow SECURITY.md and report privately to security@supatrace.dev.
+  - name: Open source questions
+    url: mailto:oss@supatrace.dev
+    about: Contact the maintainers for questions outside a bug or feature request.
