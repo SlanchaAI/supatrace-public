@@ -1281,21 +1281,31 @@ export class DynamoMetadataStore {
     const slot = Number(BigInt(`0x${bucket}`) % BigInt(this.limits.rateSlots));
     const Key = { pk: `RATE#${slot}`, sk: 'COUNTER' };
     const lease = cooldown ? random() : null;
-    try { await this._send('PutCommand', { Item: { ...Key, bucket, hits: 1, expires_at: expiresAt, ttl: expiresAt, ...(lease ? {lease} : {}) },
-      ConditionExpression: 'attribute_not_exists(pk) OR expires_at <= :now', ExpressionAttributeValues: { ':now': now } });
-      return { allowed: true, hits: 1, retry_after: expiresAt - now, ...(lease ? {complete: async () => {
-        await this._send('UpdateCommand', {Key, UpdateExpression: 'SET #completed = :yes', ConditionExpression: '#lease = :lease',
-          ExpressionAttributeNames: {'#lease': 'lease', '#completed': 'completed'}, ExpressionAttributeValues: {':yes': true, ':lease': lease}});
-      }, release: async () => {
-        // A failed send may release only its own reservation, never a newer sender's.
-        try { await this._send('DeleteCommand', {Key, ConditionExpression: '#lease = :lease', ExpressionAttributeNames: {'#lease': 'lease'}, ExpressionAttributeValues: {':lease': lease}}); }
-        catch (error) { if (!conditional(error)) throw error; }
-      }} : {}) };
-    } catch (error) { if (!conditional(error)) throw error; }
-    if (cooldown) {
+    const release = async heldLease => {
+      // A stale sender or duplicate may release only the lease it observed.
+      try { await this._send('DeleteCommand', {Key, ConditionExpression: '#lease = :lease', ExpressionAttributeNames: {'#lease': 'lease'}, ExpressionAttributeValues: {':lease': heldLease}}); }
+      catch (error) { if (!conditional(error)) throw error; }
+    };
+    for (let attempt = 0; ; attempt++) {
+      try { await this._send('PutCommand', { Item: { ...Key, bucket, hits: 1, expires_at: expiresAt, ttl: expiresAt, ...(lease ? {lease} : {}) },
+        ConditionExpression: 'attribute_not_exists(pk) OR expires_at <= :now', ExpressionAttributeValues: { ':now': now } });
+        return { allowed: true, hits: 1, retry_after: expiresAt - now, ...(lease ? {complete: async (challengeId = null) => {
+          if (challengeId !== null) hash(challengeId);
+          await this._send('UpdateCommand', {Key, UpdateExpression: 'SET #completed = :yes, challenge_id = :challenge', ConditionExpression: '#lease = :lease',
+            ExpressionAttributeNames: {'#lease': 'lease', '#completed': 'completed'}, ExpressionAttributeValues: {':yes': true, ':lease': lease, ':challenge': challengeId}});
+        }, release: () => release(lease)} : {}) };
+      } catch (error) { if (!conditional(error)) throw error; }
+      if (!cooldown) break;
       const row = await this._get(Key);
-      const same = row?.bucket === bucket && row.expires_at > now;
-      return {allowed: false, duplicate: same && row.completed === true, pending: same && row.completed !== true, retry_after: windowSeconds};
+      if (!row) {
+        // Reclamation can remove the lease after Put fails and before Get.
+        if (attempt < 3) continue;
+        return {allowed: false, duplicate: false, pending: true, retry_after: windowSeconds};
+      }
+      const same = row.bucket === bucket && row.expires_at > now;
+      const duplicate = same && row.completed === true;
+      return {allowed: false, duplicate, pending: same && row.completed !== true, retry_after: windowSeconds,
+        ...(duplicate ? {challenge_id: row.challenge_id, release: () => release(row.lease)} : {})};
     }
     try {
       const response = await this._send('UpdateCommand', { Key, UpdateExpression: 'ADD hits :one',

@@ -148,6 +148,157 @@ test('resend cooldown spans calendar-minute boundaries with the production limit
   assert.ok(await w.store.peekAuthChallenge('LINK', digest(newer)));
 });
 
+for (const reason of ['consumed', 'expired', 'wrong address', 'missing reference']) test(`a ${reason} completed link permits a fresh send within cooldown with account-independent work`, async t => {
+  t.mock.timers.enable({apis: ['Date'], now: Date.now()});
+  const outcomes = [], startedAt = Math.floor(Date.now() / 1000);
+  for (const existing of [false, true]) {
+    let now = startedAt;
+    const w = world({now: () => now});
+    w.store.consumeRate = DynamoMetadataStore.prototype.consumeRate.bind(w.store);
+    if (existing) await w.store.createVerifiedEmailAccount(address, hashPassword(password));
+    const older = await issue(w), id = digest(older);
+    if (reason === 'consumed') {
+      assert.equal((await confirm(w, older)).status, 200);
+      assert.equal(await w.store.peekAuthChallenge('LINK', id), null);
+    } else if (reason === 'missing reference') {
+      // A completed reservation written before challenge binding was deployed.
+      const reservation = rows(w).find(row => row.completed === true);
+      delete reservation.challenge_id;
+    } else {
+      const challenge = rows(w).find(row => row.id_hash === id);
+      if (reason === 'expired') {
+        challenge.expires_at = now + 1; challenge.ttl = now + 1;
+      } else challenge.email = 'other@example.com';
+    }
+    now++;
+    if (reason === 'expired') assert.equal(await w.store.peekAuthChallenge('LINK', id), null);
+    w.calls.length = 0;
+    const response = await post(w, sendPath, {email: address});
+    const outcome = {status: response.status, headers: [...response.headers], body: await response.json(), calls: w.calls.slice()};
+    assert.equal(outcome.status, 200); assert.deepEqual(outcome.body, sent);
+    assert.equal(w.mailbox.length, 2);
+    const newer = rawToken(w.mailbox[1]); assert.notEqual(newer, older);
+    assert.equal((await w.store.peekAuthChallenge('LINK', digest(newer))).email, address);
+    // Subsequent duplicates must bind to the replacement, not the old link.
+    await issue(w); assert.equal(w.mailbox.length, 2);
+    outcomes.push(outcome);
+  }
+  assert.deepEqual(outcomes[0], outcomes[1]);
+});
+
+test('concurrent resends after confirmation replace the completed reservation once', async () => {
+  const w = world();
+  w.store.consumeRate = DynamoMetadataStore.prototype.consumeRate.bind(w.store);
+  const older = await issue(w); assert.equal((await confirm(w, older)).status, 200);
+  const responses = await Promise.all(Array.from({length: 3}, () => post(w, sendPath, {email: address})));
+  for (const response of responses) {
+    assert.equal(response.status, 200); assert.deepEqual(await response.json(), sent);
+  }
+  assert.equal(w.mailbox.length, 2);
+  assert.ok(await w.store.peekAuthChallenge('LINK', digest(rawToken(w.mailbox[1]))));
+});
+
+for (const firstBlocked of ['reservation read', 'lease release']) {
+for (const reason of ['confirmed', 'expired']) test(`concurrent reclamation after a link is ${reason} retries a vanished reservation (${firstBlocked} first)`, {timeout: 5000}, async t => {
+  t.mock.timers.enable({apis: ['Date'], now: Date.now()});
+  const outcomes = [], now = Math.floor(Date.now() / 1000);
+  for (const existing of [false, true]) {
+    const w = world({now: () => now});
+    w.store.consumeRate = DynamoMetadataStore.prototype.consumeRate.bind(w.store);
+    if (existing) await w.store.createVerifiedEmailAccount(address, hashPassword(password));
+    const older = await issue(w);
+    if (reason === 'confirmed') assert.equal((await confirm(w, older)).status, 200);
+    else rows(w).find(row => row.id_hash === digest(older)).expires_at = w.store.now() - 1;
+    const reservation = rows(w).find(row => row.completed === true);
+    const send = w.client.send.bind(w.client);
+    let entered, removed, observed, failedRead;
+    const blocked = new Promise(resolve => { entered = resolve; });
+    const released = new Promise(resolve => { removed = resolve; });
+    const missing = new Promise(resolve => { observed = resolve; });
+    const readerReady = new Promise(resolve => { failedRead = resolve; });
+    let blockRead = true, releasing = false, sawMissing = false;
+    const consume = w.store.consumeRate;
+    w.store.consumeRate = async input => {
+      const rate = await consume(input);
+      if (input.cooldown && sawMissing) {
+        assert.equal(rate.allowed, true, 'the missing-row call must reacquire before returning');
+        sawMissing = false;
+      }
+      return rate;
+    };
+    w.client.send = async command => {
+      const key = command.input.Key;
+      if (key?.pk === reservation.pk && key.sk === reservation.sk) {
+        if (command.name === 'GetCommand' && blockRead && (firstBlocked === 'reservation read' || releasing)) {
+          blockRead = false; entered(); failedRead();
+          // The reader's Put failed while the invalid lease still existed.
+          await released;
+          const result = await send(command);
+          assert.equal(result.Item, undefined); sawMissing = true; observed();
+          return result;
+        }
+        if (command.name === 'DeleteCommand') {
+          if (firstBlocked === 'lease release') {
+            releasing = true; entered();
+            // Start the other request only once this request is ready to delete.
+            await readerReady;
+          }
+          const result = await send(command);
+          removed(); await missing;
+          return result;
+        }
+      }
+      return send(command);
+    };
+    w.calls.length = 0;
+    const first = post(w, sendPath, {email: address});
+    await blocked;
+    const second = post(w, sendPath, {email: ' ADA@Example.COM '});
+    const responses = await Promise.all([first, second]);
+    const outcome = await Promise.all(responses.map(async response => ({status: response.status, headers: [...response.headers], body: await response.json()})));
+    for (const response of outcome) {
+      assert.equal(response.status, 200); assert.deepEqual(response.body, sent);
+    }
+    assert.equal(w.mailbox.length, 2);
+    const newer = rawToken(w.mailbox[1]); assert.notEqual(newer, older);
+    assert.ok(await w.store.peekAuthChallenge('LINK', digest(newer)));
+    outcomes.push({responses: outcome, calls: w.calls.slice()});
+  }
+  assert.deepEqual(outcomes[0], outcomes[1]);
+});
+}
+
+test('an older valid link cannot suppress resend after the completed reservation link is consumed', async () => {
+  const w = world(), older = await issue(w);
+  w.advanceRates(60);
+  const completed = await issue(w); assert.notEqual(completed, older);
+  assert.equal((await confirm(w, completed)).status, 200);
+  assert.ok(await w.store.peekAuthChallenge('LINK', digest(older)));
+  const newer = await issue(w); assert.notEqual(newer, completed); assert.notEqual(newer, older);
+  assert.equal(w.mailbox.length, 3);
+  assert.ok(await w.store.peekAuthChallenge('LINK', digest(newer)));
+});
+
+for (const scope of ['link', 'linknet', 'linkdomain', 'linkhour']) test(`resend after confirmation still obeys the ${scope} budget`, async () => {
+  const outcomes = [];
+  for (const existing of [false, true]) {
+    const w = world();
+    const consume = DynamoMetadataStore.prototype.consumeRate.bind(w.store);
+    w.store.consumeRate = consume;
+    if (existing) await w.store.createVerifiedEmailAccount(address, hashPassword(password));
+    assert.equal((await confirm(w, await issue(w))).status, 200);
+    w.store.consumeRate = input => input.scope === scope ? {allowed: false, retry_after: 60} : consume(input);
+    w.calls.length = 0;
+    const response = await post(w, sendPath, {email: address});
+    outcomes.push({status: response.status, headers: [...response.headers], body: await response.clone().json(), calls: w.calls.slice()});
+    await invalid(response, 429, 'rate_limit');
+    assert.equal(w.mailbox.length, 1); assert.equal(response.headers.get('retry-after'), '60');
+    w.store.consumeRate = consume;
+    await issue(w); assert.equal(w.mailbox.length, 2);
+  }
+  assert.deepEqual(outcomes[0], outcomes[1]);
+});
+
 for (const failure of ['transport', 'budget']) test(`failed ${failure} reservation permits a truthful immediate retry with the production limiter`, async () => {
   const w = world({now: () => 1800000000});
   const consume = DynamoMetadataStore.prototype.consumeRate.bind(w.store);

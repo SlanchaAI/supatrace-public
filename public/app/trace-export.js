@@ -1,3 +1,4 @@
+import {pickExportFile} from './export-picker.js';
 // A single-trace version-1 writer. The caller supplies the existing validated,
 // project-bound event traversal; no new endpoint, fallback or stored handle.
 export const TRACE_FILE_TIMEOUT_MS = 120000;
@@ -47,7 +48,7 @@ export async function saveTraceFile({runId, projectId, environmentId='default', 
   try {
     // Dispatch within the click gesture. Choosing a file has no deadline, but
     // cancelling/navigation stops the wait and a late selection is never used.
-    const handle = await fileStep(() => pick({suggestedName:'supatrace-run.json',
+    const handle = await fileStep(() => pickExportFile(pick,{suggestedName:'supatrace-run.json',
       types:[{description:'SupaTrace JSON', accept:{'application/json':['.json']}}]}), {signal});
     check(signal);
     writable = await fileStep(() => handle.createWritable({keepExistingData:false}),
@@ -84,9 +85,10 @@ export async function saveTraceFile({runId, projectId, environmentId='default', 
     if (writable) {
       try { await abortFile(writable); } catch { fail('export_file_unconfirmed'); }
     }
-    if (error?.name === 'AbortError' || signal.aborted || error?.message === 'export_file_cancelled') {
+    if (signal.aborted || error?.message === 'export_file_cancelled') {
       fail('export_file_cancelled');
     }
+    if (error?.message === 'export_picker_unavailable') throw error;
     fail('export_file_unconfirmed');
   } finally {
     active = false;

@@ -10,6 +10,8 @@
   "tests/workspace-scope-browser.test.mjs",
   "tests/workspace-browser.test.mjs",
   "tests/projects-browser.test.mjs",
+  "tests/scope-choice-browser.test.mjs",
+  "tests/export-fallback-browser.test.mjs",
   "tests/account-delete-browser.test.mjs",
   "tests/pending-invite-browser.test.mjs",
   "tests/local-billing-browser.test.mjs",

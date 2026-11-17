@@ -1,3 +1,4 @@
+import {pickExportFile} from './export-picker.js';
 // Explicit export of all environments in ONE selected workspace. No account/project discovery.
 import {saveAccountArchive,accountFileStep,validateAccountCatalog,accountCatalogKey,
   ACCOUNT_FILE_TIMEOUT_MS,ACCOUNT_DOWNLOAD_LIMITS} from './account-export.js';
@@ -42,7 +43,7 @@ export async function saveWorkspaceArchive({workspaceId,projectId,environmentIds
  }
  try{
   // Preserve the user gesture; do not read any scope if the picker is declined.
-  const handle=await accountFileStep(()=>pick({suggestedName:'supatrace-workspace.json',types:[{description:'SupaTrace workspace archive',accept:{'application/json':['.json']}}]}),{signal});
+  const handle=await accountFileStep(()=>pickExportFile(pick,{suggestedName:'supatrace-workspace.json',types:[{description:'SupaTrace workspace archive',accept:{'application/json':['.json']}}]}),{signal});
   check(signal);const started=now(),scope=await readEnvironments(),scopeKey=JSON.stringify(scope);
   if(JSON.stringify(scope.map(e=>e.id).sort())!==JSON.stringify(environmentIds))fail('account_export_changed');
   writable=await accountFileStep(()=>handle.createWritable({keepExistingData:false}),{signal,timeoutMs:fileTimeoutMs,onLate:abort});check(signal);
@@ -68,8 +69,9 @@ export async function saveWorkspaceArchive({workspaceId,projectId,environmentIds
  }catch(error){
   active=false;if(committing)fail('export_file_unconfirmed');
   if(writable){try{await abort(writable);}catch{fail('export_file_unconfirmed');}}
-  if(error?.name==='AbortError'||signal?.aborted||error?.message==='export_file_cancelled')fail('export_file_cancelled');
+  if(signal?.aborted||error?.message==='export_file_cancelled')fail('export_file_cancelled');
   if(['account_export_changed','account_export_incomplete','account_export_too_large','account_export_rate_limited','account_export_read_deadline','account_export_read_failed'].includes(error?.message))throw error;
+  if(error?.message==='export_picker_unavailable')throw error;
   fail('export_file_unconfirmed');
  }finally{active=false;}
 }

@@ -11,7 +11,7 @@ export function installMembersView(document){
  view.insertAdjacentHTML('beforebegin','<section id="view-members" data-view="members" hidden><h1>Members</h1><p class="muted">Who can open this workspace, and with which role. Invite accounts, change roles and remove access here.</p></section>');
 }
 if(typeof document!=='undefined')installMembersView(document);
-export async function mountWorkspaces({request,me,projects,selected,environment,beforeSwitch=()=>true}){
+export async function mountWorkspaces({request,me,projects,selected,environment,environments:loadedEnvironments,beforeSwitch=()=>true}){
  // Other panels that reload or navigate ask the same guard the selectors below use.
  setSwitchGuard(beforeSwitch);
  const node=document.createElement('article');node.className='card';node.id='workspace-controls';
@@ -43,7 +43,7 @@ export async function mountWorkspaces({request,me,projects,selected,environment,
  for(const p of organizations){const li=document.createElement('li'),id=p.workspace_id??me.tenant_id,label=id===me.tenant_id&&personalLabel?personalLabel:orgName(p);li.dataset.org=id;li.textContent=`${label} · ${p.role??'owner'}`+(id===current?' · current':'');$('org-list').append(li);}
  // A member limited to some environments is moved to the first one they may open.
  if(Array.isArray(selected.environments)&&selected.environments.length&&!selected.environments.includes(environment)){navigate(selected.workspace_id??me.tenant_id,selected.environments[0]);return new Promise(()=>{});}
- const environments=await request('environments');
+ const environments=loadedEnvironments??await request('environments');
  if(!Array.isArray(environments.environments)||!environments.environments.some(e=>e.id===environment))throw Error('environment_unavailable');
  for(const e of environments.environments){const o=document.createElement('option');o.value=e.id;o.textContent=e.name;$('environment-select').append(o);}
  $('environment-select').value=environment;$('environment-select').onchange=()=>navigate(selected.workspace_id??me.tenant_id,$('environment-select').value);

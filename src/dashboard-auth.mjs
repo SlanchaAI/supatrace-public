@@ -295,18 +295,23 @@ export async function emailLink(request,env){
  for(let attempt=0;attempt<=50;attempt++){
   resend=await env.store.consumeRate(reservation);
   if(resend.allowed)break;
-  if(resend.duplicate)return json({ok:true,message:'Check your email'});
-  if(!resend.pending){const error=new HttpError(429,'rate_limit');error.retryAfter=resend.retry_after;throw error;}
+  if(resend.duplicate){
+   const challenge=await env.store.peekAuthChallenge('LINK',resend.challenge_id);
+   if(challenge?.email===email)return json({ok:true,message:'Check your email'});
+   // Reclaim only this completed lease; a racing sender may already own a new one.
+   await resend.release();
+  }else if(!resend.pending){const error=new HttpError(429,'rate_limit');error.retryAfter=resend.retry_after;throw error;}
   // A concurrent request must observe accepted mail before claiming delivery.
   if(attempt===50)throw new HttpError(503,'email_unavailable');
   await new Promise(resolve=>setTimeout(resolve,100));
  }
+ let id;
  try{
  await limited(env,'link',5,email);
  await charge(env,'linknet',networkIdentity(env.sourceIp),20,3600);
  await charge(env,'linkdomain',email.split('@')[1],30,3600);
  await charge(env,'linkhour','all',200,3600);
- const token=random(),id=digest(token);
+ const token=random();id=digest(token);
  // No account lookup: new and returning addresses take the same path.
  await env.store.createAuthChallenge('LINK',id,{email},900);
  try{
@@ -314,7 +319,7 @@ export async function emailLink(request,env){
  }catch(error){await env.store.consumeAuthChallenge('LINK',id);throw error;}
  }catch(error){await resend.release?.();throw error;}
  // Keep the reservation if recording delivery fails: the mail was already accepted.
- await resend.complete?.();
+ await resend.complete?.(id);
  return json({ok:true,message:'Check your email'});
 }
 export async function emailLinkOpen(request,env){

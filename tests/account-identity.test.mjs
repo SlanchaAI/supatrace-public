@@ -71,7 +71,7 @@ test('provider/account changes replace old identity and confirmed logout clears 
  f.renderAccountIdentity({auth_provider:'github',tenant_id:'new-account'},{id:'new-project',name:'New'});
  for(const id of ['provider-line','account-sign-in-note','who','account-line','project-name','project-line'])assert.doesNotMatch(f.text(id),/old-account|old-project|Old|Google/);
  f.clearAccountIdentity();assert.equal(f.billingCancels(),1);assert.equal(f.hidden('billing-portal'),true);assert.equal(f.context.billingReady,false);assert.equal(f.consentInvalidations(),1);assert.equal(f.context.workspaceExportScope,null);assert.equal(f.langsmithInvalidations(),1);assert.equal(f.braintrustInvalidations(),1);for(const id of ['provider-line','account-sign-in-note','who','account-line','project-name','project-line'])assert.equal(f.text(id),'');
- assert.match(source,/await api\('auth\/logout',\{\}\);activeProject=null;resetKeyState\(\);clearAccountIdentity\(\);location.replace/);
+ assert.match(source,/await api\('auth\/logout',\{\}\);clearScope\(actorTenant\);activeProject=null;resetKeyState\(\);clearAccountIdentity\(\);location.replace/);
  assert.match(source,/renderAccountIdentity\(me,chosen\)/);
 });
 test('one account recovery block stays inside authenticated Settings without direct sign-in links',()=>{

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
+import {clearScope} from '../public/app/scope-choice.js';
 import {webcrypto,createHash} from 'node:crypto';
 import {loadAccountKeys,writeKeyState,confirmKeyRevocation,newestKeyId,mintApiKey,keyType,KEY_PREFIXES,KEY_TYPE_LABELS} from '../public/app/key-data.js';
 const source=readFileSync(new URL('../public/app/app.js',import.meta.url),'utf8');
@@ -20,7 +21,7 @@ function app(fetcher,{revokeTimeoutMs=30000,cryptoProvider=webcrypto}={}){
  class Clock extends Date{static now(){return now;}}
  const document={getElementById:get,createElement:t=>new Node(t),createTextNode:text=>String(text),querySelectorAll:()=>[],querySelector:()=>null,addEventListener:(k,f)=>docListeners[k]=f,body:new Node(),hidden:false};
  const context={document,window:{matchMedia:()=>({matches:false,addEventListener(){}})},location:{hash:'#keys',replace(){}},fetch:async(url,options)=>{calls.push({url,options});return fetcher(url,options);},Response,URL,URLSearchParams,TextEncoder,AbortController,crypto:cryptoProvider,Blob,Date:Clock,loadAccountKeys,newestKeyId,keyType,KEY_PREFIXES,KEY_TYPE_LABELS,mintApiKey:type=>mintApiKey(type,cryptoProvider),confirmKeyRevocation:(request,options)=>confirmKeyRevocation(request,{...options,timeoutMs:revokeTimeoutMs}),writeKeyState:(key)=>writeKeyState(key,now),setTimeout:(fn,ms)=>{const id=++timerId;timers.set(id,{fn,ms});return id;},clearTimeout:id=>timers.delete(id),addEventListener:(k,f)=>(listeners[k]??=[]).push(f)};
- let executable=source.replace(/^import[^\n]+\n/gm,'');executable=executable.slice(0,executable.lastIndexOf('\nshowView();'));executable+='\nactiveProject="'+project+'";keyView="keys";globalThis.a={keys,revokeKey,rotateKey,showView,logout,resetKeyState,setProject:v=>activeProject=v};';Object.assign(context,{rememberSetupCode(){},pendingSetupCode:()=>null,clearSetupCode(){},clearFirstTraceStorage(){}});runInNewContext(executable,context);
+ let executable=source.replace(/^import[^\n]+\n/gm,'');executable=executable.slice(0,executable.lastIndexOf('\nshowView();'));executable+='\nactiveProject="'+project+'";keyView="keys";globalThis.a={keys,revokeKey,rotateKey,showView,logout,resetKeyState,setProject:v=>activeProject=v};';Object.assign(context,{clearScope,rememberSetupCode(){},pendingSetupCode:()=>null,clearSetupCode(){},clearFirstTraceStorage(){}});runInNewContext(executable,context);
  return {...context.a,get,calls,timers,context,now:v=>now=v,fire:k=>listeners[k]?.forEach(f=>f()),visible:()=>docListeners.visibilitychange(),navigate:hash=>{context.location.hash=hash;context.a.showView();},buttons:()=>get('keys').querySelectorAll('button')};
 }
 const tick=()=>new Promise(resolve=>setImmediate(resolve));

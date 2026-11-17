@@ -1,3 +1,4 @@
+import {pickExportFile} from './export-picker.js';
 // Bounded observed-read archive, not a transactional snapshot or raw-batch backup.
 const fail=code=>{throw new Error(code);};
 const check=signal=>{if(signal?.aborted)fail('export_file_cancelled');};
@@ -38,7 +39,7 @@ export async function saveAccountArchive({projectId,environmentId='default',sign
  };
  try{
   // Invoke the picker synchronously within the click, with no selection deadline.
-  const handle=await fileStep(()=>pick({suggestedName:'supatrace-account.json',types:[{description:'SupaTrace observed account archive',accept:{'application/json':['.json']}}]}),{signal});check(signal);
+  const handle=await fileStep(()=>pickExportFile(pick,{suggestedName:'supatrace-account.json',types:[{description:'SupaTrace observed account archive',accept:{'application/json':['.json']}}]}),{signal});check(signal);
   const started=now(),runs=validate(await read(()=>loadCatalog(signal)));check(signal);const before=catalogKey(runs);
   writable=await fileStep(()=>handle.createWritable({keepExistingData:false}),{signal,timeoutMs:fileTimeoutMs,onLate:abortFile});check(signal);
   await write(JSON.stringify({version:2,type:'supatrace_account_observed_export',project_id:projectId,...(environmentId!=='default'?{environment_id:environmentId}:{}),started_at:started,consistency:'observed_stable_before_after_not_a_snapshot'}).slice(0,-1)+',"runs":[');
@@ -52,8 +53,8 @@ export async function saveAccountArchive({projectId,environmentId='default',sign
   await write('],"completed_at":'+JSON.stringify(now())+',"run_count":'+runs.length+',"event_count":'+total+',"complete":true}');check(signal);
   onCommit();check(signal);committing=true;await fileStep(()=>writable.close(),{timeoutMs:fileTimeoutMs});return {runs:runs.length,events:total,consistency:'observed_stable_before_after_not_a_snapshot'};
  }catch(error){if(committing)fail('export_file_unconfirmed');if(writable){try{await abortFile(writable);}catch{fail('export_file_unconfirmed');}}
-  if(error?.name==='AbortError'||signal?.aborted||error?.message==='export_file_cancelled')fail('export_file_cancelled');
-  if(['account_export_changed','account_export_incomplete','account_export_too_large','account_export_rate_limited','account_export_read_deadline','account_export_read_failed'].includes(error?.message))throw error;fail('export_file_unconfirmed');
+  if(signal?.aborted||error?.message==='export_file_cancelled')fail('export_file_cancelled');
+  if(['account_export_changed','account_export_incomplete','account_export_too_large','account_export_rate_limited','account_export_read_deadline','account_export_read_failed'].includes(error?.message)||error?.message==='export_picker_unavailable')throw error;fail('export_file_unconfirmed');
  }
 }
 

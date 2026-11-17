@@ -2,6 +2,7 @@
 import './request-queue.js';
 import {mountSupport} from './support.js';
 import {mountImportConsent} from './import-consent.js';
+import {restoreScope,saveScope,clearScope,scopeEnvironment} from './scope-choice.js';
 import {mountWorkspaces} from './workspaces.js';
 import {saveTraceFile} from './trace-export.js';
 import {projectsPanel} from './projects.js';
@@ -68,6 +69,7 @@ messages.account_export_changed='The account changed or event counts did not rec
 messages.account_export_rate_limited='Archive read stopped at the request limit. No complete archive was confirmed. Check any selected file before retrying to a new file.';
 messages.account_export_read_deadline='An archive read took too long. No complete archive was confirmed. Check any selected file before retrying to a new file.';
 messages.account_export_read_failed='An archive read could not finish. No complete archive was confirmed. Check any selected file before retrying to a new file.';
+messages.trace_download_failed='The trace download could not be prepared or started. No complete export was confirmed. Retry the export.';
 messages.export_file_cancelled='Export cancelled before completion. The selected file was not committed; an empty new file may remain.';
 messages.export_file_unconfirmed='Export could not be confirmed complete. Do not use the selected file as a complete export; retry to a new file.';
 messages.export_read_deadline='The next trace batch took too long. No complete export was confirmed. Retry the export.';
@@ -715,11 +717,16 @@ $('export').onclick=async()=>{
  if(!selected||exportJob||redactionJob)return;
  closeRedaction();const id=selected,project=activeProject,environment=activeEnvironment,workspace=activeWorkspace,job=new AbortController();exportJob=job;syncExportControls();$('cancel-export').hidden=false;reportExport('trace',id);
  try{
-  if(typeof window.showSaveFilePicker==='function'){const count=await saveRunFile(id,job.signal,window.showSaveFilePicker.bind(window),project,environment,workspace);$('status').textContent=`Export saved: ${count} events.`;toast('Export complete.');return;}
+  if(typeof window.showSaveFilePicker==='function')try{const count=await saveRunFile(id,job.signal,window.showSaveFilePicker.bind(window),project,environment,workspace);$('status').textContent=`Export saved: ${count} events.`;toast('Export complete.');return;}catch(error){if(error.message!=='export_picker_unavailable')throw error;}
   const events=await allEvents(id,job.signal,null,project,{environmentId:environment,workspaceId:workspace});requireExport(job.signal);
   const blob=new Blob([JSON.stringify({version:1,run_id:id,...(environment!=='default'?{project_id:project,environment_id:environment}:{}),events})],{type:'application/json'}),href=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=href;a.download='supatrace-run.json';a.click();setTimeout(()=>URL.revokeObjectURL(href),1000);$('status').textContent='Export download started. Check your browser downloads to confirm the file was saved.';toast('Download started.');
- }catch(e){if(selected===id)report(e.message?.startsWith('export_file_')?e:job.signal.aborted?new Error('export_cancelled'):e);}
+ }catch(e){
+  if(selected===id){
+   const known=e.message==='Export too large for this browser'||e.message?.startsWith('export_')||e.message==='invalid_export_page';
+   report(e.message?.startsWith('export_file_')?e:job.signal.aborted?new Error('export_cancelled'):known?e:new Error('trace_download_failed'));
+  }
+ }
  finally{exportJob=null;syncExportControls();$('cancel-export').disabled=false;$('cancel-export').hidden=true;}
 };
 $('cancel-export').onclick=()=>exportJob?.abort();
@@ -728,11 +735,11 @@ function reportExport(kind,runId){void api('audit/events',{action:'export.starte
 function clearAccountDownload(){$('workspace-export-reviewed').checked=false;if(accountDownloadDraft&&/^(Account|Workspace) archive ready:/.test($('status').textContent))$('status').textContent='';accountDownloadDraft=null;$('download-account').hidden=true;$('discard-account').hidden=true;syncExportControls();}
 $('export-account').onclick=async()=>{
  if(!activeProject||exportJob||redactionJob||keySigningOut||keySuspended)return;
- clearAccountDownload();closeRedaction();const project=activeProject,environment=activeEnvironment,workspace=activeWorkspace,job=new AbortController(),streaming=typeof window.showSaveFilePicker==='function';exportJob=job;syncExportControls();$('cancel-account-export').hidden=false;reportExport('account');
+ clearAccountDownload();closeRedaction();const project=activeProject,environment=activeEnvironment,workspace=activeWorkspace,job=new AbortController();let streaming=typeof window.showSaveFilePicker==='function';exportJob=job;syncExportControls();$('cancel-account-export').hidden=false;reportExport('account');
  try{
   const options={projectId:project,environmentId:environment,signal:job.signal,loadCatalog:signal=>loadAccountRuns((path,sig)=>api(path,undefined,sig,project,environment,workspace),{projectId:project,signal}),writeRun:(id,signal,sink)=>allEvents(id,signal,sink,project,{environmentId:environment,workspaceId:workspace}),onProgress:p=>{$('status').textContent=`Exporting account: ${p.runs_completed}/${p.runs_total} traces, ${p.events} events. Pause uploads until preparation finishes.`;},onCommit:()=>{$('cancel-account-export').disabled=true;$('status').textContent=streaming?'Saving completed account archive…':'Preparing completed account download…';}};
-  if(streaming){const result=await saveAccountArchive({...options,pick:window.showSaveFilePicker.bind(window)});$('status').textContent=`Account archive saved: ${result.runs} traces, ${result.events} events. Observed read, not a point-in-time snapshot.`;toast('Account archive saved.');}
-  else{
+  if(streaming)try{const result=await saveAccountArchive({...options,pick:window.showSaveFilePicker.bind(window)});$('status').textContent=`Account archive saved: ${result.runs} traces, ${result.events} events. Observed read, not a point-in-time snapshot.`;toast('Account archive saved.');}catch(error){if(error.message!=='export_picker_unavailable')throw error;streaming=false;}
+  if(!streaming){
    const result=await prepareAccountArchive(options);requireExport(job.signal);if(project!==activeProject||keySigningOut||keySuspended||location.hash!=='#traces')throw new Error('export_cancelled');
    accountDownloadDraft={...result,project,workspace,environment};$('download-account').hidden=false;$('discard-account').hidden=false;$('status').textContent=`Account archive ready: ${result.runs} traces, ${result.events} events, ${result.bytes.toLocaleString('en-US')} bytes. Choose Download prepared archive. Observed read, not a point-in-time snapshot.`;
   }
@@ -742,7 +749,7 @@ $('workspace-export-reviewed').onchange=syncExportControls;
 $('export-workspace').onclick=async()=>{
  const scope=workspaceExportScope;
  if(!scope||!$('workspace-export-reviewed').checked||scope.project!==activeProject||scope.workspace!==activeWorkspace||exportJob||redactionJob||keySigningOut||keySuspended)return;
- const project=scope.project,workspace=scope.workspace,environmentIds=[...scope.environmentIds],job=new AbortController(),streaming=typeof window.showSaveFilePicker==='function';
+ const project=scope.project,workspace=scope.workspace,environmentIds=[...scope.environmentIds],job=new AbortController();let streaming=typeof window.showSaveFilePicker==='function';
  clearAccountDownload();closeRedaction();exportJob=job;syncExportControls();$('cancel-account-export').hidden=false;reportExport('workspace');
  try{
   const options={workspaceId:workspace,projectId:project,environmentIds,signal:job.signal,
@@ -751,8 +758,8 @@ $('export-workspace').onclick=async()=>{
    writeRun:(environment,id,signal,sink)=>allEvents(id,signal,sink,project,{environmentId:environment,workspaceId:workspace}),
    onProgress:p=>{$('status').textContent=`Exporting workspace: ${p.environments_completed}/${p.environments_total} environments, ${p.runs_completed} traces, ${p.events} events. Pause uploads until preparation finishes.`;},
    onCommit:()=>{$('cancel-account-export').disabled=true;$('status').textContent=streaming?'Saving completed workspace archive…':'Preparing completed workspace download…';}};
-  if(streaming){const result=await saveWorkspaceArchive({...options,pick:window.showSaveFilePicker.bind(window)});$('status').textContent=`Workspace archive saved: ${result.environments} environments, ${result.runs} traces, ${result.events} events. Observed read, not a point-in-time snapshot.`;toast('Workspace archive saved.');}
-  else{const result=await prepareWorkspaceArchive(options);requireExport(job.signal);if(project!==activeProject||workspace!==activeWorkspace||keySigningOut||keySuspended||location.hash!=='#traces')throw Error('export_cancelled');
+  if(streaming)try{const result=await saveWorkspaceArchive({...options,pick:window.showSaveFilePicker.bind(window)});$('status').textContent=`Workspace archive saved: ${result.environments} environments, ${result.runs} traces, ${result.events} events. Observed read, not a point-in-time snapshot.`;toast('Workspace archive saved.');}catch(error){if(error.message!=='export_picker_unavailable')throw error;streaming=false;}
+  if(!streaming){const result=await prepareWorkspaceArchive(options);requireExport(job.signal);if(project!==activeProject||workspace!==activeWorkspace||keySigningOut||keySuspended||location.hash!=='#traces')throw Error('export_cancelled');
    accountDownloadDraft={...result,project,workspace,kind:'workspace'};$('download-account').hidden=false;$('discard-account').hidden=false;$('status').textContent=`Workspace archive ready: ${result.environments} environments, ${result.runs} traces, ${result.events} events, ${result.bytes.toLocaleString('en-US')} bytes. Choose Download prepared archive. Observed read, not a point-in-time snapshot.`;}
  }catch(error){report(error);}finally{exportJob=null;syncExportControls();$('cancel-account-export').disabled=false;$('cancel-account-export').hidden=true;if(accountDownloadDraft)$('download-account').focus();}
 };
@@ -843,7 +850,7 @@ function keyIdentity(){return actorTenant+'|'+activeProject+'|'+activeEnvironmen
 // of this function (sign-out, identity invalidation, a changed account) means that key must leave the page.
 function clearKeyAttempt(){clearApiKeyValue();firstTrace?.reset();firstKeyAttempt=null;keyAttempt=null;$('created-key').textContent='';$('new-key-config').textContent='';$('new-key-config').hidden=true;$('new-key-download').removeAttribute('href');$('new-key-download').hidden=true;}
 $('create-key').onclick=async()=>{if(keySigningOut||keySuspended)return;const b=$('create-key');if(keyAttempt&&keyAttempt.identity!==keyIdentity())clearKeyAttempt();b.disabled=true;$('created-key').textContent=keyAttempt?'Retrying the same write key request...':'Creating a write key...';let attempt=keyAttempt;const live=()=>keyAttempt===attempt&&attempt.identity===keyIdentity();try{if(!attempt){const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';attempt=keyAttempt={identity:keyIdentity(),key:Array.from(crypto.getRandomValues(new Uint8Array(43)),v=>alphabet[v&63]).join('')};}if(!attempt.key_hash){const key_hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(attempt.key))),v=>v.toString(16).padStart(2,'0')).join('');if(!live())return;attempt.key_hash=key_hash;}if(!attempt.user_code){const start=await api('setup/start',{key_hash:attempt.key_hash});if(!live())return;attempt.user_code=start.user_code;}const approved=await api('setup/approve',{user_code:attempt.user_code});if(!live())return;if(approved?.approved!==true||!/^proj_[a-f0-9]{32}$/.test(approved.project_id||''))throw Error('Request failed');keyAttempt=null;const config=JSON.stringify({origin:location.origin,write_key:attempt.key,approved:true,project_id:approved.project_id,...(approved.environment_id?{environment_id:approved.environment_id}:{})},null,1);$('new-key-config').textContent=config;$('new-key-config').hidden=false;$('new-key-download').setAttribute('href','data:application/json,'+encodeURIComponent(config));$('new-key-download').hidden=false;$('created-key').textContent='Write key created. Save supatrace-access.json now; the key is shown only once. Then run: python3 upload.py ./first-trace.json --config ./supatrace-access.json';toast('Write key created.');await keys();}catch(e){if(attempt&&!live())return;if(e.status===410)keyAttempt=null;$('created-key').textContent=explain(e);keyRecovery($('created-key'),e);}finally{b.disabled=false;}};
-async function logout(){if(keySigningOut)return;keySigningOut=true;stopLive();clearKeyAttempt();clearSetupCode();clearFirstTraceStorage();const recheckUsage=usageStarted;closeDetail();stopUsage('Signing out. Usage and billing actions are paused.');suspendKeyState('Signing out. Key actions are paused.');closeRedaction();cancelImportPlan();langsmithImport?.invalidate('Signing out. Review the scope again after sign-in.');braintrustImport?.invalidate('Signing out. Review the scope again after sign-in.');cancelCommercialCheckout();exportJob?.abort();clearRunCatalog();try{await api('auth/logout',{});activeProject=null;resetKeyState();clearAccountIdentity();location.replace('/app/');}catch(e){keySigningOut=false;keySuspended=false;updateUsageControls();report(e);if(activeProject&&$('live-toggle').checked)liveWatch?.start(catalogMark);const version=usageVersion,project=activeProject;await keys();if(recheckUsage&&version===usageVersion&&project===activeProject)await usage();}}
+async function logout(){if(keySigningOut)return;keySigningOut=true;stopLive();clearKeyAttempt();clearSetupCode();clearFirstTraceStorage();const recheckUsage=usageStarted;closeDetail();stopUsage('Signing out. Usage and billing actions are paused.');suspendKeyState('Signing out. Key actions are paused.');closeRedaction();cancelImportPlan();langsmithImport?.invalidate('Signing out. Review the scope again after sign-in.');braintrustImport?.invalidate('Signing out. Review the scope again after sign-in.');cancelCommercialCheckout();exportJob?.abort();clearRunCatalog();try{await api('auth/logout',{});clearScope(actorTenant);activeProject=null;resetKeyState();clearAccountIdentity();location.replace('/app/');}catch(e){keySigningOut=false;keySuspended=false;updateUsageControls();report(e);if(activeProject&&$('live-toggle').checked)liveWatch?.start(catalogMark);const version=usageVersion,project=activeProject;await keys();if(recheckUsage&&version===usageVersion&&project===activeProject)await usage();}}
 $('logout').onclick=logout;$('logout-settings').onclick=logout;
 $('account-reload').onclick=()=>location.reload();
 $('menu-toggle').onclick=()=>menu(!$('rail').classList.contains('open'));
@@ -890,16 +897,29 @@ for(const [formId,resultId] of [['import-form','import-result'],['langsmith-form
 importConsent=mountImportConsent({document,getProject:()=>keySigningOut||keySuspended||activeEnvironment!=='default'||activeWorkspace!==actorTenant||activeProject!==actorDefaultProject||!$('account-reload').hidden?null:activeProject,request:(path,data,signal)=>api(path,data,signal)});
 langsmithImport=mountLangsmithImport({document,getProject:()=>keySigningOut||keySuspended||activeEnvironment!=='default'||activeWorkspace!==actorTenant||activeProject!==actorDefaultProject||!$('account-reload').hidden?null:activeProject});
 braintrustImport=mountBraintrustImport({document,getProject:()=>keySigningOut||keySuspended||activeEnvironment!=='default'||activeWorkspace!==actorTenant||activeProject!==actorDefaultProject||!$('account-reload').hidden?null:activeProject});
-mountWorkspaceStartup({request:(path,signal)=>api(path,undefined,signal,null),mountSignIn,onReady:async({me,data},{focus})=>{
- actorTenant=me.tenant_id;actorDefaultProject=me.project_id;const requestedProject=new URLSearchParams(location.search||'').get('project');const chosen=activeWorkspace?data.projects.find(p=>(p.workspace_id??me.tenant_id)===activeWorkspace&&(!requestedProject||p.id===requestedProject)):requestedProject?data.projects.find(p=>p.id===requestedProject):data.projects.find(p=>p.id===me.project_id);if(!chosen)throw Error('workspace_unavailable');if(chosen.sso_required===true&&(chosen.workspace_id??me.tenant_id)!==me.tenant_id){location.replace('/app/?sso_org='+encodeURIComponent(chosen.workspace_name??'That organization')+'#home');await new Promise(()=>{});}
+mountWorkspaceStartup({request:(path,signal)=>api(path,undefined,signal,null),mountSignIn:(...args)=>{clearScope(null);return mountSignIn(...args);},onReady:async({me,data},{focus})=>{
+ actorTenant=me.tenant_id;actorDefaultProject=me.project_id;const restored=restoreScope({account:actorTenant,defaultProject:actorDefaultProject,projects:data.projects,search:location.search});let chosen=restored.project;activeEnvironment=restored.environment;if(!chosen)throw Error('workspace_unavailable');if(chosen.sso_required===true&&(chosen.workspace_id??me.tenant_id)!==me.tenant_id){location.replace('/app/?sso_org='+encodeURIComponent(chosen.workspace_name??'That organization')+'#home');await new Promise(()=>{});}
  if(chosen.mfa_required===true&&(chosen.workspace_id??me.tenant_id)!==me.tenant_id){location.replace('/app/?mfa_org='+encodeURIComponent(chosen.workspace_name??'That organization')+'#settings');await new Promise(()=>{});}
+ let environments=await api('environments',undefined,undefined,chosen.id,'default',chosen.workspace_id??actorTenant);
+ activeEnvironment=scopeEnvironment(activeEnvironment,environments.environments,chosen.environments);
+ if(!activeEnvironment&&chosen.id!==actorDefaultProject){
+  chosen=data.projects.find(p=>p.id===actorDefaultProject);if(!chosen)throw Error('workspace_unavailable');
+  environments=await api('environments',undefined,undefined,chosen.id,'default',chosen.workspace_id??actorTenant);
+  activeEnvironment=scopeEnvironment('default',environments.environments,chosen.environments);
+ }
+ if(!activeEnvironment)throw Error('environment_unavailable');
  activeWorkspace=chosen.workspace_id??me.tenant_id;activeRole=chosen.role??'owner';activeProject=chosen.id;
+ saveScope(actorTenant,{workspace:activeWorkspace,project:activeProject,environment:activeEnvironment});
+ // Keep bare personal Default links bare; scoped links and restored non-default
+ // choices must carry the validated scope for modules that read the URL.
+ const scopeUrl=new URL(location.href);
+ if(activeWorkspace!==actorTenant||activeProject!==actorDefaultProject||activeEnvironment!=='default'||['workspace','project','environment'].some(name=>scopeUrl.searchParams.has(name))){scopeUrl.searchParams.set('workspace',activeWorkspace);scopeUrl.searchParams.set('project',activeProject);scopeUrl.searchParams.set('environment',activeEnvironment);history.replaceState(null,'',scopeUrl);}
  firstTrace?.restore({account:actorTenant,project_id:activeProject,environment_id:activeEnvironment});
  // The organization on screen, for the modules that talk to the API themselves (it may have been chosen by ?project=, not ?workspace=).
  if(document.documentElement?.dataset){document.documentElement.dataset.workspace=activeWorkspace;document.documentElement.dataset.project=activeProject;}
  $('connect-command').textContent='python3 connect.py --project '+activeProject+(activeEnvironment!=='default'?' --environment '+activeEnvironment:'')+' --config ./supatrace-access.json';renderAccountIdentity(me,chosen);
  await projectsPanel?.refresh(data);
- await mountWorkspaces({request:api,me,projects:data.projects,selected:chosen,environment:activeEnvironment,beforeSwitch:()=>!exportJob&&!redactionJob&&!billingBusy&&!keyRevocation});
+ await mountWorkspaces({request:api,me,projects:data.projects,selected:chosen,environment:activeEnvironment,environments,beforeSwitch:()=>!exportJob&&!redactionJob&&!billingBusy&&!keyRevocation});
  await mountSupport({document,request:api});
  mountAuditLog({document,request:path=>api(path),workspace:activeWorkspace,ownWorkspace:actorTenant,role:activeRole});
  workspaceExportScope={project:activeProject,workspace:activeWorkspace,environmentIds:[...$('environment-select').options].map(o=>o.value)};

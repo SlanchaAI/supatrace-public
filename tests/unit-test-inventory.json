@@ -65,6 +65,7 @@
   "tests/stripe-customer-bootstrap.test.mjs",
   "tests/account-pagination.test.mjs",
   "tests/export-safety.test.mjs",
+  "tests/scope-choice.test.mjs",
   "tests/import-composition.test.mjs",
   "tests/stripe-worker.test.mjs",
   "tests/stripe-runtime.test.mjs",

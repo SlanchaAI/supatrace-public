@@ -112,7 +112,7 @@ test('candidate full export retains all fields across pages and finishes control
   assert.equal(fixed.dispatched(),1);assert.match(fixed.get('status').textContent,/Export download started.*Check your browser downloads/);assert.doesNotMatch(fixed.get('status').textContent,/Export complete|Export saved/);
 });
 test('original trace download dispatch failure never claims a completed save',async()=>{
- for(const downloadFailure of ['url','click']){const fixed=app(async()=>page([event()]),{downloadFailure});await fixed.a.show('run');await fixed.get('export').onclick();assert.equal(fixed.dispatched(),0);assert.doesNotMatch(fixed.get('status').textContent,/Export complete|Export saved|download started/);assert.equal(fixed.get('export').disabled,false);assert.equal(fixed.get('cancel-export').hidden,true);}
+ for(const downloadFailure of ['url','click']){const fixed=app(async()=>page([event()]),{downloadFailure});await fixed.a.show('run');await fixed.get('export').onclick();assert.equal(fixed.dispatched(),0);assert.doesNotMatch(fixed.get('status').textContent,/Export complete|Export saved|download started|cancelled/);assert.match(fixed.get('status').textContent,/download could not be prepared or started/);assert.equal(fixed.get('export').disabled,false);assert.equal(fixed.get('cancel-export').hidden,true);}
 });
 test('invalid page exports no partial file and explains the export failure',async()=>{
   let calls=0;const fixed=app(async()=>++calls===1?page([event()]):new Response('{"events":[]}'));
@@ -229,4 +229,24 @@ test('export notes disclose observed-read consistency, scope and browser size li
  assert.match(note('account-export-note'),/not redacted.*secrets.*Review/);
  for(const fact of ['100,000 traces','20 MiB of catalog metadata','five minutes','live read','not a snapshot','byte-for-byte','20 MiB and 100,000 events','two minutes','counts equal are not detected'])assert.ok(note('account-export-note').includes(fact),fact);
  assert.match(note('workspace-export-note'),/every listed environment.*20 environments.*does not include other workspaces/);
+});
+
+for(const name of ['SecurityError','NotAllowedError','TypeError'])test(`trace picker ${name} falls back to original JSON`,async()=>{
+ const original=event('fallback',{nested:[false,0,null,'café']});
+ const f=app(async()=>page([original]),{picker:()=>{throw Object.assign(Error('synthetic picker restriction'),{name});}});
+ await f.a.show('fallback');await f.get('export').onclick();
+ assert.deepEqual(JSON.parse(await f.download().text()),{version:1,run_id:'fallback',events:[original]});
+ assert.equal(f.dispatched(),1);assert.doesNotMatch(f.get('status').textContent,/cancelled/);
+});
+test('account picker capability rejection prepares the existing bounded standard download',async()=>{
+ const f=downloadApp({picker:async()=>{throw Object.assign(Error(),{name:'SecurityError'});}});
+ await f.get('export-account').onclick();assert.equal(f.get('download-account').hidden,false);assert.equal(f.scans(),2);
+ f.get('download-account').onclick();assert.equal(JSON.parse(await f.download().text()).complete,true);assert.equal(f.dispatched(),1);assert.doesNotMatch(f.get('status').textContent,/cancelled/);
+});
+test('AbortError after picker success is a file failure, never a user dismissal or fallback',async()=>{
+ for(const phase of ['create','write']){
+  const sink=fileSink({writeHook:()=>{if(phase==='write')throw Object.assign(Error(),{name:'AbortError'});}});
+  const f=app(async()=>page([event()]),{picker:phase==='create'?async()=>({createWritable:()=>{throw Object.assign(Error(),{name:'AbortError'});}}):sink.pick});
+  await f.a.show('run');await f.get('export').onclick();assert.equal(f.download(),null);assert.match(f.get('status').textContent,/could not be confirmed complete/);assert.doesNotMatch(f.get('status').textContent,/cancelled/);
+ }
 });

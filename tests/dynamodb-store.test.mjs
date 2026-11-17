@@ -314,18 +314,57 @@ test('cooldown reservations are atomic and a stale release cannot delete a newer
   assert.equal(attempts.filter(rate => rate.allowed).length, 1);
   const first = attempts.find(rate => rate.allowed);
   assert.equal(attempts.find(rate => !rate.allowed).pending, true);
-  await first.complete();
+  await first.complete(H);
   const duplicate = await store.consumeRate(input);
   assert.equal(duplicate.duplicate, true); assert.equal(duplicate.pending, false);
-  await first.release();
+  assert.equal(duplicate.challenge_id, H);
+  await duplicate.release();
   const second = await store.consumeRate(input); assert.equal(second.allowed, true);
   await assert.rejects(first.complete());
   assert.equal((await store.consumeRate(input)).pending, true);
+  await duplicate.release(); assert.equal((await store.consumeRate(input)).pending, true);
+  await second.complete(H2);
+  assert.equal((await store.consumeRate(input)).challenge_id, H2);
   await first.release(); assert.equal((await store.consumeRate(input)).allowed, false);
   now += 59; assert.equal((await store.consumeRate(input)).allowed, false);
   now++; assert.equal((await store.consumeRate(input)).allowed, true);
   await second.release(); assert.equal((await store.consumeRate(input)).allowed, false);
 });
+
+for (const scope of ['linkresend', 'othercooldown']) {
+  const input = {scope, identity: 'synthetic@example.com', limit: 1, windowSeconds: 60, cooldown: true};
+  for (const missingReads of [1, 3]) test(`${scope} acquires a vanished cooldown row after ${missingReads} missing reads`, async () => {
+    const steps = Array.from({length: missingReads}, () => [
+      ['PutCommand', conditionError()], ['GetCommand', {}]
+    ]).flat();
+    const h = harness([...steps, ['PutCommand', {}]]);
+    const acquired = await h.store.consumeRate(input);
+    assert.equal(acquired.allowed, true); assert.equal(acquired.hits, 1);
+    assert.equal(typeof acquired.complete, 'function'); assert.equal(typeof acquired.release, 'function');
+    h.done();
+  });
+
+  test(`${scope} denies an occupied foreign bucket after a missing cooldown row`, async () => {
+    const h = harness([
+      ['PutCommand', conditionError()], ['GetCommand', {}],
+      ['PutCommand', conditionError()], ['GetCommand', {Item: {bucket: 'another-bucket', expires_at: NOW + 60}}]
+    ]);
+    const collision = await h.store.consumeRate(input);
+    assert.equal(collision.allowed, false); assert.equal(collision.duplicate, false);
+    assert.equal(collision.pending, false); assert.equal(collision.release, undefined);
+    h.done();
+  });
+
+  test(`${scope} bounds missing-row acquisition retries without reporting a rate-limit denial`, async () => {
+    const h = harness(Array.from({length: 4}, () => [
+      ['PutCommand', conditionError()], ['GetCommand', {}]
+    ]).flat());
+    const contended = await h.store.consumeRate(input);
+    assert.equal(contended.allowed, false); assert.equal(contended.duplicate, false);
+    assert.equal(contended.pending, true); assert.equal(contended.release, undefined);
+    h.done();
+  });
+}
 
 test('rate cardinality is bounded, hit increments conditional and live hash collisions fail closed', async () => {
   let rateKey;
